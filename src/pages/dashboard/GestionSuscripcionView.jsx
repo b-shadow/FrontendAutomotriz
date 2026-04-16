@@ -684,16 +684,9 @@ export const GestionSuscripcionView = () => {
 
             {/* MODO SIMULADO: Formulario visual de tarjeta simulada */}
             {paymentIntent && isSimulatedPayment(paymentIntent) && (
-              <div className="mb-6 p-4 border border-amber-300 dark:border-amber-700 rounded-lg bg-amber-50 dark:bg-amber-900/20">
-                <div className="mb-4 p-3 bg-amber-100 dark:bg-amber-900/40 border border-amber-300 dark:border-amber-700 rounded">
-                  <p className="text-sm font-semibold text-amber-900 dark:text-amber-300 mb-1">🧪 Modo Simulación Local</p>
-                  <p className="text-xs text-amber-800 dark:text-amber-300">
-                    Este es un entorno de prueba. Los datos no se procesan realmente.
-                  </p>
-                </div>
-
+              <div className="mb-6 p-4 border border-amber-300 dark:border-amber-700 rounded-lg bg-amber-50 dark:bg-amber-900/20">               
                 <label className="block text-sm font-semibold text-gray-700 dark:text-white mb-3">
-                  Información de la Tarjeta (Simulada)
+                  Información de la Tarjeta
                 </label>
 
                 {/* Nombre del titular */}
@@ -750,10 +743,6 @@ export const GestionSuscripcionView = () => {
                     />
                   </div>
                 </div>
-
-                <p className="text-xs text-gray-600 dark:text-gray-400 mt-3 mb-3">
-                  ℹ️ Datos de ejemplo: <strong>4242 4242 4242 4242</strong> | <strong>12/25</strong> | <strong>424</strong>
-                </p>
               </div>
             )}
 

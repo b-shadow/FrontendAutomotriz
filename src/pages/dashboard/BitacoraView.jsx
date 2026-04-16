@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import auditoriaService from '../../services/auditoriaService'
-import usuariosService from '../../services/usuariosService'
+import * as XLSX from 'xlsx'
 
 /**
  * Formatea fecha a formato legible
@@ -81,7 +81,6 @@ export const BitacoraView = ({ tenantSlug }) => {
   // Estados principales
   const [resumen, setResumen] = useState(null)
   const [eventos, setEventos] = useState([])
-  const [usuarios, setUsuarios] = useState([])
   const [loading, setLoading] = useState(true)
   const [cargandoListado, setCargandoListado] = useState(false)
   const [error, setError] = useState(null)
@@ -101,8 +100,6 @@ export const BitacoraView = ({ tenantSlug }) => {
   const [filtros, setFiltros] = useState({
     search: '',
     accion: '',
-    entidad_tipo: '',
-    usuario: '',
     created_at__gte: '',
     created_at__lte: '',
     ordering: '-created_at',
@@ -110,7 +107,9 @@ export const BitacoraView = ({ tenantSlug }) => {
 
   // Opciones para selects (derivadas de datos)
   const [accionesDisponibles, setAccionesDisponibles] = useState([])
-  const [entidadesDisponibles, setEntidadesDisponibles] = useState([])
+
+  // Estado para exportación
+  const [exportandoTodo, setExportandoTodo] = useState(false)
 
   /**
    * PROBLEMA 1: Extrae lógica de acumulación a función helper
@@ -121,11 +120,6 @@ export const BitacoraView = ({ tenantSlug }) => {
 
     setAccionesDisponibles((prev) => {
       const nuevas = listaEventos.map((e) => e.accion).filter(Boolean)
-      return [...new Set([...prev, ...nuevas])].sort()
-    })
-
-    setEntidadesDisponibles((prev) => {
-      const nuevas = listaEventos.map((e) => e.entidad_tipo).filter(Boolean)
       return [...new Set([...prev, ...nuevas])].sort()
     })
   }
@@ -140,18 +134,13 @@ export const BitacoraView = ({ tenantSlug }) => {
     try {
       const ordering = orderingOverride !== null ? orderingOverride : filtros.ordering
       // Cargar en paralelo
-      const [resumenData, eventosData, usuariosData] = await Promise.all([
+      const [resumenData, eventosData] = await Promise.all([
         auditoriaService.obtenerResumen(tenantSlug),
         auditoriaService.listarEventos(tenantSlug, { page: 1, page_size: pageSize, ordering }),
-        usuariosService.listarUsuarios(tenantSlug),
       ])
       setResumen(resumenData)
       setEventos(eventosData.results || [])
       setTotalItems(eventosData.count || 0)
-      const listaUsuarios = Array.isArray(usuariosData)
-        ? usuariosData
-        : usuariosData.results || usuariosData.usuarios || []
-      setUsuarios(listaUsuarios.filter((u) => u.is_active))
       acumularOpcionesDesdeEventos(eventosData.results || [])
     } catch (err) {
       setError(err.response?.data?.error || err.message || 'Error al cargar datos')
@@ -219,12 +208,252 @@ export const BitacoraView = ({ tenantSlug }) => {
     setDetalleEvento(null)
     setErrorDetalle(null)
   }
+
+  /**
+   * Prepara datos formateados para exportar
+   * @param {array} datosExportar - Lista de eventos a exportar
+   * @returns {array} Datos formateados
+   */
+  function prepararDatosExportacion(datosExportar) {
+    return datosExportar.map((evento) => ({
+      'Fecha': formatearFecha(evento.created_at),
+      'Acción': labelAccion(evento.accion),
+      'Usuario': formatearUsuario(evento),
+      'Email Usuario': evento.usuario_email || 'N/A',
+      'Tipo Entidad': evento.entidad_tipo || 'N/A',
+      'ID Entidad': evento.entidad_id || 'N/A',
+      'Descripción': evento.descripcion || 'N/A',
+      'IP': evento.ip || 'N/A',
+    }))
+  }
+
+  /**
+   * Descargar archivo
+   * @param {string} contenido - Contenido del archivo
+   * @param {string} nombreArchivo - Nombre del archivo
+   * @param {string} tipo - Tipo MIME
+   */
+  function descargarArchivo(contenido, nombreArchivo, tipo) {
+    const blob = new Blob([contenido], { type: tipo })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = nombreArchivo
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+  }
+
+  /**
+   * Exportar a CSV
+   */
+  function exportarCSV(datosExportar, nombreArchivo = 'bitacora.csv') {
+    const datosFormato = prepararDatosExportacion(datosExportar)
+    if (datosFormato.length === 0) {
+      alert('No hay datos para exportar')
+      return
+    }
+
+    const headers = Object.keys(datosFormato[0])
+    const csvContent = [
+      headers.join(','),
+      ...datosFormato.map((row) =>
+        headers
+          .map((header) => {
+            const valor = row[header] || ''
+            // Escapar comillas y agregar comillas si contiene comas
+            const valorEscapado = String(valor).replace(/"/g, '""')
+            return `"${valorEscapado}"`
+          })
+          .join(',')
+      ),
+    ].join('\n')
+
+    descargarArchivo(csvContent, nombreArchivo, 'text/csv;charset=utf-8;')
+  }
+
+  /**
+   * Exportar a HTML
+   */
+  function exportarHTML(datosExportar, nombreArchivo = 'bitacora.html') {
+    const datosFormato = prepararDatosExportacion(datosExportar)
+    if (datosFormato.length === 0) {
+      alert('No hay datos para exportar')
+      return
+    }
+
+    const headers = Object.keys(datosFormato[0])
+    const filas = datosFormato
+      .map(
+        (row) => `
+      <tr>
+        ${headers.map((header) => `<td>${row[header] || 'N/A'}</td>`).join('')}
+      </tr>
+    `
+      )
+      .join('')
+
+    const htmlContent = `
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Bitácora de Auditoría</title>
+      <style>
+        * { font-family: Arial, sans-serif; }
+        body { padding: 20px; background-color: #f5f5f5; }
+        h1 { color: #333; text-align: center; }
+        table { 
+          width: 100%; 
+          border-collapse: collapse; 
+          background-color: white;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        th { 
+          background-color: #5b21b6; 
+          color: white; 
+          padding: 12px; 
+          text-align: left;
+          font-weight: bold;
+        }
+        td { 
+          padding: 10px 12px; 
+          border-bottom: 1px solid #ddd; 
+        }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        tr:hover { background-color: #f0f0f0; }
+        .footer { 
+          text-align: center; 
+          margin-top: 20px; 
+          color: #666; 
+          font-size: 12px;
+        }
+      </style>
+    </head>
+    <body>
+      <h1>📋 Bitácora de Auditoría</h1>
+      <p style="text-align: center; color: #666;">
+        Generado el ${new Date().toLocaleString('es-ES')}
+      </p>
+      <table>
+        <thead>
+          <tr>
+            ${headers.map((header) => `<th>${header}</th>`).join('')}
+          </tr>
+        </thead>
+        <tbody>
+          ${filas}
+        </tbody>
+      </table>
+      <div class="footer">
+        <p>Total de eventos: ${datosFormato.length}</p>
+      </div>
+    </body>
+    </html>
+    `
+
+    descargarArchivo(htmlContent, nombreArchivo, 'text/html;charset=utf-8;')
+  }
+
+  /**
+   * Exportar a Excel
+   */
+  function exportarExcel(datosExportar, nombreArchivo = 'bitacora.xlsx') {
+    const datosFormato = prepararDatosExportacion(datosExportar)
+    if (datosFormato.length === 0) {
+      alert('No hay datos para exportar')
+      return
+    }
+
+    // Crear un nuevo workbook
+    const ws = XLSX.utils.json_to_sheet(datosFormato)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Bitácora')
+
+    // Ajustar ancho de columnas
+    const colWidths = [20, 20, 25, 25, 20, 40, 30, 15]
+    ws['!cols'] = colWidths.map((width) => ({ wch: width }))
+
+    // Descargar archivo
+    XLSX.writeFile(wb, nombreArchivo)
+  }
+
+  /**
+   * Manejar exportación  
+   */
+  async function handleExportarListado(formato) {
+    if (eventos.length === 0) {
+      alert('No hay eventos para exportar')
+      return
+    }
+
+    const timestamp = new Date().toISOString().split('T')[0]
+    const nombreBase = `bitacora_${timestamp}`
+
+    switch (formato) {
+      case 'csv':
+        exportarCSV(eventos, `${nombreBase}.csv`)
+        break
+      case 'html':
+        exportarHTML(eventos, `${nombreBase}.html`)
+        break
+      case 'excel':
+        exportarExcel(eventos, `${nombreBase}.xlsx`)
+        break
+      default:
+        break
+    }
+  }
+
+  /**
+   * Manejar exportación de todos los datos (descarga completa con filtros aplicados)
+   */
+  async function handleExportarTodo(formato) {
+    setExportandoTodo(true)
+    try {
+      // Obtener todos los datos con los filtros aplicados sin paginación
+      const respuesta = await auditoriaService.listarEventos(tenantSlug, {
+        page: 1,
+        page_size: 999999, // Número muy grande para obtener todos los registros
+        ...filtros,
+      })
+
+      const datosCompletos = respuesta.results || []
+      if (datosCompletos.length === 0) {
+        alert('No hay eventos para exportar con los filtros aplicados')
+        return
+      }
+
+      const timestamp = new Date().toISOString().split('T')[0]
+      const nombreBase = `bitacora_completa_${timestamp}`
+
+      switch (formato) {
+        case 'csv':
+          exportarCSV(datosCompletos, `${nombreBase}.csv`)
+          break
+        case 'html':
+          exportarHTML(datosCompletos, `${nombreBase}.html`)
+          break
+        case 'excel':
+          exportarExcel(datosCompletos, `${nombreBase}.xlsx`)
+          break
+        default:
+          break
+      }
+    } catch (err) {
+      alert('Error al exportar: ' + (err.response?.data?.error || err.message || 'Error desconocido'))
+      console.error('Error en handleExportarTodo:', err)
+    } finally {
+      setExportandoTodo(false)
+    }
+  }
+
   function limpiarFiltros() {
     setFiltros({
       search: '',
       accion: '',
-      entidad_tipo: '',
-      usuario: '',
       created_at__gte: '',
       created_at__lte: '',
       ordering: '-created_at',
@@ -328,7 +557,7 @@ export const BitacoraView = ({ tenantSlug }) => {
         </div>
       )}
 
-      {/* ACCIONES FRECUENTES */}
+      {/* ACCIONES FRECUENTES 
       {resumen?.acciones_frecuentes && resumen.acciones_frecuentes.length > 0 && (
         <div className="bg-white dark:bg-slate-900 rounded-lg p-6 shadow-sm border border-slate-200 dark:border-slate-800 transition-colors">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
@@ -349,7 +578,7 @@ export const BitacoraView = ({ tenantSlug }) => {
           </div>
         </div>
       )}
-
+      */}
       {/* FILTROS */}
       <div className="bg-white dark:bg-slate-900 rounded-lg p-6 shadow-sm border border-slate-200 dark:border-slate-800 transition-colors">
         <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
@@ -393,48 +622,7 @@ export const BitacoraView = ({ tenantSlug }) => {
             </div>
           </div>
 
-          {/* Fila 2: Entidad y Usuario */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Entidad */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Tipo de Entidad
-              </label>
-              <select
-                value={filtros.entidad_tipo}
-                onChange={(e) => setFiltros({ ...filtros, entidad_tipo: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-              >
-                <option value="">Todas las entidades</option>
-                {entidadesDisponibles.map((entidad) => (
-                  <option key={entidad} value={entidad}>
-                    {entidad}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Usuario */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Usuario
-              </label>
-              <select
-                value={filtros.usuario}
-                onChange={(e) => setFiltros({ ...filtros, usuario: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-              >
-                <option value="">Todos los usuarios</option>
-                {usuarios.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.nombres} {u.apellidos} ({u.email})
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Fila 3: Fechas y Orden */}
+          {/* Fila 2: Fechas y Orden */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Desde */}
             <div>
@@ -479,7 +667,7 @@ export const BitacoraView = ({ tenantSlug }) => {
           </div>
 
           {/* Botones de acción */}
-          <div className="flex gap-2 pt-2">
+          <div className="flex flex-wrap gap-2 pt-2">
             <button
               onClick={aplicarFiltros}
               disabled={cargandoListado}
@@ -493,7 +681,77 @@ export const BitacoraView = ({ tenantSlug }) => {
             >
               Limpiar
             </button>
+
+            {/* Separador visual */}
+            <div className="hidden md:block flex-grow"></div>
+
+            {/* Botones de exportación */}
+            <div className="flex flex-wrap gap-2">
+              <div className="flex items-center">
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-300 mr-2">
+                  📥 Exportar:
+                </span>
+              </div>
+
+              {/* Exportar página actual */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleExportarListado('csv')}
+                  className="px-4 py-2 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors font-medium text-sm"
+                  title="Exportar página actual a CSV"
+                >
+                  CSV
+                </button>
+                <button
+                  onClick={() => handleExportarListado('excel')}
+                  className="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors font-medium text-sm"
+                  title="Exportar página actual a Excel"
+                >
+                  Excel
+                </button>
+                <button
+                  onClick={() => handleExportarListado('html')}
+                  className="px-4 py-2 bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 border border-orange-200 dark:border-orange-800 rounded-lg hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-colors font-medium text-sm"
+                  title="Exportar página actual a HTML"
+                >
+                  HTML
+                </button>
+              </div>
+
+              {/* Exportar todo con filtros */}
+              <div className="flex gap-2 ml-2 pl-2 border-l border-slate-300 dark:border-slate-600">
+                <button
+                  onClick={() => handleExportarTodo('csv')}
+                  disabled={exportandoTodo}
+                  className="px-3 py-2 bg-green-600 dark:bg-green-700 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-800 transition-colors font-medium text-xs disabled:opacity-50"
+                  title="Exportar todo (con filtros) a CSV"
+                >
+                  {exportandoTodo ? '⏳' : '📊'} CSV
+                </button>
+                <button
+                  onClick={() => handleExportarTodo('excel')}
+                  disabled={exportandoTodo}
+                  className="px-3 py-2 bg-blue-600 dark:bg-blue-700 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-800 transition-colors font-medium text-xs disabled:opacity-50"
+                  title="Exportar todo (con filtros) a Excel"
+                >
+                  {exportandoTodo ? '⏳' : '📊'} Excel
+                </button>
+                <button
+                  onClick={() => handleExportarTodo('html')}
+                  disabled={exportandoTodo}
+                  className="px-3 py-2 bg-orange-600 dark:bg-orange-700 text-white rounded-lg hover:bg-orange-700 dark:hover:bg-orange-800 transition-colors font-medium text-xs disabled:opacity-50"
+                  title="Exportar todo (con filtros) a HTML"
+                >
+                  {exportandoTodo ? '⏳' : '📊'} HTML
+                </button>
+              </div>
+            </div>
           </div>
+
+          {/* Nota de información sobre exportación */}
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+            💡 Botones claros: exportan página actual ({eventos.length} eventos) | Botones oscuros: exportan todos los datos con filtros aplicados
+          </p>
         </div>
       </div>
 
@@ -749,7 +1007,6 @@ export const BitacoraView = ({ tenantSlug }) => {
                     </p>
                   </div>
                 </div>
-
                 {/* Acción */}
                 <div>
                   <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
@@ -759,7 +1016,6 @@ export const BitacoraView = ({ tenantSlug }) => {
                     {labelAccion(detalleEvento.accion)}
                   </span>
                 </div>
-
                 {/* Usuario */}
                 <div>
                   <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
@@ -774,7 +1030,6 @@ export const BitacoraView = ({ tenantSlug }) => {
                     )}
                   </p>
                 </div>
-
                 {/* Entidad */}
                 <div>
                   <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
@@ -810,7 +1065,7 @@ export const BitacoraView = ({ tenantSlug }) => {
                       {detalleEvento.ip || 'N/A'}
                     </p>
                   </div>
-                  {/* User Agent - Oculto visualmente pero capturado en datos para auditoría future
+                  {/* User Agent - Oculto visualmente pero capturado
                   <div>
                     <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                       User Agent
@@ -837,7 +1092,6 @@ export const BitacoraView = ({ tenantSlug }) => {
                 </div>
               </div>
             ) : null}
-
             {/* Footer */}
             <div className="flex justify-end gap-2 p-6 border-t border-slate-200 dark:border-slate-700">
               <button
@@ -853,5 +1107,4 @@ export const BitacoraView = ({ tenantSlug }) => {
     </div>
   )
 }
-
 export default BitacoraView

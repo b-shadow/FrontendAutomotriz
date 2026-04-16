@@ -1,14 +1,14 @@
 import { useState } from 'react'
 import {
-  //canViewBitacora,
+  canViewBitacora,
   canManageUsers,
   canManageCompany,
   canManageSuscription,
-  //canViewVehiculos,
-  //canViewServiciosCatalogo,
-  //canViewEspaciosTrabajo,
-  //canViewPlanVehiculo,
-  //canViewCitas,
+  canViewVehiculos,
+  canViewServiciosCatalogo,
+  canViewEspaciosTrabajo,
+  canViewPlanVehiculo,
+  canViewCitas,
 } from '../utils/roleHelper'
 
 // Icono Chevron
@@ -42,9 +42,20 @@ export const TenantSidebar = ({
     gestionUsuarios: true,
     reportesEstadisticas: false,
     modulo2: false,
-    modulo3: false,
-    modulo4: false,
+    // modulo3: false, // Deshabilitado
+    // modulo4: false, // Deshabilitado
   })
+
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+
+  const handleLogoutClick = () => {
+    setShowLogoutConfirm(true)
+  }
+
+  const handleConfirmLogout = () => {
+    setShowLogoutConfirm(false)
+    onLogout()
+  }
 
   const toggleModule = (moduleName) => {
     setExpandedModules((prev) => ({
@@ -89,7 +100,7 @@ export const TenantSidebar = ({
       label: '🚗 Vehículos, Servicios y Citas',
       icon: '🚗',
       items: [
-        /* {
+        {
           id: 'gestionVehiculos',
           label: '🚗 Gestionar Vehículos',
           visible: canViewVehiculos(user),
@@ -118,9 +129,10 @@ export const TenantSidebar = ({
           id: 'citas',
           label: '📅 Gestionar Citas',
           visible: canViewCitas(user),
-        }, */
+        },
       ],
     },
+    /* TODO: Habilitar en futuras versiones
     modulo3: {
       label: '📈 Módulo',
       icon: '📈',
@@ -143,11 +155,12 @@ export const TenantSidebar = ({
         },
       ],
     },
+    */
     reportesEstadisticas: {
       label: '📊 Reportes y Estadísticas',
       icon: '📊',
       items: [
-        /* {
+        {
           id: 'generarReportes',
           label: '📄 Generar Reportes',
           visible: true,
@@ -166,7 +179,7 @@ export const TenantSidebar = ({
           id: 'gestionarBackup',
           label: '💾 Gestionar Backup',
           visible: true,
-        }, */
+        },
       ],
     },
   }
@@ -174,8 +187,8 @@ export const TenantSidebar = ({
   const modules = [
     'gestionUsuarios',
     'modulo2',
-    'modulo3',
-    'modulo4',
+    // 'modulo3', // Deshabilitado por el momento
+    // 'modulo4', // Deshabilitado por el momento
     'reportesEstadisticas',
   ]
 
@@ -310,13 +323,42 @@ export const TenantSidebar = ({
         {/* Footer */}
         <div className="border-t border-slate-200/70 px-4 py-4 dark:border-white/10">
           <button
-            onClick={onLogout}
+            onClick={handleLogoutClick}
             className="w-full rounded-2xl bg-gradient-to-r from-red-600 to-rose-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-red-900/20 transition hover:scale-[1.01] hover:from-red-500 hover:to-rose-500"
           >
             🚪 Cerrar Sesión
           </button>
         </div>
       </aside>
+
+      {/* Modal de confirmación */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-3xl border border-slate-200/70 bg-white/98 p-6 shadow-2xl dark:border-white/10 dark:bg-[#0f0a25]/98">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">
+              ¿Cerrar sesión?
+            </h2>
+            <p className="text-slate-600 dark:text-slate-400 mb-6">
+              ¿Estás seguro de que deseas cerrar sesión? Tendrás que volver a iniciar sesión para acceder a tu cuenta.
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="flex-1 rounded-2xl border border-slate-200/70 bg-slate-100 px-4 py-3 font-semibold text-slate-900 transition hover:bg-slate-200 dark:border-white/10 dark:bg-white/[0.06] dark:text-slate-100 dark:hover:bg-white/[0.12]"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmLogout}
+                className="flex-1 rounded-2xl bg-gradient-to-r from-red-600 to-rose-600 px-4 py-3 font-semibold text-white shadow-lg shadow-red-900/20 transition hover:from-red-500 hover:to-rose-500"
+              >
+                Cerrar Sesión
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }

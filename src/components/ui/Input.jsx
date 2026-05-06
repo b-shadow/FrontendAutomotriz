@@ -9,7 +9,7 @@ export const Input = ({
   return (
     <div className="flex flex-col gap-1.5">
       {label && (
-        <label className="block text-sm font-semibold text-gray-700">
+        <label className="block text-sm font-semibold text-carbon-700">
           {label}
         </label>
       )}

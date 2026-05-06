@@ -33,9 +33,7 @@ const vehiculosService = {
       if (filtros.page) params.append('page', filtros.page)
 
       const queryString = params.toString()
-      const url = queryString
-        ? `/api/${tenantSlug}/vehiculos/?${queryString}`
-        : `/api/${tenantSlug}/vehiculos/`
+      const url = queryString ? `/api/${tenantSlug}/vehiculos/?${queryString}` : `/api/${tenantSlug}/vehiculos/`
 
       const response = await apiClient.get(url)
       return response.data

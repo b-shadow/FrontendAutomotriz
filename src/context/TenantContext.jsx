@@ -24,11 +24,11 @@ function TenantProvider({ children, tenant, tenantSlug }) {
     }
   }, [tenantSlug])
   const value = {
-    tenant,           // Objeto empresa { id, nombre, slug, estado }
-    tenantSlug,       // Slug de la URL
-    user,             // Usuario autenticado en este tenant
+    tenant, // Objeto empresa { id, nombre, slug, estado }
+    tenantSlug, // Slug de la URL
+    user, // Usuario autenticado en este tenant
     setUser: setSessionUser, // Actualizar usuario
-    logout,           // Logout del tenant
+    logout, // Logout del tenant
     isLoggedIn: !!user, // Verificar si hay sesión activa
   }
   return (

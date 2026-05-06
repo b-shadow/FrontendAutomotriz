@@ -41,7 +41,7 @@ const suscripcionService = {
       return response.data
     } catch (error) {
       console.error('Error al cambiar plan:', error)
-      const mensaje = error.response?.data?.error || error.response?.data?.detail || error.message
+      const mensaje = error.response.data.error || error.response.data.detail || error.message
       const nuevoError = new Error(mensaje)
       nuevoError.response = error.response
       throw nuevoError
@@ -55,7 +55,7 @@ const suscripcionService = {
   obtenerPlanes: async () => {
     try {
       const response = await apiClient.get('/api/planes/')
-      return response.data.results ?? response.data
+      return response.data.results ? response.data.results : response.data
     } catch (error) {
       console.error('Error al obtener planes:', error)
       throw error
@@ -90,14 +90,13 @@ const suscripcionService = {
       const response = await apiClient.post(
         `/api/${tenantSlug}/suscripciones/crear_payment_intent/`,
         {
-          planId: datos.planId,
-          accion: datos.accion
+          planId: datos.planId, accion : datos.accion
         }
       )
       return response.data
     } catch (error) {
       console.error('Error al crear payment intent:', error)
-      const mensaje = error.response?.data?.error || error.response?.data?.detail || error.message
+      const mensaje = error.response.data.error || error.response.data.detail || error.message
       const nuevoError = new Error(mensaje)
       nuevoError.response = error.response
       throw nuevoError
@@ -116,15 +115,14 @@ const suscripcionService = {
       const response = await apiClient.post(
         `/api/${tenantSlug}/suscripciones/confirmar_pago/`,
         {
-          paymentIntentId: datos.paymentIntentId,
-          planId: datos.planId,
+          paymentIntentId: datos.paymentIntentId, planId : datos.planId,
           accion: datos.accion
         }
       )
       return response.data
     } catch (error) {
       console.error('Error al confirmar pago:', error)
-      const mensaje = error.response?.data?.error || error.response?.data?.detail || error.message
+      const mensaje = error.response.data.error || error.response.data.detail || error.message
       const nuevoError = new Error(mensaje)
       nuevoError.response = error.response
       throw nuevoError
@@ -146,7 +144,7 @@ const suscripcionService = {
       return response.data
     } catch (error) {
       console.error('Error al cancelar cambio pendiente:', error)
-      const mensaje = error.response?.data?.error || error.response?.data?.detail || error.message
+      const mensaje = error.response.data.error || error.response.data.detail || error.message
       const nuevoError = new Error(mensaje)
       nuevoError.response = error.response
       throw nuevoError

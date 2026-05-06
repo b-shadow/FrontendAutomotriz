@@ -8,8 +8,7 @@ export const authService = {
   //ADMIN AUTH
   async loginAdmin() {
     return {
-      success: false,
-      error: 'Login admin no disponible en este flujo. Admin login es via Django admin.',
+      success: false, error : 'Login admin no disponible en este flujo. Admin login es via Django admin.',
     }
   },
   logoutAdmin() {
@@ -27,13 +26,11 @@ export const authService = {
     try {
       const response = await publicApiClient.get('/api/planes/')
       return {
-        success: true,
-        planes: response.data.results || response.data,
+        success: true, planes : response.data.results || response.data,
       }
     } catch {
       return {
-        success: false,
-        error: 'Error al cargar planes',
+        success: false, error : 'Error al cargar planes',
         planes: [],
       }
     }
@@ -43,13 +40,11 @@ export const authService = {
     try {
       const response = await publicApiClient.get('/api/empresas/')
       return {
-        success: true,
-        empresas: response.data.results || response.data,
+        success: true, empresas : response.data.results || response.data,
       }
     } catch {
       return {
-        success: false,
-        error: 'Error al cargar empresas',
+        success: false, error : 'Error al cargar empresas',
         empresas: [],
       }
     }
@@ -61,14 +56,12 @@ export const authService = {
         params: { slug },
       })
       return {
-        success: true,
-        tenant: response.data,
+        success: true, tenant : response.data,
       }
     } catch (err) {
       return {
-        success: false,
-        error: err.response?.data?.error || 'Empresa no encontrada',
-        status: err.response?.status,
+        success: false, error : err.response.data.error || 'Empresa no encontrada',
+        status: err.response.status,
       }
     }
   },
@@ -93,7 +86,7 @@ export const authService = {
         tokens,
       }
     } catch (err) {
-      const errorData = err.response?.data || {}
+      const errorData = err.response.data || {}
       let errorMsg = 'Error al registrar'
       // Manejar diferentes formatos de error del backend
       if (errorData.email && Array.isArray(errorData.email)) {
@@ -112,8 +105,7 @@ export const authService = {
         errorMsg = errorData.detail
       }
       return {
-        success: false,
-        error: errorMsg,
+        success: false, error : errorMsg,
       }
     }
   },
@@ -138,8 +130,7 @@ export const authService = {
       }
     } catch (err) {
       return {
-        success: false,
-        error: err.response?.data?.detail || 'Email o contraseña inválidos',
+        success: false, error : err.response.data.detail || 'Email o contraseña inválidos',
       }
     }
   },
@@ -172,13 +163,11 @@ export const authService = {
         { email }
       )
       return {
-        success: true,
-        message: 'Email de recuperación enviado',
+        success: true, message : 'Email de recuperación enviado',
       }
     } catch {
       return {
-        success: false,
-        error: 'Error al enviar email de recuperación',
+        success: false, error : 'Error al enviar email de recuperación',
       }
     }
   },
@@ -187,21 +176,17 @@ export const authService = {
   async crearPagoEmpresa(planId, empresaData, usuarioData) {
     try {
       const response = await publicApiClient.post('/api/pagos/crear_pago/', {
-        plan_id: planId,
-        empresa_nombre: empresaData.nombre,
-        empresa_slug: empresaData.slug,
-        usuario_nombres: usuarioData.nombres,
-        usuario_apellidos: usuarioData.apellidos,
-        usuario_email: usuarioData.email,
+        plan_id: planId, empresa_nombre : empresaData.nombre,
+        empresa_slug: empresaData.slug, usuario_nombres : usuarioData.nombres,
+        usuario_apellidos: usuarioData.apellidos, usuario_email : usuarioData.email,
         usuario_password: usuarioData.password,
       })
       return {
-        success: true,
-        paymentIntentId: response.data.paymentIntentId,
+        success: true, paymentIntentId : response.data.paymentIntentId,
         paymentIntent: response.data,
       }
     } catch (err) {
-      const errorData = err.response?.data || {}
+      const errorData = err.response.data || {}
       let errorMsg = 'Error al crear pago'
 
       if (errorData.error) {
@@ -209,8 +194,7 @@ export const authService = {
       }
 
       return {
-        success: false,
-        error: errorMsg,
+        success: false, error : errorMsg,
       }
     }
   },
@@ -222,11 +206,10 @@ export const authService = {
         payment_intent_id: paymentIntentId,
       })
       return {
-        success: true,
-        empresa: response.data.empresa || response.data,
+        success: true, empresa : response.data.empresa || response.data,
       }
     } catch (err) {
-      const errorData = err.response?.data || {}
+      const errorData = err.response.data || {}
       let errorMsg = 'Error al confirmar pago'
       if (errorData.error) {
         errorMsg = errorData.error
@@ -234,8 +217,7 @@ export const authService = {
         errorMsg = errorData.detail
       }
       return {
-        success: false,
-        error: errorMsg,
+        success: false, error : errorMsg,
       }
     }
   },
@@ -254,16 +236,13 @@ export const authService = {
         { params }
       )
       return {
-        success: true,
-        eventos: response.data.results || response.data,
+        success: true, eventos : response.data.results || response.data,
         total: response.data.count || (Array.isArray(response.data) ? response.data.length : 0),
       }
     } catch (err) {
       return {
-        success: false,
-        error: err.response?.data?.detail || 'Error al cargar auditoría',
-        eventos: [],
-        total: 0,
+        success: false, error : err.response.data.detail || 'Error al cargar auditoría',
+        eventos: [], total : 0,
       }
     }
   },
@@ -275,13 +254,11 @@ export const authService = {
         `/api/${tenantSlug}/auditoria/resumen/`
       )
       return {
-        success: true,
-        resumen: response.data,
+        success: true, resumen : response.data,
       }
     } catch (err) {
       return {
-        success: false,
-        error: err.response?.data?.detail || 'Error al cargar resumen',
+        success: false, error : err.response.data.detail || 'Error al cargar resumen',
         resumen: null,
       }
     }

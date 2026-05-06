@@ -10,6 +10,7 @@
  * 
  * REGLA: Backend es autoridad única sobre segmentos, fragmentación, estado
  */
+import { Info, Hourglass, Check, AlertTriangle, XCircle } from 'lucide-react';
 import React, { useState, useEffect } from 'react'
 import { useTenant } from '../../hooks/useTenant'
 import citasService from '../../services/citasService'
@@ -25,14 +26,10 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
 
   // Form data
   const [formData, setFormData] = useState({
-    vehiculo_id: null,
-    cliente_id: null,
-    plan_servicio_id: null,
-    servicios_plan_detalle_ids: [],
-    fecha_hora_inicio_programada: '',
-    espacio_trabajo_id: null,
-    observaciones_cliente: '',
-    canal_origen: 'CLIENTE',  // Always CLIENTE from frontend (users or asesor on behalf)
+    vehiculo_id: null, cliente_id : null,
+    plan_servicio_id: null, servicios_plan_detalle_ids : [],
+    fecha_hora_inicio_programada: '', espacio_trabajo_id : null,
+    observaciones_cliente: '', canal_origen : 'CLIENTE',  // Always CLIENTE from frontend (users or asesor on behalf)
   })
 
   // Data for selectors
@@ -72,14 +69,14 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
           page_size: 1000,
         })
         console.debug('[CitaModalCrear] Response de espacios:', resEspacios)
-        const espaciosList = resEspacios?.espacios || []
+        const espaciosList = resEspacios.espacios || []
         setEspacios(espaciosList)
         console.debug('[CitaModalCrear] Espacios establecidos:', {
           count: espaciosList.length,
           espacios: espaciosList.map((e) => ({ id: e.id, nombre: e.nombre })),
         })
       } catch (err) {
-        console.error('❌ Error cargando datos iniciales:', err)
+        console.error(' Error cargando datos iniciales:', err)
         setError('Error al cargar datos iniciales')
       } finally {
         setLoading(false)
@@ -104,20 +101,15 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
         const fechaLocal = formData.fecha_hora_inicio_programada
 
         console.debug('[CitaModalCrear Preview] Enviando fecha sin conversión:', {
-          fechaLocal,
-          payload: {
-            vehiculo_id: formData.vehiculo_id,
-            servicios_ids: formData.servicios_plan_detalle_ids,
-            fecha_hora_inicio: fechaLocal,
-            espacio_trabajo_id: formData.espacio_trabajo_id || undefined,
+          fechaLocal, payload : {
+            vehiculo_id: formData.vehiculo_id, servicios_ids : formData.servicios_plan_detalle_ids,
+            fecha_hora_inicio: fechaLocal, espacio_trabajo_id : formData.espacio_trabajo_id || undefined,
           }
         })
 
         const response = await citasService.previewIntencion(tenantSlug, {
-          vehiculo_id: formData.vehiculo_id,
-          servicios_ids: formData.servicios_plan_detalle_ids,
-          fecha_hora_inicio: fechaLocal,
-          espacio_trabajo_id: formData.espacio_trabajo_id || undefined,
+          vehiculo_id: formData.vehiculo_id, servicios_ids : formData.servicios_plan_detalle_ids,
+          fecha_hora_inicio: fechaLocal, espacio_trabajo_id : formData.espacio_trabajo_id || undefined,
         })
 
         console.debug('[CitaModalCrear Preview] Respuesta:', response)
@@ -125,8 +117,7 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
       } catch (err) {
         console.error('Error cargando preview:', err)
         setPreview({
-          es_valida: false,
-          mensajes: ['Error validando la intención. Intenta de nuevo.'],
+          es_valida: false, mensajes : ['Error validando la intención. Intenta de nuevo.'],
         })
       } finally {
         setPreviewLoading(false)
@@ -157,8 +148,7 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
       setEspacioValidationLoading(true)
       try {
         const response = await citasService.validarDisponibilidadEspacio(tenantSlug, {
-          espacio_trabajo_id: formData.espacio_trabajo_id,
-          fecha_hora_inicio: formData.fecha_hora_inicio_programada,
+          espacio_trabajo_id: formData.espacio_trabajo_id, fecha_hora_inicio : formData.fecha_hora_inicio_programada,
           duracion_requerida_min: duracionEstimada,
         })
 
@@ -167,8 +157,7 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
       } catch (err) {
         console.error('Error validando disponibilidad de espacio:', err)
         setEspacioValidation({
-          disponible: false,
-          error: err.response?.data?.detail || 'Error al validar disponibilidad',
+          disponible: false, error : err.response.data.detail || 'Error al validar disponibilidad',
         })
       } finally {
         setEspacioValidationLoading(false)
@@ -186,10 +175,8 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
   // When vehicle changes
   const handleVehiculoChange = async (vehiculoId) => {
     setFormData((prev) => ({
-      ...prev,
-      vehiculo_id: vehiculoId,
-      cliente_id: null,
-      plan_servicio_id: null,
+      ...prev, vehiculo_id : vehiculoId,
+      cliente_id: null, plan_servicio_id : null,
       servicios_plan_detalle_ids: [],
       // NO reseteamos espacio_trabajo_id para que el usuario pueda pre-seleccionar
     }))
@@ -198,8 +185,7 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
     if (vehiculo) {
       // Derive customer automatically
       setFormData((prev) => ({
-        ...prev,
-        cliente_id: vehiculo.propietario.id,
+        ...prev, cliente_id : vehiculo.propietario.id,
         plan_servicio_id: vehiculo.plan_servicio_id,  // ← ASIGNAR EL PLAN
       }))
 
@@ -224,14 +210,13 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
   // When services change
   const handleServiciosChange = (servicioIds) => {
     setFormData((prev) => ({
-      ...prev,
-      servicios_plan_detalle_ids: servicioIds,
+      ...prev, servicios_plan_detalle_ids : servicioIds,
     }))
 
     // Calculate estimated duration (UX only, not authority)
     const duracion = servicioIds.reduce((sum, id) => {
       const servicio = serviciosDelPlan.find((s) => s.id === id)
-      return sum + (servicio?.tiempo_estandar_min || 0)
+      return sum + (servicio.tiempo_estandar_min || 0)
     }, 0)
     setDuracionEstimada(duracion)
   }
@@ -255,12 +240,9 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
 
       // Construir payload - solo incluir espacio_trabajo_id si tiene valor
       const payload = {
-        vehiculo_id: formData.vehiculo_id,
-        cliente_id: formData.cliente_id,
-        plan_servicio_id: formData.plan_servicio_id,
-        servicios_plan_detalle_ids: formData.servicios_plan_detalle_ids,
-        fecha_hora_inicio_programada: fechaLocal,
-        observaciones_cliente: formData.observaciones_cliente,
+        vehiculo_id: formData.vehiculo_id, cliente_id : formData.cliente_id,
+        plan_servicio_id: formData.plan_servicio_id, servicios_plan_detalle_ids : formData.servicios_plan_detalle_ids,
+        fecha_hora_inicio_programada: fechaLocal, observaciones_cliente : formData.observaciones_cliente,
         canal_origen: formData.canal_origen,
       }
 
@@ -276,7 +258,7 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
 
       onSuccess()
     } catch (err) {
-      setError(err.response?.data?.detail || 'Error creando cita')
+      setError(err.response.data.detail || 'Error creando cita')
     } finally {
       setLoading(false)
     }
@@ -286,21 +268,21 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
   const cliente = vehiculoSeleccionado?.propietario || vehiculoSeleccionado?.cliente
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-screen overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50">
+      <div className="bg-white dark:bg-carbon-900 text-carbon-900 dark:text-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-screen overflow-y-auto border border-neutral-200 dark:border-white/[0.08]">
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold">Nueva Cita</h2>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 text-2xl"
+            className="text-carbon-500 hover:text-carbon-700 dark:text-neutral-300 dark:hover:text-white text-2xl"
           >
             ×
           </button>
         </div>
 
         {error && (
-          <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg mb-4">
+          <div className="bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-200 px-4 py-3 rounded-lg mb-4">
             {error}
           </div>
         )}
@@ -314,7 +296,7 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
               <select
                 value={formData.vehiculo_id || ''}
                 onChange={(e) => handleVehiculoChange(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 bg-white dark:bg-carbon-900 text-carbon-900 dark:text-white border-neutral-200 dark:border-white/[0.08]"
               >
                 <option value="">Selecciona vehículo</option>
                 {vehiculos.map((v) => (
@@ -326,21 +308,21 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
             </div>
 
             {cliente && (
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm">
+              <div className="bg-neutral-50 dark:bg-carbon-800/60 p-4 rounded-lg">
+                <p className="text-sm text-carbon-800 dark:text-neutral-200">
                   <strong>Cliente (derivado):</strong> {cliente.nombre_completo || cliente.nombres}
                 </p>
               </div>
             )}
 
             <div className="flex gap-2 justify-end">
-              <button onClick={onClose} className="px-4 py-2 text-gray-600">
+              <button onClick={onClose} className="px-4 py-2 text-carbon-600 dark:text-neutral-300">
                 Cancelar
               </button>
               <button
                 onClick={() => setStep(2)}
                 disabled={!formData.vehiculo_id}
-                className="px-4 py-2 bg-purple-600 text-white rounded-lg disabled:opacity-50"
+                className="px-4 py-2 bg-primary-600 text-white rounded-lg disabled:opacity-50"
               >
                 Siguiente
               </button>
@@ -356,7 +338,7 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
               <label className="block text-sm font-medium mb-2">
                 Servicios a realizar
               </label>
-              <div className="space-y-2 max-h-48 overflow-y-auto border rounded-lg p-3">
+              <div className="space-y-2 max-h-48 overflow-y-auto border rounded-lg p-3 bg-white dark:bg-carbon-900 border-neutral-200 dark:border-white/[0.08]">
                 {serviciosDelPlan.map((servicio) => {
                   // Verificar si el servicio tiene estado PROGRAMADO
                   const enUso = servicio.estado === 'PROGRAMADO'
@@ -377,9 +359,9 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
                         disabled={enUso}
                         className="rounded"
                       />
-                      <span className={`text-sm ${enUso ? 'text-gray-400 line-through' : ''}`}>
+                      <span className={`text-sm ${enUso ? 'text-neutral-400 dark:text-neutral-500 line-through' : 'text-carbon-800 dark:text-neutral-200'}`}>
                         {servicio.servicio_nombre} ({servicio.tiempo_estandar_min} min)
-                        {enUso && <span className="ml-2 text-xs text-red-600">(programado)</span>}
+                        {enUso && <span className="ml-2 text-xs text-red-600 dark:text-red-300">(programado)</span>}
                       </span>
                     </label>
                   )
@@ -388,7 +370,7 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
             </div>
 
             {duracionEstimada > 0 && (
-              <div className="bg-blue-50 p-3 rounded-lg text-sm">
+              <div className="bg-blue-50 dark:bg-blue-900/20 text-carbon-800 dark:text-blue-100 p-3 rounded-lg text-sm">
                 <strong>Duración estimada:</strong> {duracionEstimada} minutos (se calcula al validar)
               </div>
             )}
@@ -396,14 +378,14 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
             <div className="flex gap-2 justify-end">
               <button
                 onClick={() => setStep(1)}
-                className="px-4 py-2 text-gray-600"
+                className="px-4 py-2 text-carbon-600 dark:text-neutral-300"
               >
                 Anterior
               </button>
               <button
                 onClick={() => setStep(3)}
                 disabled={formData.servicios_plan_detalle_ids.length === 0}
-                className="px-4 py-2 bg-purple-600 text-white rounded-lg disabled:opacity-50"
+                className="px-4 py-2 bg-primary-600 text-white rounded-lg disabled:opacity-50"
               >
                 Siguiente
               </button>
@@ -420,16 +402,15 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
               <label className="block text-sm font-medium mb-2">Fecha deseada</label>
               <input
                 type="date"
-                value={formData.fecha_hora_inicio_programada?.split('T')[0] || ''}
+                value={formData.fecha_hora_inicio_programada.split('T')[0] || ''}
                 onChange={(e) =>
                   setFormData((prev) => ({
-                    ...prev,
-                    fecha_hora_inicio_programada: `${e.target.value}T${
-                      formData.fecha_hora_inicio_programada?.split('T')[1] || '09:00:00'
+                    ...prev, fecha_hora_inicio_programada : `${e.target.value}T${
+                      formData.fecha_hora_inicio_programada.split('T')[1] || '09:00:00'
                     }`,
                   }))
                 }
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 bg-white dark:bg-carbon-900 text-carbon-900 dark:text-white border-neutral-200 dark:border-white/[0.08]"
               />
             </div>
 
@@ -437,25 +418,24 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
               <label className="block text-sm font-medium mb-2">Hora deseada</label>
               <input
                 type="time"
-                value={formData.fecha_hora_inicio_programada?.split('T')[1]?.slice(0, 5) || '09:00'}
+                value={formData.fecha_hora_inicio_programada.split('T')[1].slice(0, 5) || '09:00'}
                 onChange={(e) =>
                   setFormData((prev) => ({
-                    ...prev,
-                    fecha_hora_inicio_programada: `${
-                      formData.fecha_hora_inicio_programada?.split('T')[0] || '2026-03-25'
+                    ...prev, fecha_hora_inicio_programada : `${
+                      formData.fecha_hora_inicio_programada.split('T')[0] || '2026-03-25'
                     }T${e.target.value}:00`,
                   }))
                 }
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 bg-white dark:bg-carbon-900 text-carbon-900 dark:text-white border-neutral-200 dark:border-white/[0.08]"
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium mb-2">Espacio de trabajo (opcional)</label>
               {espacios.length === 0 ? (
-                <div className="w-full px-3 py-2 border rounded-lg bg-gray-50 text-gray-600">
+                <div className="w-full px-3 py-2 border rounded-lg bg-neutral-50 dark:bg-carbon-800/60 text-carbon-600 dark:text-neutral-300 border-neutral-200 dark:border-white/[0.08]">
                   <p className="text-sm">
-                    ℹ️ Sin espacios creados. El backend asignará automáticamente.
+                    <Info className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Sin espacios creados. El backend asignará automáticamente.
                   </p>
                 </div>
               ) : (
@@ -463,11 +443,10 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
                   value={formData.espacio_trabajo_id || ''}
                   onChange={(e) =>
                     setFormData((prev) => ({
-                      ...prev,
-                      espacio_trabajo_id: e.target.value || null,
+                      ...prev, espacio_trabajo_id : e.target.value || null,
                     }))
                   }
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 bg-white dark:bg-carbon-900 text-carbon-900 dark:text-white border-neutral-200 dark:border-white/[0.08]"
                 >
                   <option value="">Asignación automática</option>
                   {espacios.map((espacio) => (
@@ -477,32 +456,32 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
                   ))}
                 </select>
               )}
-              <p className="text-xs text-gray-500 mt-1">Si no seleccionas, el backend asignará un espacio disponible</p>
+              <p className="text-xs text-carbon-500 dark:text-neutral-400 mt-1">Si no seleccionas, el backend asignará un espacio disponible</p>
 
               {/* Real-time availability validation for selected espacio */}
               {formData.espacio_trabajo_id && (
                 <div className="mt-3">
                   {espacioValidationLoading && (
-                    <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg text-sm">
-                      ⏳ Validando disponibilidad del espacio...
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/40 text-carbon-800 dark:text-blue-100 p-3 rounded-lg text-sm">
+                      <Hourglass className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Validando disponibilidad del espacio...
                     </div>
                   )}
 
                   {espacioValidation && !espacioValidationLoading && (
                     <>
                       {espacioValidation.disponible ? (
-                        <div className="bg-green-50 border border-green-200 p-3 rounded-lg text-sm">
-                          <p className="text-green-800 font-semibold">✓ {espacioValidation.mensaje}</p>
-                          <p className="text-green-700 text-xs mt-1">
+                        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/40 p-3 rounded-lg text-sm">
+                          <p className="text-green-800 dark:text-green-200 font-semibold"><Check className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> {espacioValidation.mensaje}</p>
+                          <p className="text-green-700 dark:text-green-300 text-xs mt-1">
                             Disponible desde {new Date(espacioValidation.fecha_hora_inicio).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}
                           </p>
                         </div>
-                      ) : (
-                        <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg text-sm space-y-2">
-                          <p className="text-yellow-800 font-semibold">⚠️ {espacioValidation.mensaje}</p>
+              ) : (
+                        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800/40 p-3 rounded-lg text-sm space-y-2">
+                          <p className="text-yellow-800 dark:text-yellow-200 font-semibold"><AlertTriangle className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> {espacioValidation.mensaje}</p>
                           {espacioValidation.proximo_horario_disponible && (
-                            <div className="bg-yellow-100 p-2 rounded flex items-center justify-between">
-                              <span className="text-yellow-700 text-xs">
+                            <div className="bg-yellow-100 dark:bg-yellow-900/30 p-2 rounded flex items-center justify-between">
+                              <span className="text-yellow-700 dark:text-yellow-300 text-xs">
                                 Próximo horario disponible: <strong>{new Date(espacioValidation.proximo_horario_disponible).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</strong>
                               </span>
                               <button
@@ -512,8 +491,7 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
                                   const fechaStr = proximaHora.toISOString().split('T')[0]
                                   const horaStr = proximaHora.toTimeString().slice(0, 5)
                                   setFormData((prev) => ({
-                                    ...prev,
-                                    fecha_hora_inicio_programada: `${fechaStr}T${horaStr}:00`,
+                                    ...prev, fecha_hora_inicio_programada : `${fechaStr}T${horaStr}:00`,
                                   }))
                                 }}
                                 className="bg-yellow-700 hover:bg-yellow-800 text-white px-2 py-1 rounded text-xs font-semibold"
@@ -530,22 +508,22 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
               )}
             </div>
 
-            <div className="bg-yellow-50 p-3 rounded-lg text-sm">
-              <strong>ℹ️ Nota:</strong> Esta es tu intención de horario. El backend validará 
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 text-carbon-800 dark:text-yellow-100 p-3 rounded-lg text-sm">
+              <strong><Info className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Nota:</strong> Esta es tu intención de horario. El backend validará 
               disponibilidad y puede ajustar si hay conflictos (fragmentación, múltiples espacios, etc).
             </div>
 
             <div className="flex gap-2 justify-end">
               <button
                 onClick={() => setStep(2)}
-                className="px-4 py-2 text-gray-600"
+                className="px-4 py-2 text-carbon-600 dark:text-neutral-300"
               >
                 Anterior
               </button>
               <button
                 onClick={() => setStep(4)}
                 disabled={!formData.fecha_hora_inicio_programada}
-                className="px-4 py-2 bg-purple-600 text-white rounded-lg disabled:opacity-50"
+                className="px-4 py-2 bg-primary-600 text-white rounded-lg disabled:opacity-50"
               >
                 Siguiente
               </button>
@@ -560,26 +538,26 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
 
             {/* Validation status from backend preview */}
             {previewLoading && (
-              <div className="bg-blue-50 p-3 rounded-lg text-sm">
-                ⏳ Validando programación...
+              <div className="bg-blue-50 dark:bg-blue-900/20 text-carbon-800 dark:text-blue-100 p-3 rounded-lg text-sm">
+                <Hourglass className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Validando programación...
               </div>
             )}
 
             {preview && (
               <>
                 {preview.es_valida ? (
-                  <div className="bg-green-50 border border-green-200 p-3 rounded-lg">
-                    <p className="text-green-800 text-sm font-semibold">✓ Programación válida</p>
+                  <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/40 p-3 rounded-lg">
+                    <p className="text-green-800 dark:text-green-200 text-sm font-semibold"><Check className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Programación válida</p>
                     {preview.fragmentado && (
-                      <p className="text-green-700 text-xs mt-1">
-                        ⚠️ Se distribuirá en {preview.segmentos_preview?.length || 1} segmento(s) debido a horarios
+                      <p className="text-green-700 dark:text-green-300 text-xs mt-1">
+                        <AlertTriangle className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Se distribuirá en {preview.segmentos_preview.length || 1} segmento(s) debido a horarios
                       </p>
                     )}
                   </div>
-                ) : (
-                  <div className="bg-red-50 border border-red-200 p-3 rounded-lg">
-                    <p className="text-red-800 text-sm font-semibold">✗ Programación inválida</p>
-                    <p className="text-red-700 text-xs mt-1">
+              ) : (
+                  <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/40 p-3 rounded-lg">
+                    <p className="text-red-800 dark:text-red-200 text-sm font-semibold"><XCircle className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Programación inválida</p>
+                    <p className="text-red-700 dark:text-red-300 text-xs mt-1">
                       {preview.mensajes?.[0] || 'No se puede programar con estos parámetros'}
                     </p>
                   </div>
@@ -587,12 +565,12 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
               </>
             )}
 
-            <div className="bg-gray-50 p-4 rounded-lg space-y-2 text-sm">
+            <div className="bg-neutral-50 dark:bg-carbon-800/60 p-4 rounded-lg space-y-2 text-sm">
               <p>
-                <strong>Vehículo:</strong> {vehiculoSeleccionado?.placa}
+                <strong>Vehículo:</strong> {vehiculoSeleccionado.placa}
               </p>
               <p>
-                <strong>Cliente:</strong> {cliente?.nombre_completo || cliente?.nombres}
+                <strong>Cliente:</strong> {cliente.nombre_completo || cliente.nombres}
               </p>
               <p>
                 <strong># Servicios:</strong> {formData.servicios_plan_detalle_ids.length}
@@ -606,26 +584,25 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
               </p>
               
               {/* Show real end time from backend preview (not simple calculation) */}
-              {preview?.fecha_hora_fin_estimada ? (
-                <p className="font-medium text-purple-700">
+              {preview.fecha_hora_fin_estimada ? (
+                <p className="font-medium text-primary-700 dark:text-primary-300">
                   <strong>Fin estimado (real):</strong>{' '}
                   {new Date(preview.fecha_hora_fin_estimada).toLocaleString()}
-                </p>
-              ) : (
+                </p> ) : (
                 <p>
                   <strong>Fin estimado:</strong>{' '}
                   {new Date(new Date(formData.fecha_hora_inicio_programada).getTime() + duracionEstimada * 60000).toLocaleString()}
-                  {' '}<span className="text-gray-500 text-xs">(provisional)</span>
+                  {' '}<span className="text-carbon-500 dark:text-neutral-400 text-xs">(provisional)</span>
                 </p>
               )}
 
               {/* Show segmentos preview if fragmented */}
-              {preview?.fragmentado && preview?.segmentos_preview?.length > 0 && (
-                <div className="mt-3 pt-3 border-t">
+              {preview.fragmentado && preview.segmentos_preview.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-neutral-200 dark:border-white/[0.08]">
                   <p className="font-medium text-sm mb-2">Distribución por espacio:</p>
                   <div className="space-y-1">
                     {preview.segmentos_preview.map((seg, idx) => (
-                      <div key={idx} className="text-xs text-gray-600 ml-2">
+                      <div key={idx} className="text-xs text-carbon-600 dark:text-neutral-400 ml-2">
                         • {seg.espacio}: {new Date(seg.inicio).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} a {new Date(seg.fin).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} ({seg.duracion_min} min)
                       </div>
                     ))}
@@ -634,8 +611,8 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
               )}
             </div>
 
-            <div className="bg-yellow-50 p-3 rounded-lg text-sm">
-              <strong>⚠️ IMPORTANTE:</strong> Al confirmar, el backend:
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 text-carbon-800 dark:text-yellow-100 p-3 rounded-lg text-sm">
+              <strong><AlertTriangle className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> IMPORTANTE:</strong> Al confirmar, el backend:
               <ul className="mt-2 ml-4 list-disc space-y-1">
                 <li>Validará que la intención sea válida</li>
                 <li>Puede ajustar la hora fin real si hay conflictos o fragmentación</li>
@@ -649,18 +626,17 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
               value={formData.observaciones_cliente}
               onChange={(e) =>
                 setFormData((prev) => ({
-                  ...prev,
-                  observaciones_cliente: e.target.value,
+                  ...prev, observaciones_cliente : e.target.value,
                 }))
               }
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 bg-white dark:bg-carbon-900 text-carbon-900 dark:text-white border-neutral-200 dark:border-white/[0.08]"
               rows="3"
             />
 
             <div className="flex gap-2 justify-end">
               <button
                 onClick={() => setStep(3)}
-                className="px-4 py-2 text-gray-600"
+                className="px-4 py-2 text-carbon-600 dark:text-neutral-300"
               >
                 Anterior
               </button>

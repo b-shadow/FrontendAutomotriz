@@ -31,17 +31,13 @@ export const HorarioEspacioModal = ({
   const getInitialFormData = () => {
     if (isOpen && horario) {
       return {
-        dia_semana: String(horario.dia_semana),
-        hora_inicio: horario.hora_inicio || '',
-        hora_fin: horario.hora_fin || '',
-        activo: horario.activo !== false,
+        dia_semana: String(horario.dia_semana), hora_inicio : horario.hora_inicio || '',
+        hora_fin: horario.hora_fin || '', activo : horario.activo !== false,
       }
     }
     return {
-      dia_semana: '',
-      hora_inicio: '',
-      hora_fin: '',
-      activo: true,
+      dia_semana: '', hora_inicio : '',
+      hora_fin: '', activo : true,
     }
   }
 
@@ -87,8 +83,7 @@ export const HorarioEspacioModal = ({
     }
 
     const payload = {
-      dia_semana: Number(formData.dia_semana),
-      hora_inicio: formData.hora_inicio,
+      dia_semana: Number(formData.dia_semana), hora_inicio : formData.hora_inicio,
       hora_fin: formData.hora_fin,
     }
 
@@ -108,8 +103,7 @@ export const HorarioEspacioModal = ({
     }))
     if (errors[name]) {
       setErrors((prev) => ({
-        ...prev,
-        [name]: '',
+        ...prev, [name] : '',
       }))
     }
   }
@@ -132,24 +126,23 @@ export const HorarioEspacioModal = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-lg w-full max-w-md p-6">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+      <div className="bg-white dark:bg-carbon-800 rounded-lg shadow-lg w-full max-w-md p-6">
+        <h2 className="text-xl font-semibold text-carbon-900 dark:text-white mb-4">
           {isEditing ? 'Editar Horario' : 'Crear Horario'}
         </h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Día de la semana */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-carbon-700 dark:text-neutral-300 mb-2">
               Día de la Semana
             </label>
             <select
               name="dia_semana"
               value={formData.dia_semana}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg
-                bg-white dark:bg-slate-700 text-gray-900 dark:text-white
-                focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-neutral-300 dark:border-white/[0.08] rounded-lg
+                bg-white dark:bg-carbon-700 text-carbon-900 dark:text-white ? focus : ring-2 focus:ring-primary-500 focus:border-transparent"
             >
               <option value="">-- Selecciona un día --</option>
               {DIAS_SEMANA.map((dia) => (
@@ -158,14 +151,13 @@ export const HorarioEspacioModal = ({
                 </option>
               ))}
             </select>
-            {errors.dia_semana && (
-              <p className="text-sm text-red-600 dark:text-red-400 mt-1">{errors.dia_semana}</p>
+            {errors.dia_semana && (<p className="text-sm text-red-600 dark:text-red-400 mt-1">{errors.dia_semana}</p>
             )}
           </div>
 
           {/* Hora de inicio */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-carbon-700 dark:text-neutral-300 mb-2">
               Hora de Inicio
             </label>
             <input
@@ -173,18 +165,16 @@ export const HorarioEspacioModal = ({
               name="hora_inicio"
               value={formData.hora_inicio}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg
-                bg-white dark:bg-slate-700 text-gray-900 dark:text-white
-                focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-neutral-300 dark:border-white/[0.08] rounded-lg
+                bg-white dark:bg-carbon-700 text-carbon-900 dark:text-white ? focus : ring-2 focus:ring-primary-500 focus:border-transparent"
             />
-            {errors.hora_inicio && (
-              <p className="text-sm text-red-600 dark:text-red-400 mt-1">{errors.hora_inicio}</p>
+            {errors.hora_inicio && (<p className="text-sm text-red-600 dark:text-red-400 mt-1">{errors.hora_inicio}</p>
             )}
           </div>
 
           {/* Hora de fin */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-carbon-700 dark:text-neutral-300 mb-2">
               Hora de Fin
             </label>
             <input
@@ -192,12 +182,10 @@ export const HorarioEspacioModal = ({
               name="hora_fin"
               value={formData.hora_fin}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg
-                bg-white dark:bg-slate-700 text-gray-900 dark:text-white
-                focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-neutral-300 dark:border-white/[0.08] rounded-lg
+                bg-white dark:bg-carbon-700 text-carbon-900 dark:text-white ? focus : ring-2 focus:ring-primary-500 focus:border-transparent"
             />
-            {errors.hora_fin && (
-              <p className="text-sm text-red-600 dark:text-red-400 mt-1">{errors.hora_fin}</p>
+            {errors.hora_fin && (<p className="text-sm text-red-600 dark:text-red-400 mt-1">{errors.hora_fin}</p>
             )}
           </div>
 
@@ -210,10 +198,9 @@ export const HorarioEspacioModal = ({
                 id="activo"
                 checked={formData.activo}
                 onChange={handleChange}
-                className="w-4 h-4 text-primary-600 border-gray-300 dark:border-slate-600 rounded
-                  focus:ring-2 focus:ring-primary-500"
+                className="w-4 h-4 text-primary-600 border-neutral-300 dark:border-white/[0.08] rounded ? focus : ring-2 focus:ring-primary-500"
               />
-              <label htmlFor="activo" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+              <label htmlFor="activo" className="ml-2 text-sm text-carbon-700 dark:text-neutral-300">
                 Horario activo
               </label>
             </div>
@@ -225,8 +212,8 @@ export const HorarioEspacioModal = ({
               type="button"
               onClick={onClose}
               disabled={isLoading}
-              className="flex-1 px-4 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300
-                rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-2 border border-neutral-300 dark:border-white/[0.08] text-carbon-700 dark:text-neutral-300
+                rounded-lg hover:bg-neutral-50 dark:hover:bg-carbon-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancelar
             </button>
@@ -236,19 +223,18 @@ export const HorarioEspacioModal = ({
                 onClick={handleDelete}
                 disabled={isLoading}
                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  isDeleting
-                    ? 'bg-red-600 hover:bg-red-700 text-white'
+                  isDeleting ?
+                     'bg-red-600 hover:bg-red-700 text-white'
                     : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/50'
                 } disabled:opacity-50 disabled:cursor-not-allowed`}
               >
-                {isDeleting ? '¿Confirmar?' : 'Eliminar'}
+                {isDeleting ? '¿Confirmar' : 'Eliminar'}
               </button>
             )}
             <button
               type="submit"
               disabled={isLoading}
-              className="flex-1 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg
-                disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg ? disabled : opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? 'Guardando...' : isEditing ? 'Actualizar' : 'Crear'}
             </button>

@@ -1,3 +1,4 @@
+import { Pencil, Plus, X, Hourglass, Check } from 'lucide-react';
 import { useState, useEffect } from 'react'
 import planVehiculoService from '../../services/planVehiculoService'
 
@@ -53,16 +54,15 @@ export const PlanVehiculoModal = ({
       } else {
         // Crear nuevo plan - NUNCA DEBERÍA LLEGAR AQUÍ
         await planVehiculoService.crearPlanVehiculo(tenantSlug, {
-          vehiculo_id: vehiculoId,
-          descripcion_general: descripcion,
+          vehiculo_id: vehiculoId, descripcion_general : descripcion,
         })
       }
 
       onSuccess()
     } catch (err) {
       setError(
-        err.response?.data?.error ||
-          err.response?.data?.mensaje ||
+        err.response.data.error ||
+          err.response.data.mensaje ||
           'Error al guardar el plan'
       )
       console.error('Error:', err)
@@ -73,18 +73,18 @@ export const PlanVehiculoModal = ({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-md w-full transition-colors">
+      <div className="bg-white dark:bg-carbon-800 rounded-lg shadow-xl max-w-md w-full transition-colors">
         {/* Header */}
-        <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-slate-700">
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-            {plan ? '✏️ Editar Plan' : '➕ Crear Plan'}
+        <div className="flex justify-between items-center p-6 border-b border-neutral-200 dark:border-white/[0.08]">
+          <h2 className="text-lg font-bold text-carbon-900 dark:text-white">
+            {plan ? <><Pencil className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Editar Plan</> : <><Plus className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Crear Plan</>}
           </h2>
           <button
             onClick={onClose}
-            className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+            className="text-carbon-500 dark:text-neutral-400 hover:text-carbon-700 dark:hover:text-neutral-300 transition-colors"
             aria-label="Cerrar"
           >
-            ✕
+            <X className="inline-block mx-1 text-current" size={20} strokeWidth={2} />
           </button>
         </div>
 
@@ -98,14 +98,14 @@ export const PlanVehiculoModal = ({
 
           {/* Vehículo */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-carbon-700 dark:text-neutral-300 mb-2">
               Vehículo *
             </label>
             <select
               value={vehiculoId}
               onChange={(e) => setVehiculoId(e.target.value)}
               disabled={!!plan}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-700 dark:text-white text-gray-900 focus:ring-2 focus:ring-purple-500 outline-none disabled:opacity-50 transition-colors"
+              className="w-full px-3 py-2 border border-neutral-300 dark:border-white/[0.08] rounded-lg dark:bg-carbon-700 dark:text-white text-carbon-900 focus:ring-2 focus:ring-primary-500 outline-none disabled:opacity-50 transition-colors"
             >
               <option value="">Selecciona un vehículo</option>
               {vehiculos.map((veh) => (
@@ -118,7 +118,7 @@ export const PlanVehiculoModal = ({
 
           {/* Descripción General */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-carbon-700 dark:text-neutral-300 mb-2">
               Descripción General
             </label>
             <textarea
@@ -126,16 +126,16 @@ export const PlanVehiculoModal = ({
               onChange={(e) => setDescripcion(e.target.value)}
               placeholder="Descripción de las necesidades del vehículo"
               rows={4}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-700 dark:text-white text-gray-900 focus:ring-2 focus:ring-purple-500 outline-none transition-colors resize-none"
+              className="w-full px-3 py-2 border border-neutral-300 dark:border-white/[0.08] rounded-lg dark:bg-carbon-700 dark:text-white text-carbon-900 focus:ring-2 focus:ring-primary-500 outline-none transition-colors resize-none"
             />
           </div>
         </form>
 
         {/* Footer */}
-        <div className="flex justify-end gap-2 p-6 border-t border-gray-200 dark:border-slate-700">
+        <div className="flex justify-end gap-2 p-6 border-t border-neutral-200 dark:border-white/[0.08]">
           <button
             onClick={onClose}
-            className="px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 font-medium transition-colors"
+            className="px-4 py-2 border border-neutral-300 dark:border-white/[0.08] rounded-lg text-carbon-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-carbon-700 font-medium transition-colors"
             disabled={loading}
           >
             Cancelar
@@ -143,9 +143,9 @@ export const PlanVehiculoModal = ({
           <button
             onClick={handleSubmit}
             disabled={loading}
-            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-600 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+            className="px-4 py-2 bg-primary-600 hover:bg-primary-700 dark:bg-primary-700 dark:hover:bg-primary-600 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
           >
-            {loading ? '⏳ Guardando...' : '✓ Guardar'}
+            {loading ? <><Hourglass className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Guardando...</> : <><Check className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Guardar</>}
           </button>
         </div>
       </div>

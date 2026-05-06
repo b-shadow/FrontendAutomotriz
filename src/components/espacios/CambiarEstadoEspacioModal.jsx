@@ -27,13 +27,11 @@ export const CambiarEstadoEspacioModal = ({
   const getInitialFormData = () => {
     if (isOpen && espacio) {
       return {
-        estado: espacio.estado || '',
-        motivo: '',
+        estado: espacio.estado || '', motivo : '',
       }
     }
     return {
-      estado: '',
-      motivo: '',
+      estado: '', motivo : '',
     }
   }
 
@@ -63,21 +61,18 @@ export const CambiarEstadoEspacioModal = ({
     }
 
     onSave({
-      estado: formData.estado,
-      motivo: formData.motivo,
+      estado: formData.estado, motivo : formData.motivo,
     })
   }
 
   const handleChange = (e) => {
     const { name, value } = e.target
     setFormData((prev) => ({
-      ...prev,
-      [name]: value,
+      ...prev, [name] : value,
     }))
     if (errors[name]) {
       setErrors((prev) => ({
-        ...prev,
-        [name]: '',
+        ...prev, [name] : '',
       }))
     }
   }
@@ -86,32 +81,31 @@ export const CambiarEstadoEspacioModal = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-lg w-full max-w-md p-6">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+      <div className="bg-white dark:bg-carbon-800 rounded-lg shadow-lg w-full max-w-md p-6">
+        <h2 className="text-xl font-semibold text-carbon-900 dark:text-white mb-4">
           Cambiar Estado del Espacio
         </h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Estado actual */}
-          <div className="bg-gray-100 dark:bg-slate-700 p-3 rounded">
-            <p className="text-sm text-gray-600 dark:text-gray-400">Estado actual</p>
-            <p className="text-lg font-medium text-gray-900 dark:text-white">
+          <div className="bg-neutral-100 dark:bg-carbon-700 p-3 rounded">
+            <p className="text-sm text-carbon-600 dark:text-neutral-400">Estado actual</p>
+            <p className="text-lg font-medium text-carbon-900 dark:text-white">
               {espacio.estado_display}
             </p>
           </div>
 
           {/* Nuevo estado */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-carbon-700 dark:text-neutral-300 mb-2">
               Nuevo Estado
             </label>
             <select
               name="estado"
               value={formData.estado}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg
-                bg-white dark:bg-slate-700 text-gray-900 dark:text-white
-                focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-neutral-300 dark:border-white/[0.08] rounded-lg
+                bg-white dark:bg-carbon-700 text-carbon-900 dark:text-white ? focus : ring-2 focus:ring-primary-500 focus:border-transparent"
             >
               <option value="">-- Selecciona un estado --</option>
               {ESTADOS.map((est) => (
@@ -120,14 +114,13 @@ export const CambiarEstadoEspacioModal = ({
                 </option>
               ))}
             </select>
-            {errors.estado && (
-              <p className="text-sm text-red-600 dark:text-red-400 mt-1">{errors.estado}</p>
+            {errors.estado && (<p className="text-sm text-red-600 dark:text-red-400 mt-1">{errors.estado}</p>
             )}
           </div>
 
           {/* Motivo */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-carbon-700 dark:text-neutral-300 mb-1">
               Motivo (opcional)
             </label>
             <textarea
@@ -136,9 +129,8 @@ export const CambiarEstadoEspacioModal = ({
               onChange={handleChange}
               placeholder="Explica por qué se cambia el estado..."
               rows="2"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg
-                bg-white dark:bg-slate-700 text-gray-900 dark:text-white
-                focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-neutral-300 dark:border-white/[0.08] rounded-lg
+                bg-white dark:bg-carbon-700 text-carbon-900 dark:text-white ? focus : ring-2 focus:ring-primary-500 focus:border-transparent"
             />
           </div>
 
@@ -148,16 +140,15 @@ export const CambiarEstadoEspacioModal = ({
               type="button"
               onClick={onClose}
               disabled={isLoading}
-              className="flex-1 px-4 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300
-                rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-2 border border-neutral-300 dark:border-white/[0.08] text-carbon-700 dark:text-neutral-300
+                rounded-lg hover:bg-neutral-50 dark:hover:bg-carbon-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={isLoading}
-              className="flex-1 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg
-                disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg ? disabled : opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? 'Guardando...' : 'Cambiar Estado'}
             </button>

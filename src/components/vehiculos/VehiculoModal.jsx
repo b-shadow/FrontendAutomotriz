@@ -1,3 +1,4 @@
+import { Pencil, Car } from 'lucide-react';
 import { useState, useEffect } from 'react'
 
 export const VehiculoModal = ({
@@ -114,15 +115,15 @@ export const VehiculoModal = ({
   if (!isOpen) return null
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white dark:bg-carbon-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="sticky top-0 bg-white dark:bg-slate-800 px-6 py-4 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-            {vehiculo ? '✏️ Editar Vehículo' : '🚗 Registrar Nuevo Vehículo'}
+        <div className="sticky top-0 bg-white dark:bg-carbon-800 px-6 py-4 border-b border-neutral-200 dark:border-white/[0.08] flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-carbon-900 dark:text-white">
+            {vehiculo ? <><Pencil className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Editar Vehículo</> : <><Car className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Registrar Nuevo Vehículo</>}
           </h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            className="text-neutral-400 hover:text-carbon-600 dark:hover:text-neutral-300 transition-colors"
             aria-label="Cerrar"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -136,14 +137,14 @@ export const VehiculoModal = ({
           {/* Propietario - selector si puede seleccionar, info si es USUARIO */}
           {canSelectPropietario ? (
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-carbon-700 dark:text-neutral-300 mb-2">
                 Propietario
               </label>
               <select
                 name="propietario_id"
                 value={formData.propietario_id}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-neutral-300 dark:border-white/[0.08] rounded-lg bg-white dark:bg-carbon-700 text-carbon-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               >
                 <option value="">Seleccionar propietario...</option>
                 {usuarios.map((user) => (
@@ -166,7 +167,7 @@ export const VehiculoModal = ({
 
           {/* Placa */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-carbon-700 dark:text-neutral-300 mb-2">
               Placa *
             </label>
             <input
@@ -176,8 +177,8 @@ export const VehiculoModal = ({
               onChange={handleInputChange}
               placeholder="Ej: ABC123"
               maxLength="50"
-              className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                errors.placa ? 'border-red-500' : 'border-gray-300 dark:border-slate-600'
+              className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-carbon-700 text-carbon-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
+                errors.placa ? 'border-red-500' : 'border-neutral-300 dark:border-white/[0.08]'
               }`}
               disabled={isLoading || !!vehiculo} // No permitir editar placa
             />
@@ -186,7 +187,7 @@ export const VehiculoModal = ({
 
           {/* Marca */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-carbon-700 dark:text-neutral-300 mb-2">
               Marca *
             </label>
             <input
@@ -196,8 +197,8 @@ export const VehiculoModal = ({
               onChange={handleInputChange}
               placeholder="Ej: Toyota"
               maxLength="100"
-              className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                errors.marca ? 'border-red-500' : 'border-gray-300 dark:border-slate-600'
+              className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-carbon-700 text-carbon-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
+                errors.marca ? 'border-red-500' : 'border-neutral-300 dark:border-white/[0.08]'
               }`}
             />
             {errors.marca && <p className="text-red-500 text-xs mt-1">{errors.marca}</p>}
@@ -205,7 +206,7 @@ export const VehiculoModal = ({
 
           {/* Modelo */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-carbon-700 dark:text-neutral-300 mb-2">
               Modelo *
             </label>
             <input
@@ -215,8 +216,8 @@ export const VehiculoModal = ({
               onChange={handleInputChange}
               placeholder="Ej: Corolla"
               maxLength="100"
-              className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                errors.modelo ? 'border-red-500' : 'border-gray-300 dark:border-slate-600'
+              className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-carbon-700 text-carbon-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
+                errors.modelo ? 'border-red-500' : 'border-neutral-300 dark:border-white/[0.08]'
               }`}
             />
             {errors.modelo && <p className="text-red-500 text-xs mt-1">{errors.modelo}</p>}
@@ -226,7 +227,7 @@ export const VehiculoModal = ({
           <div className="grid grid-cols-2 gap-4">
             {/* Año */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-carbon-700 dark:text-neutral-300 mb-2">
                 Año *
               </label>
               <input
@@ -236,8 +237,8 @@ export const VehiculoModal = ({
                 onChange={handleInputChange}
                 min="1900"
                 max={new Date().getFullYear() + 1}
-                className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                  errors.anio ? 'border-red-500' : 'border-gray-300 dark:border-slate-600'
+                className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-carbon-700 text-carbon-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
+                  errors.anio ? 'border-red-500' : 'border-neutral-300 dark:border-white/[0.08]'
                 }`}
               />
               {errors.anio && <p className="text-red-500 text-xs mt-1">{errors.anio}</p>}
@@ -245,7 +246,7 @@ export const VehiculoModal = ({
 
             {/* Color */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-carbon-700 dark:text-neutral-300 mb-2">
                 Color
               </label>
               <input
@@ -255,14 +256,14 @@ export const VehiculoModal = ({
                 onChange={handleInputChange}
                 placeholder="Ej: Blanco"
                 maxLength="100"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-neutral-300 dark:border-white/[0.08] rounded-lg bg-white dark:bg-carbon-700 text-carbon-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               />
             </div>
           </div>
 
           {/* Kilometraje */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-carbon-700 dark:text-neutral-300 mb-2">
               Kilometraje Actual
             </label>
             <input
@@ -271,8 +272,8 @@ export const VehiculoModal = ({
               value={formData.kilometraje_actual}
               onChange={handleInputChange}
               min="0"
-              className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                errors.kilometraje_actual ? 'border-red-500' : 'border-gray-300 dark:border-slate-600'
+              className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-carbon-700 text-carbon-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
+                errors.kilometraje_actual ? 'border-red-500' : 'border-neutral-300 dark:border-white/[0.08]'
               }`}
             />
             {errors.kilometraje_actual && <p className="text-red-500 text-xs mt-1">{errors.kilometraje_actual}</p>}
@@ -282,7 +283,7 @@ export const VehiculoModal = ({
           <div className="grid grid-cols-2 gap-4">
             {/* VIN/Chasis */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-carbon-700 dark:text-neutral-300 mb-2">
                 VIN/Chasis
               </label>
               <input
@@ -292,13 +293,13 @@ export const VehiculoModal = ({
                 onChange={handleInputChange}
                 placeholder="Número VIN"
                 maxLength="100"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-neutral-300 dark:border-white/[0.08] rounded-lg bg-white dark:bg-carbon-700 text-carbon-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               />
             </div>
 
             {/* Motor */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-carbon-700 dark:text-neutral-300 mb-2">
                 Motor
               </label>
               <input
@@ -308,14 +309,14 @@ export const VehiculoModal = ({
                 onChange={handleInputChange}
                 placeholder="Ej: 1.8L Gasolina"
                 maxLength="100"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-neutral-300 dark:border-white/[0.08] rounded-lg bg-white dark:bg-carbon-700 text-carbon-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               />
             </div>
           </div>
 
           {/* Observaciones */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-carbon-700 dark:text-neutral-300 mb-2">
               Observaciones
             </label>
             <textarea
@@ -325,17 +326,17 @@ export const VehiculoModal = ({
               placeholder="Notas adicionalesobre el vehículo..."
               maxLength="500"
               rows="3"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+              className="w-full px-3 py-2 border border-neutral-300 dark:border-white/[0.08] rounded-lg bg-white dark:bg-carbon-700 text-carbon-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
             />
           </div>
 
           {/* Botones */}
-          <div className="flex gap-3 justify-end pt-6 border-t border-gray-200 dark:border-slate-700">
+          <div className="flex gap-3 justify-end pt-6 border-t border-neutral-200 dark:border-white/[0.08]">
             <button
               type="button"
               onClick={onClose}
               disabled={isLoading}
-              className="px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
+              className="px-4 py-2 border border-neutral-300 dark:border-white/[0.08] rounded-lg text-carbon-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-carbon-700 transition-colors disabled:opacity-50"
             >
               Cancelar
             </button>

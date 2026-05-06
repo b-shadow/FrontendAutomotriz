@@ -2,8 +2,7 @@ import React from 'react'
 
 export const Badge = ({ children, variant = 'primary', className = '' }) => {
   const variants = {
-    primary: 'badge-primary',
-    secondary: 'badge-secondary',
+    primary: 'badge-primary', secondary : 'badge-secondary',
   }
 
   return (

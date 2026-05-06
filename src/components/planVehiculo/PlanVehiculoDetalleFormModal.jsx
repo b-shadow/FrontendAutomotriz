@@ -1,3 +1,4 @@
+import { Pencil, Plus, X, User, Wrench } from 'lucide-react';
 import { useState, useEffect } from 'react'
 import planVehiculoService from '../../services/planVehiculoService'
 import serviciosCatalogoService from '../../services/serviciosCatalogoService'
@@ -47,14 +48,12 @@ export const PlanVehiculoDetalleFormModal = ({
   useEffect(() => {
     if (detalle) {
       setServicioId(
-        typeof detalle.servicio_catalogo === 'object'
-          ? detalle.servicio_catalogo.id
-          : detalle.servicio_catalogo || ''
+        typeof detalle.servicio_catalogo === 'object' ? detalle.servicio_catalogo.id : detalle.servicio_catalogo || ''
       )
       setOrigen(detalle.origen || '')
       setPrioridad(detalle.prioridad || 'MEDIA')
-      setTiempo(detalle.tiempo_estandar_min?.toString() || '')
-      setPrecio(detalle.precio_referencial?.toString() || '')
+      setTiempo(detalle.tiempo_estandar_min.toString() || '')
+      setPrecio(detalle.precio_referencial.toString() || '')
       setObservaciones(detalle.observaciones || '')
       
       // Cargar servicio seleccionado para mostrar detalles
@@ -69,9 +68,9 @@ export const PlanVehiculoDetalleFormModal = ({
     if (!detalle) {
       // Solo se detecta al crear (no al editar)
       let rolNombre = ''
-      if (typeof user?.rol === 'string') {
+      if (typeof user.rol === 'string') {
         rolNombre = user.rol
-      } else if (user?.rol?.nombre) {
+      } else if (user.rol.nombre) {
         rolNombre = user.rol.nombre
       }
       if (rolNombre === 'USUARIO') {
@@ -142,8 +141,8 @@ export const PlanVehiculoDetalleFormModal = ({
       onSuccess()
     } catch (err) {
       setError(
-        err.response?.data?.error ||
-          err.response?.data?.mensaje ||
+        err.response.data.error ||
+          err.response.data.mensaje ||
           'Error al guardar el detalle'
       )
       console.error('Error:', err)
@@ -153,18 +152,18 @@ export const PlanVehiculoDetalleFormModal = ({
   }
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto transition-colors">
+      <div className="bg-white dark:bg-carbon-800 rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto transition-colors">
         {/* Header */}
-        <div className="sticky top-0 flex justify-between items-center p-6 border-b border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800">
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-            {detalle ? '✏️ Editar Detalle' : '➕ Agregar Detalle'}
+        <div className="sticky top-0 flex justify-between items-center p-6 border-b border-neutral-200 dark:border-white/[0.08] bg-white dark:bg-carbon-800">
+          <h2 className="text-lg font-bold text-carbon-900 dark:text-white">
+            {detalle ? <><Pencil className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Editar Detalle</> : <><Plus className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Agregar Detalle</>}
           </h2>
           <button
             onClick={onClose}
-            className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+            className="text-carbon-500 dark:text-neutral-400 hover:text-carbon-700 dark:hover:text-neutral-300 transition-colors"
             aria-label="Cerrar"
           >
-            ✕
+            <X className="inline-block mx-1 text-current" size={20} strokeWidth={2} />
           </button>
         </div>
 
@@ -177,7 +176,7 @@ export const PlanVehiculoDetalleFormModal = ({
           )}
 
           {/* Plan Info */}
-          <div className="bg-gray-50 dark:bg-slate-700 p-3 rounded-lg text-xs text-gray-600 dark:text-gray-400">
+          <div className="bg-neutral-50 dark:bg-carbon-700 p-3 rounded-lg text-xs text-carbon-600 dark:text-neutral-400">
             <p>
               <strong>Plan:</strong> ID {plan.id.substring(0, 8)}...
             </p>
@@ -188,14 +187,14 @@ export const PlanVehiculoDetalleFormModal = ({
 
           {/* Servicio Catálogo - OBLIGATORIO */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-carbon-700 dark:text-neutral-300 mb-2">
               Servicio del Catálogo *
             </label>
             <select
               value={servicioId}
               onChange={handleServicioChange}
               disabled={detalle !== null || loadingServicios}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-700 dark:text-white text-gray-900 focus:ring-2 focus:ring-purple-500 outline-none disabled:opacity-50 transition-colors"
+              className="w-full px-3 py-2 border border-neutral-300 dark:border-white/[0.08] rounded-lg dark:bg-carbon-700 dark:text-white text-carbon-900 focus:ring-2 focus:ring-primary-500 outline-none disabled:opacity-50 transition-colors"
             >
               <option value="">-- Selecciona un servicio --</option>
               {servicios.map((serv) => (
@@ -205,7 +204,7 @@ export const PlanVehiculoDetalleFormModal = ({
               ))}
             </select>
             {detalle && (
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              <p className="text-xs text-carbon-500 dark:text-neutral-400 mt-1">
                 !No se puede cambiar el servicio en edición
               </p>
             )}
@@ -213,35 +212,33 @@ export const PlanVehiculoDetalleFormModal = ({
 
           {/* Origen - Auto-detectado según rol */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-carbon-700 dark:text-neutral-300 mb-2">
               Origen (Auto-detectado)
             </label>
-            <div className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-700 bg-gray-50 dark:text-white text-gray-900">
-              <span className="font-semibold text-purple-600 dark:text-purple-400">
+            <div className="w-full px-3 py-2 border border-neutral-300 dark:border-white/[0.08] rounded-lg dark:bg-carbon-700 bg-neutral-50 dark:text-white text-carbon-900">
+              <span className="font-semibold text-primary-600 dark:text-primary-400">
                 {origen === 'CLIENTE'
-                  ? '👤 Necesidad del Cliente'
-                  : origen === 'MECANICO'
-                    ? '🔧 Recomendación Técnica'
-                    : origen === 'ADMIN'
-                      ? '👑 Administrador'
-                      : '💼 Asesor de Servicio'}
+                  ? <><User className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Necesidad del Cliente</>
+                  : origen === 'MECANICO' ?
+                     <><Wrench className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Recomendación Técnica</>
+                    : origen === 'ADMIN' ? '👑 Administrador' : '💼 Asesor de Servicio'}
               </span>
             </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            <p className="text-xs text-carbon-500 dark:text-neutral-400 mt-1">
               Tu rol determina automáticamente el origen
             </p>
           </div>
 
           {/* Prioridad */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-carbon-700 dark:text-neutral-300 mb-2">
               Prioridad
             </label>
             <select
               value={prioridad}
               onChange={(e) => setPrioridad(e.target.value)}
               disabled={loading}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-700 dark:text-white text-gray-900 focus:ring-2 focus:ring-purple-500 outline-none transition-colors"
+              className="w-full px-3 py-2 border border-neutral-300 dark:border-white/[0.08] rounded-lg dark:bg-carbon-700 dark:text-white text-carbon-900 focus:ring-2 focus:ring-primary-500 outline-none transition-colors"
             >
               <option value="BAJA">Baja</option>
               <option value="MEDIA">Media</option>
@@ -252,41 +249,37 @@ export const PlanVehiculoDetalleFormModal = ({
 
           {/* Tiempo Estimado - READONLY (desde catálogo) */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-carbon-700 dark:text-neutral-300 mb-2">
               Tiempo Estimado (minutos) — Auto-cargado
             </label>
-            <div className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-700 bg-gray-50 dark:text-white text-gray-900">
+            <div className="w-full px-3 py-2 border border-neutral-300 dark:border-white/[0.08] rounded-lg dark:bg-carbon-700 bg-neutral-50 dark:text-white text-carbon-900">
               <span className="font-semibold">
                 {tiempo || '—'}
               </span>
             </div>
-            {servicioSeleccionado && (
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Desde: {servicioSeleccionado.nombre}
+            {servicioSeleccionado && (<p className="text-xs text-carbon-500 dark:text-neutral-400 mt-1"> ? Desde : {servicioSeleccionado.nombre}
               </p>
             )}
           </div>
 
           {/* Precio Referencial - READONLY (desde catálogo) */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-carbon-700 dark:text-neutral-300 mb-2">
               Precio Referencial (Bs.) — Auto-cargado
             </label>
-            <div className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-700 bg-gray-50 dark:text-white text-gray-900">
+            <div className="w-full px-3 py-2 border border-neutral-300 dark:border-white/[0.08] rounded-lg dark:bg-carbon-700 bg-neutral-50 dark:text-white text-carbon-900">
               <span className="font-semibold">
                 {precio ? `Bs. ${parseFloat(precio).toFixed(2)}` : '—'}
               </span>
             </div>
-            {servicioSeleccionado && (
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Desde: {servicioSeleccionado.nombre}
+            {servicioSeleccionado && (<p className="text-xs text-carbon-500 dark:text-neutral-400 mt-1"> ? Desde : {servicioSeleccionado.nombre}
               </p>
             )}
           </div>
 
           {/* Observaciones */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-carbon-700 dark:text-neutral-300 mb-2">
               Observaciones
             </label>
             <textarea
@@ -295,23 +288,23 @@ export const PlanVehiculoDetalleFormModal = ({
               placeholder="Notas adicionales sobre el detalle"
               rows={3}
               disabled={loading}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-700 dark:text-white text-gray-900 focus:ring-2 focus:ring-purple-500 outline-none transition-colors resize-none"
+              className="w-full px-3 py-2 border border-neutral-300 dark:border-white/[0.08] rounded-lg dark:bg-carbon-700 dark:text-white text-carbon-900 focus:ring-2 focus:ring-primary-500 outline-none transition-colors resize-none"
             />
           </div>
         </form>
 
         {/* Footer */}
-        <div className="sticky bottom-0 flex justify-end gap-2 p-6 border-t border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+        <div className="sticky bottom-0 flex justify-end gap-2 p-6 border-t border-neutral-200 dark:border-white/[0.08] bg-white dark:bg-carbon-800">
           <button
             onClick={onClose}
-            className="px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 font-medium transition-colors"
+            className="px-4 py-2 border border-neutral-300 dark:border-white/[0.08] rounded-lg text-carbon-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-carbon-700 font-medium transition-colors"
             disabled={loading}
           >
             Cancelar
           </button>
           <button
             onClick={handleSubmit}
-            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+            className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
             disabled={loading}
           >
             {loading ? 'Guardando...' : detalle ? 'Actualizar' : 'Agregar'}

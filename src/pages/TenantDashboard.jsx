@@ -22,6 +22,10 @@ import { EspaciosTrabajoView } from '../components/espacios/EspaciosTrabajoView'
 import { HorariosGeneralesView } from './dashboard/HorariosGeneralesView'
 import PlanVehiculoView from './dashboard/PlanVehiculoView'
 import GestionCitasView from './dashboard/GestionCitasView'
+import RecepcionVehiculoView from './dashboard/RecepcionVehiculoView'
+import AsistenteIAView from './dashboard/AsistenteIAView'
+import { GenerarReportesView } from './dashboard/GenerarReportesView'
+import { FloatingAIAvatar } from '../components/FloatingAIAvatar'
 
 export const TenantDashboard = () => {
   const { tenantSlug } = useParams()
@@ -36,10 +40,10 @@ export const TenantDashboard = () => {
   // Redireccionar si no hay usuario o tenant
   if (!user || !tenant) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-950">
+      <div className="min-h-screen flex items-center justify-center bg-neutral-100 dark:bg-carbon-950">
         <div className="text-center">
           <div className="animate-spin w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Cargando...</p>
+          <p className="text-carbon-600 dark:text-neutral-400 font-medium tracking-wide">Cargando...</p>
         </div>
       </div>
     )
@@ -60,7 +64,7 @@ export const TenantDashboard = () => {
   const renderView = () => {
     switch (activeView) {
       case 'dashboard':
-        return <DashboardHome user={user} tenant={tenant} tenantSlug={tenantSlug} />
+        return <DashboardHome user={user} tenant={tenant} tenantSlug={tenantSlug} onNavigate={handleNavigate} />
       case 'editarPerfil':
         return <PerfilUsuarioView user={user} tenant={tenant} tenantSlug={tenantSlug} />
       case 'gestionEmpresa':
@@ -87,17 +91,23 @@ export const TenantDashboard = () => {
         return <PlanVehiculoView user={user} tenantSlug={tenantSlug} />
       case 'citas':
         return <GestionCitasView user={user} tenantSlug={tenantSlug} onNavigate={handleNavigate} />
+      case 'recepcionVehiculo':
+        return <RecepcionVehiculoView tenantSlug={tenantSlug} />
+      case 'asistenteIA':
+        return <AsistenteIAView />
+      case 'generarReportes':
+        return <GenerarReportesView />
       default:
-        return <DashboardHome user={user} tenant={tenant} tenantSlug={tenantSlug} />
+        return <DashboardHome user={user} tenant={tenant} tenantSlug={tenantSlug} onNavigate={handleNavigate} />
     }
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col md:flex-row transition-colors duration-300">
+    <div className="min-h-screen bg-neutral-100 dark:bg-carbon-950 flex flex-col md:flex-row transition-colors duration-300">
       {/* OVERLAY PARA MÓVIL */}
       {isMobileMenuOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          className="fixed inset-0 bg-black/60 z-40 md:hidden"
           onClick={() => setIsMobileMenuOpen(false)}
           aria-hidden="true"
         />
@@ -118,12 +128,12 @@ export const TenantDashboard = () => {
       {/* MAIN CONTENT */}
       <div className="flex-1 flex flex-col md:ml-64">
         {/* TOPBAR */}
-        <header className="sticky top-0 z-40 bg-white dark:bg-slate-900 shadow-sm border-b border-slate-200 dark:border-slate-800 transition-colors duration-300">
+        <header className="sticky top-0 z-40 bg-white dark:bg-carbon-900 shadow-sm border-b border-neutral-200 dark:border-white/[0.06] transition-colors duration-300">
           <div className="px-4 md:px-8 py-4 flex justify-between items-center">
             {/* Botón hamburguesa en móvil */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="md:hidden p-2 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+              className="md:hidden p-2 text-carbon-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/[0.05] rounded-lg transition-colors"
               aria-label="Abrir menú"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -132,8 +142,8 @@ export const TenantDashboard = () => {
             </button>
 
             <div>
-              <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400">Main Property •</h2>
-              <h1 className="text-xl font-bold text-slate-900 dark:text-white">{tenant.nombre}</h1>
+              <h2 className="text-sm font-semibold text-carbon-500 dark:text-neutral-400 tracking-wide uppercase">Main Property •</h2>
+              <h1 className="text-xl font-bold text-carbon-900 dark:text-white tracking-tight">{tenant.nombre}</h1>
             </div>
 
             <div className="flex items-center gap-4">
@@ -141,15 +151,15 @@ export const TenantDashboard = () => {
               <ThemeToggle />
 
               <div className="hidden md:flex items-center gap-3">
-                <div className="h-10 w-px bg-slate-200 dark:bg-slate-700"></div>
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary-400 to-primary-500 dark:from-primary-500 dark:to-primary-600 flex items-center justify-center text-white font-semibold text-sm">
-                  {user?.nombres?.charAt(0)?.toUpperCase() || 'U'}
+                <div className="h-10 w-px bg-neutral-200 dark:bg-white/[0.06]"></div>
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-500 to-burgundy-600 flex items-center justify-center text-white font-semibold text-sm shadow-md shadow-primary-900/20">
+                  {user.nombres.charAt(0).toUpperCase() || 'U'}
                 </div>
                 <div className="text-right hidden lg:block">
-                  <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                  <p className="text-sm font-semibold text-carbon-900 dark:text-white">
                     {user.nombres} {user.apellidos}
                   </p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">{user.email}</p>
+                  <p className="text-xs text-carbon-500 dark:text-neutral-400">{user.email}</p>
                 </div>
               </div>
             </div>
@@ -157,12 +167,17 @@ export const TenantDashboard = () => {
         </header>
 
         {/* CONTENT AREA */}
-        <main className="flex-1 overflow-y-auto px-4 md:px-8 py-6 md:py-8">
+        <main className="flex-1 overflow-y-auto px-4 md:px-8 py-6 md:py-8 relative">
           <div className="max-w-7xl mx-auto">
             {renderView()}
           </div>
         </main>
       </div>
+
+      {/* FLOATING AI AVATAR */}
+      {activeView !== 'asistenteIA' && (
+        <FloatingAIAvatar onClick={() => handleNavigate('asistenteIA')} />
+      )}
     </div>
   )
 }

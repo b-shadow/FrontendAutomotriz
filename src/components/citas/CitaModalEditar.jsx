@@ -12,7 +12,7 @@ const CitaModalEditar = ({ cita, onClose, onSuccess }) => {
   const { tenantSlug } = useTenant()
 
   const [formData, setFormData] = useState({
-    observaciones_cliente: cita?.observaciones_cliente || '',
+    observaciones_cliente: cita.observaciones_cliente || '',
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -27,7 +27,7 @@ const CitaModalEditar = ({ cita, onClose, onSuccess }) => {
 
       onSuccess()
     } catch (err) {
-      setError(err.response?.data?.detail || 'Error al editar')
+      setError(err.response.data.detail || 'Error al editar')
     } finally {
       setLoading(false)
     }
@@ -38,7 +38,7 @@ const CitaModalEditar = ({ cita, onClose, onSuccess }) => {
       <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold">Editar Cita</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl">
+          <button onClick={onClose} className="text-carbon-500 hover:text-carbon-700 text-2xl">
             ×
           </button>
         </div>
@@ -49,16 +49,16 @@ const CitaModalEditar = ({ cita, onClose, onSuccess }) => {
           </div>
         )}
 
-        <div className="bg-gray-50 p-4 rounded-lg mb-4 text-sm space-y-1">
+        <div className="bg-neutral-50 p-4 rounded-lg mb-4 text-sm space-y-1">
           <p>
-            <strong>Vehículo:</strong> {cita?.vehiculo?.placa}
+            <strong>Vehículo:</strong> {cita.vehiculo.placa}
           </p>
           <p>
-            <strong>Estado:</strong> {cita?.estado}
+            <strong>Estado:</strong> {cita.estado}
           </p>
           <p>
             <strong>Inicio:</strong>{' '}
-            {new Date(cita?.fecha_hora_inicio_programada).toLocaleString()}
+            {new Date(cita.fecha_hora_inicio_programada).toLocaleString()}
           </p>
         </div>
 
@@ -70,24 +70,23 @@ const CitaModalEditar = ({ cita, onClose, onSuccess }) => {
             value={formData.observaciones_cliente}
             onChange={(e) =>
               setFormData((prev) => ({
-                ...prev,
-                observaciones_cliente: e.target.value,
+                ...prev, observaciones_cliente : e.target.value,
               }))
             }
-            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
+            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500"
             rows="4"
             placeholder="Notas adicionales..."
           />
         </div>
 
         <div className="flex gap-2 justify-end mt-6">
-          <button onClick={onClose} className="px-4 py-2 text-gray-600">
+          <button onClick={onClose} className="px-4 py-2 text-carbon-600">
             Cancelar
           </button>
           <button
             onClick={handleSubmit}
             disabled={loading}
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg disabled:opacity-50"
+            className="px-4 py-2 bg-primary-600 text-white rounded-lg disabled:opacity-50"
           >
             {loading ? 'Guardando...' : 'Guardar'}
           </button>

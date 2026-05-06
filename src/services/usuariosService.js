@@ -30,9 +30,7 @@ const usuariosService = {
       if (filtros.ordering) params.append('ordering', filtros.ordering)
       
       const queryString = params.toString()
-      const url = queryString 
-        ? `/api/${tenantSlug}/usuarios/?${queryString}`
-        : `/api/${tenantSlug}/usuarios/`
+      const url = queryString ? `/api/${tenantSlug}/usuarios/?${queryString}` : `/api/${tenantSlug}/usuarios/`
       
       const response = await apiClient.get(url)
       return response.data

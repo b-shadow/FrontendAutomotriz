@@ -1,4 +1,5 @@
 import { useTheme } from '../hooks/useTheme'
+import { Sun, Moon } from 'lucide-react'
 /**
  * ThemeToggle - Componente para cambiar entre modo claro y oscuro
  */
@@ -9,26 +10,17 @@ export const ThemeToggle = () => {
     <button
       onClick={toggleTheme}
       className={`
-        flex items-center gap-2 px-3 py-2 rounded-lg
-        font-semibold text-sm transition-all duration-200
-        ${theme === 'light'
-          ? 'bg-gray-100 text-gray-900 hover:bg-gray-200'
-          : 'bg-slate-700 text-white hover:bg-slate-600'
+        flex items-center justify-center p-2.5 rounded-lg
+        font-semibold text-sm tracking-wide transition-all duration-200 border
+        ${theme === 'light' ? 'bg-neutral-100 text-carbon-800 border-neutral-300 hover:bg-neutral-200 hover:border-primary-300' : 'bg-white/[0.05] text-neutral-300 border-white/[0.08] hover:bg-white/[0.08] hover:text-primary-400 hover:border-primary-500/30'
         }
       `}
       aria-label="Cambiar tema"
       title={`Cambiar a modo ${theme === 'light' ? 'oscuro' : 'claro'}`}
     >
       {theme === 'light' ? (
-        <>
-          <span className="text-lg">⚪</span>
-          <span>White</span>
-        </>
-      ) : (
-        <>
-          <span className="text-lg">⚫</span>
-          <span>Black</span>
-        </>
+        <Sun size={18} strokeWidth={2.2} aria-hidden="true" /> ) : (
+        <Moon size={18} strokeWidth={2.2} aria-hidden="true" />
       )}
     </button>
   )

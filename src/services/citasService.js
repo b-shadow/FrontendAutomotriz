@@ -29,9 +29,7 @@ const citasService = {
       if (filtros.page_size) params.append('page_size', filtros.page_size)
 
       const queryString = params.toString()
-      const url = queryString
-        ? `/api/${tenantSlug}/citas/?${queryString}`
-        : `/api/${tenantSlug}/citas/`
+      const url = queryString ? `/api/${tenantSlug}/citas/?${queryString}` : `/api/${tenantSlug}/citas/`
 
       const response = await apiClient.get(url)
       return response.data
@@ -98,11 +96,9 @@ const citasService = {
   crearCita: async (tenantSlug, citaData) => {
     try {
       console.log('📤 Enviando solicitud de cita al backend con INTENCIÓN:', {
-        vehiculo_id: citaData.vehiculo_id,
-        cliente_id: citaData.cliente_id,
-        fecha_inicio: citaData.fecha_hora_inicio_programada,
-        espacio: citaData.espacio_trabajo_id,
-        servicios: citaData.servicios_plan_detalle_ids?.length ? `${citaData.servicios_plan_detalle_ids.length} servicio(s)` : 'ninguno',
+        vehiculo_id: citaData.vehiculo_id, cliente_id : citaData.cliente_id,
+        fecha_inicio: citaData.fecha_hora_inicio_programada, espacio : citaData.espacio_trabajo_id,
+        servicios: citaData.servicios_plan_detalle_ids.length ? `${citaData.servicios_plan_detalle_ids.length} servicio(s)` : 'ninguno',
       })
 
       const response = await apiClient.post(`/api/${tenantSlug}/citas/`, citaData)
@@ -110,7 +106,7 @@ const citasService = {
       return response.data
     } catch (error) {
       console.error('❌ Error al crear cita:', error)
-      if (error.response?.data) {
+      if (error.response.data) {
         console.error('🔴 Detalle del error:', JSON.stringify(error.response.data, null, 2))
       }
       throw error
@@ -155,7 +151,7 @@ const citasService = {
       return response.data
     } catch (error) {
       console.error('❌ Error al editar cita:', error)
-      if (error.response?.data) {
+      if (error.response.data) {
         console.error('🔴 Detalle del error:', JSON.stringify(error.response.data, null, 2))
       }
       throw error
@@ -247,10 +243,8 @@ const citasService = {
       console.log(`🔄 Refrescando estado canónico de cita ${citaId}`)
       const response = await apiClient.get(`/api/${tenantSlug}/citas/${citaId}/`)
       console.log('✅ Cita canónica:', {
-        estado: response.data.estado,
-        inicio: response.data.fecha_hora_inicio_programada,
-        fin: response.data.fecha_hora_fin_programada,
-        segmentos: response.data.espacios_segmentos?.length || 0,
+        estado: response.data.estado, inicio : response.data.fecha_hora_inicio_programada,
+        fin: response.data.fecha_hora_fin_programada, segmentos : response.data.espacios_segmentos.length || 0,
       })
       return response.data
     } catch (error) {
@@ -267,7 +261,7 @@ const citasService = {
    * 
    * @param {string} tenantSlug - Slug del tenant
    * @param {object} intencion - Intención de cita
-   *   {vehiculo_id, servicios_ids[], fecha_hora_inicio, espacio_trabajo_id?}
+   *   {vehiculo_id, servicios_ids[], fecha_hora_inicio, espacio_trabajo_id}
    * @returns {object} { fecha_hora_fin_estimada, es_valida, duracion_total_min, fragmentado, segmentos_preview, mensajes }
    */
   previewIntencion: async (tenantSlug, intencion) => {
@@ -277,8 +271,7 @@ const citasService = {
         intencion
       )
       console.log('✅ Preview intención calculado:', {
-        es_valida: response.data.es_valida,
-        fin_estimada: response.data.fecha_hora_fin_estimada,
+        es_valida: response.data.es_valida, fin_estimada : response.data.fecha_hora_fin_estimada,
         fragmentado: response.data.fragmentado,
       })
       return response.data
@@ -330,8 +323,7 @@ const citasService = {
         validacion
       )
       console.log('✅ Validación de disponibilidad de espacio:', {
-        disponible: response.data.disponible,
-        espacioNombre: response.data.espacio_nombre,
+        disponible: response.data.disponible, espacioNombre : response.data.espacio_nombre,
         mensaje: response.data.mensaje,
       })
       return response.data

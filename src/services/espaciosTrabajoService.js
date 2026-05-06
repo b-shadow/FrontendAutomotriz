@@ -40,33 +40,28 @@ const espaciosTrabajoService = {
       if (filtros.page_size) params.append('page_size', filtros.page_size)
 
       const queryString = params.toString()
-      const url = queryString
-        ? `/api/${tenantSlug}/espacios/?${queryString}`
-        : `/api/${tenantSlug}/espacios/`
+      const url = queryString ? `/api/${tenantSlug}/espacios/?${queryString}` : `/api/${tenantSlug}/espacios/`
 
       const response = await apiClient.get(url)
       
       // Backend devuelve paginación: { count, next, previous, results }
       // Extraer results (array de espacios)
-      const espaciosList = response.data?.results || response.data?.espacios || response.data || []
-      const count = response.data?.count || espaciosList.length
+      const espaciosList = response.data.results || response.data.espacios || response.data || []
+      const count = response.data.count || espaciosList.length
       
       console.debug('[espaciosTrabajoService] Respuesta completa de API:', {
-        url,
-        statusCode: response.status,
+        url, statusCode : response.status,
         responseData: response.data,
       })
       
       console.debug('[espaciosTrabajoService] Espacios cargados:', {
         url,
-        count,
-        espaciosCount: espaciosList.length,
+        count, espaciosCount : espaciosList.length,
         responseStructure: Object.keys(response.data || {}),
       })
       
       return {
-        espacios: espaciosList,
-        count: count,
+        espacios: espaciosList, count : count,
       }
     } catch (error) {
       console.error('❌ Error al listar espacios de trabajo:', error)
@@ -193,8 +188,7 @@ const espaciosTrabajoService = {
         `/api/${tenantSlug}/espacios/${espacioId}/horarios/`
       )
       return {
-        horarios: response.data.results || response.data.horarios || response.data || [],
-        count: response.data.count || (response.data.results ? response.data.results.length : 0),
+        horarios: response.data.results || response.data.horarios || response.data || [], count : response.data.count || (response.data.results ? response.data.results.length  : 0),
       }
     } catch (error) {
       console.error('Error al listar horarios del espacio:', error)
@@ -226,7 +220,7 @@ const espaciosTrabajoService = {
 
   /**
    * Editar un horario de un espacio
-   * PATCH /api/{slug}/espacios/{espacio_id}/editar_horario/?horario_id={horario_id}
+   * PATCH /api/{slug}/espacios/{espacio_id}/editar_horario/horario_id={horario_id}
    *
    * @param {string} tenantSlug - Slug del tenant
    * @param {string} espacioId - ID del espacio
@@ -237,7 +231,7 @@ const espaciosTrabajoService = {
   editarHorarioEspacio: async (tenantSlug, espacioId, horarioId, horarioData) => {
     try {
       const response = await apiClient.patch(
-        `/api/${tenantSlug}/espacios/${espacioId}/editar_horario/?horario_id=${horarioId}`,
+        `/api/${tenantSlug}/espacios/${espacioId}/editar_horario/horario_id=${horarioId}`,
         horarioData
       )
       return response.data
@@ -249,7 +243,7 @@ const espaciosTrabajoService = {
 
   /**
    * Cambiar activo/inactivo de un horario
-   * PATCH /api/{slug}/espacios/{espacio_id}/activo_horario/?horario_id={horario_id}
+   * PATCH /api/{slug}/espacios/{espacio_id}/activo_horario/horario_id={horario_id}
    *
    * @param {string} tenantSlug - Slug del tenant
    * @param {string} espacioId - ID del espacio
@@ -259,7 +253,7 @@ const espaciosTrabajoService = {
   cambiarActivoHorarioEspacio: async (tenantSlug, espacioId, horarioId, payload) => {
     try {
       const response = await apiClient.patch(
-        `/api/${tenantSlug}/espacios/${espacioId}/activo_horario/?horario_id=${horarioId}`,
+        `/api/${tenantSlug}/espacios/${espacioId}/activo_horario/horario_id=${horarioId}`,
         payload
       )
       return response.data
@@ -271,7 +265,7 @@ const espaciosTrabajoService = {
 
   /**
    * Eliminar un horario completamente
-   * DELETE /api/{slug}/espacios/{espacio_id}/eliminar_horario/?horario_id={horario_id}
+   * DELETE /api/{slug}/espacios/{espacio_id}/eliminar_horario/horario_id={horario_id}
    *
    * @param {string} tenantSlug - Slug del tenant
    * @param {string} espacioId - ID del espacio
@@ -280,7 +274,7 @@ const espaciosTrabajoService = {
   eliminarHorarioEspacio: async (tenantSlug, espacioId, horarioId) => {
     try {
       const response = await apiClient.delete(
-        `/api/${tenantSlug}/espacios/${espacioId}/eliminar_horario/?horario_id=${horarioId}`
+        `/api/${tenantSlug}/espacios/${espacioId}/eliminar_horario/horario_id=${horarioId}`
       )
       return response.data
     } catch (error) {

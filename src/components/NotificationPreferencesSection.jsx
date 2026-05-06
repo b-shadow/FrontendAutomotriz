@@ -1,3 +1,4 @@
+import { XCircle, CheckCircle, Bell, Mail, Check, X, Lightbulb } from 'lucide-react';
 import { useState, useEffect } from 'react'
 import { Card, Button } from './ui'
 import usuariosService from '../services/usuariosService'
@@ -9,8 +10,7 @@ export const NotificationPreferencesSection = ({ tenantSlug, userId }) => {
 
   // ESTADO: Preferencias
   const [preferencias, setPreferencias] = useState({
-    noti_email: true,
-    noti_push: true,
+    noti_email: true, noti_push : true,
   })
 
   // ESTADO: Feedback
@@ -21,7 +21,7 @@ export const NotificationPreferencesSection = ({ tenantSlug, userId }) => {
   useEffect(() => {
     const cargarPreferencias = async () => {
       if (!tenantSlug || !userId) {
-        setErrorMessage('❌ Error: Tenant o usuario no disponible')
+        setErrorMessage(<><XCircle className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Error: Tenant o usuario no disponible</>)
         setIsLoadingInitial(false)
         return
       }
@@ -30,18 +30,17 @@ export const NotificationPreferencesSection = ({ tenantSlug, userId }) => {
         setIsLoadingInitial(true)
         const data = await usuariosService.obtenerPreferenciasNotificacion(tenantSlug)
         setPreferencias(data.preferencias || {
-          noti_email: true,
-          noti_push: true,
+          noti_email: true, noti_push : true,
         })
         setErrorMessage('')
       } catch (error) {
         console.error('Error al cargar preferencias:', error)
         const errorMsg =
-          error.response?.data?.detail ||
-          error.response?.data?.message ||
+          error.response.data.detail ||
+          error.response.data.message ||
           error.message ||
           'No se pudo cargar las preferencias'
-        setErrorMessage(`❌ Error: ${errorMsg}`)
+        setErrorMessage(` Error: ${errorMsg}`)
       } finally {
         setIsLoadingInitial(false)
       }
@@ -53,14 +52,13 @@ export const NotificationPreferencesSection = ({ tenantSlug, userId }) => {
   // Manejar cambio de preferencia
   const handleToggle = async (key) => {
     if (!tenantSlug) {
-      setErrorMessage('❌ Error: Tenant no disponible')
+      setErrorMessage(<><XCircle className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Error: Tenant no disponible</>)
       return
     }
 
     const nuevoValor = !preferencias[key]
     const datosActualizados = {
-      ...preferencias,
-      [key]: nuevoValor,
+      ...preferencias, [key] : nuevoValor,
     }
 
     // Actualizar UI inmediatamente (optimistic update)
@@ -78,7 +76,7 @@ export const NotificationPreferencesSection = ({ tenantSlug, userId }) => {
 
       // Confirmar con datos del backend
       setPreferencias(response.preferencias || datosActualizados)
-      setSuccessMessage('✅ Preferencia actualizada correctamente')
+      setSuccessMessage(<><CheckCircle className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Preferencia actualizada correctamente</>)
 
       // Limpiar mensaje después de 3 segundos
       setTimeout(() => {
@@ -92,11 +90,11 @@ export const NotificationPreferencesSection = ({ tenantSlug, userId }) => {
       })
 
       const errorMsg =
-        error.response?.data?.detail ||
-        error.response?.data?.message ||
+        error.response.data.detail ||
+        error.response.data.message ||
         error.message ||
         'No se pudo actualizar la preferencia'
-      setErrorMessage(`❌ Error: ${errorMsg}`)
+      setErrorMessage(` Error: ${errorMsg}`)
       console.error('Error al actualizar preferencia:', error)
     } finally {
       setIsLoading(false)
@@ -107,12 +105,12 @@ export const NotificationPreferencesSection = ({ tenantSlug, userId }) => {
   if (isLoadingInitial) {
     return (
       <Card className="bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700">
-        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
-          🔔 Preferencias de Notificación
+        <h3 className="text-lg font-bold text-carbon-900 dark:text-white mb-4">
+          <Bell className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Preferencias de Notificación
         </h3>
         <div className="flex items-center justify-center py-8">
           <div className="animate-spin w-8 h-8 border-3 border-blue-500 border-t-transparent rounded-full"></div>
-          <span className="ml-3 text-gray-600 dark:text-gray-400">Cargando preferencias...</span>
+          <span className="ml-3 text-carbon-600 dark:text-neutral-400">Cargando preferencias...</span>
         </div>
       </Card>
     )
@@ -121,8 +119,8 @@ export const NotificationPreferencesSection = ({ tenantSlug, userId }) => {
   return (
     <Card className="bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700">
       {/* HEADER */}
-      <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
-        🔔 Preferencias de Notificación
+      <h3 className="text-lg font-bold text-carbon-900 dark:text-white mb-4">
+        <Bell className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Preferencias de Notificación
       </h3>
 
       {/* MENSAJES DE ÉXITO */}
@@ -140,7 +138,7 @@ export const NotificationPreferencesSection = ({ tenantSlug, userId }) => {
       )}
 
       {/* DESCRIPCIÓN */}
-      <p className="text-sm text-gray-700 dark:text-gray-300 mb-6">
+      <p className="text-sm text-carbon-700 dark:text-neutral-300 mb-6">
         Controla cómo deseas recibir notificaciones en el futuro. Estos canales estarán disponibles cuando se implemente el sistema de notificaciones.
       </p>
 
@@ -151,15 +149,15 @@ export const NotificationPreferencesSection = ({ tenantSlug, userId }) => {
           type="button"
           onClick={() => handleToggle('noti_email')}
           disabled={isLoading}
-          className="w-full flex items-center justify-between p-4 bg-white dark:bg-slate-700 rounded-lg border border-gray-200 dark:border-slate-600 hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed text-left"
+          className="w-full flex items-center justify-between p-4 bg-white dark:bg-carbon-700 rounded-lg border border-neutral-200 dark:border-white/[0.08] hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed text-left"
         >
           <div className="flex items-center gap-3">
-            <span className="text-2xl">📧</span>
+            <span className="text-2xl"><Mail className="inline-block mx-1 text-current" size={20} strokeWidth={2} /></span>
             <div>
-              <p className="font-semibold text-gray-900 dark:text-white">
+              <p className="font-semibold text-carbon-900 dark:text-white">
                 Notificaciones por Email
               </p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-carbon-600 dark:text-neutral-400">
                 Recibe actualizaciones por correo electrónico
               </p>
             </div>
@@ -169,9 +167,9 @@ export const NotificationPreferencesSection = ({ tenantSlug, userId }) => {
           <div className="flex-shrink-0 ml-4">
             <div
               className={`w-16 h-9 rounded-full flex items-center transition-all ${
-                preferencias.noti_email
-                  ? 'bg-blue-600'
-                  : 'bg-gray-300 dark:bg-gray-600'
+                preferencias.noti_email ?
+                   'bg-blue-600'
+                  : 'bg-neutral-300 dark:bg-neutral-600'
               }`}
             >
               <div
@@ -180,9 +178,9 @@ export const NotificationPreferencesSection = ({ tenantSlug, userId }) => {
                 }`}
               >
                 <span className={`text-lg font-bold ${
-                  preferencias.noti_email ? 'text-blue-600' : 'text-gray-400'
+                  preferencias.noti_email ? 'text-blue-600' : 'text-neutral-400'
                 }`}>
-                  {preferencias.noti_email ? '✓' : '✕'}
+                  {preferencias.noti_email ? <><Check className="inline-block mx-1 text-current" size={20} strokeWidth={2} /></> : <><X className="inline-block mx-1 text-current" size={20} strokeWidth={2} /></>}
                 </span>
               </div>
             </div>
@@ -194,15 +192,15 @@ export const NotificationPreferencesSection = ({ tenantSlug, userId }) => {
           type="button"
           onClick={() => handleToggle('noti_push')}
           disabled={isLoading}
-          className="w-full flex items-center justify-between p-4 bg-white dark:bg-slate-700 rounded-lg border border-gray-200 dark:border-slate-600 hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed text-left"
+          className="w-full flex items-center justify-between p-4 bg-white dark:bg-carbon-700 rounded-lg border border-neutral-200 dark:border-white/[0.08] hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed text-left"
         >
           <div className="flex items-center gap-3">
-            <span className="text-2xl">🔔</span>
+            <span className="text-2xl"><Bell className="inline-block mx-1 text-current" size={20} strokeWidth={2} /></span>
             <div>
-              <p className="font-semibold text-gray-900 dark:text-white">
+              <p className="font-semibold text-carbon-900 dark:text-white">
                 Notificaciones Push
               </p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-carbon-600 dark:text-neutral-400">
                 Recibe notificaciones instantáneas en el navegador
               </p>
             </div>
@@ -212,9 +210,9 @@ export const NotificationPreferencesSection = ({ tenantSlug, userId }) => {
           <div className="flex-shrink-0 ml-4">
             <div
               className={`w-16 h-9 rounded-full flex items-center transition-all ${
-                preferencias.noti_push
-                  ? 'bg-blue-600'
-                  : 'bg-gray-300 dark:bg-gray-600'
+                preferencias.noti_push ?
+                   'bg-blue-600'
+                  : 'bg-neutral-300 dark:bg-neutral-600'
               }`}
             >
               <div
@@ -223,9 +221,9 @@ export const NotificationPreferencesSection = ({ tenantSlug, userId }) => {
                 }`}
               >
                 <span className={`text-lg font-bold ${
-                  preferencias.noti_push ? 'text-blue-600' : 'text-gray-400'
+                  preferencias.noti_push ? 'text-blue-600' : 'text-neutral-400'
                 }`}>
-                  {preferencias.noti_push ? '✓' : '✕'}
+                  {preferencias.noti_push ? <><Check className="inline-block mx-1 text-current" size={20} strokeWidth={2} /></> : <><X className="inline-block mx-1 text-current" size={20} strokeWidth={2} /></>}
                 </span>
               </div>
             </div>
@@ -234,9 +232,9 @@ export const NotificationPreferencesSection = ({ tenantSlug, userId }) => {
       </div>
 
       {/* INFORMACIÓN ADICIONAL */}
-      <div className="mt-6 p-4 bg-white dark:bg-slate-700 rounded-lg border border-gray-200 dark:border-slate-600 text-sm text-gray-600 dark:text-gray-400">
+      <div className="mt-6 p-4 bg-white dark:bg-carbon-700 rounded-lg border border-neutral-200 dark:border-white/[0.08] text-sm text-carbon-600 dark:text-neutral-400">
         <p>
-          💡 <strong>Nota:</strong> Estos son solo tus canales preferidos. El sistema de envío de notificaciones se implementará en el futuro.
+          <Lightbulb className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> <strong>Nota:</strong> Estos son solo tus canales preferidos. El sistema de envío de notificaciones se implementará en el futuro.
         </p>
       </div>
     </Card>

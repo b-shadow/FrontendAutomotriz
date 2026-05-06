@@ -34,9 +34,7 @@ const planVehiculoService = {
       if (filtros.page) params.append('page', filtros.page)
 
       const queryString = params.toString()
-      const url = queryString
-        ? `/api/${tenantSlug}/planes-vehiculo/?${queryString}`
-        : `/api/${tenantSlug}/planes-vehiculo/`
+      const url = queryString ? `/api/${tenantSlug}/planes-vehiculo/?${queryString}` : `/api/${tenantSlug}/planes-vehiculo/`
 
       const response = await apiClient.get(url)
       return response.data
@@ -171,8 +169,7 @@ const planVehiculoService = {
       // - prioridad (opcional)
       // - observaciones (opcional)
       const data = {
-        ...detalleData,
-        plan_servicio_id: planId,
+        ...detalleData, plan_servicio_id : planId,
       }
       const response = await apiClient.post(
         `/api/${tenantSlug}/planes-vehiculo/${planId}/crear-detalle/`,

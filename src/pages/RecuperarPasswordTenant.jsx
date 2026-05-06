@@ -1,3 +1,4 @@
+import { Lock, CheckCircle } from 'lucide-react';
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTenant } from '../hooks/useTenant'
@@ -44,12 +45,12 @@ export const RecuperarPasswordTenant = () => {
   }
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden bg-slate-50 text-slate-900 transition-colors duration-300 dark:bg-[#0b0720] dark:text-white">
+    <div className="relative min-h-screen overflow-x-hidden bg-neutral-100 text-carbon-900 transition-colors duration-300 dark:bg-carbon-950 dark:text-white">
       {/* FONDO GLOBAL */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute left-[-120px] top-[-120px] h-72 w-72 rounded-full bg-fuchsia-400/20 blur-3xl dark:bg-fuchsia-500/20" />
-        <div className="absolute right-[-120px] top-[120px] h-80 w-80 rounded-full bg-sky-400/20 blur-3xl dark:bg-sky-500/20" />
-        <div className="absolute bottom-[-120px] left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-violet-400/10 blur-3xl dark:bg-violet-500/10" />
+        <div className="absolute left-[-120px] top-[-120px] h-72 w-72 rounded-full bg-primary-400/10 blur-3xl dark:bg-primary-500/10" />
+        <div className="absolute right-[-120px] top-[120px] h-80 w-80 rounded-full bg-burgundy-400/8 blur-3xl dark:bg-burgundy-500/8" />
+        <div className="absolute bottom-[-120px] left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-primary-400/5 blur-3xl dark:bg-primary-500/5" />
       </div>
 
       <main className="relative z-10 mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10">
@@ -60,24 +61,22 @@ export const RecuperarPasswordTenant = () => {
 
         {/* CARD CENTRADA */}
         <section className="mx-auto w-full max-w-xl">
-          <div className="overflow-hidden rounded-[32px] border border-slate-200/70 bg-white/85 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur-xl transition-colors duration-300 dark:border-white/10 dark:bg-white/5 dark:shadow-[0_30px_80px_rgba(76,29,149,0.18)]">
+          <div className="overflow-hidden rounded-2xl border border-neutral-200/70 bg-white/85 shadow-xl backdrop-blur-xl transition-colors duration-300 dark:border-white/[0.06] dark:bg-white/[0.03] dark:shadow-[0_30px_80px_rgba(220,38,38,0.06)]">
             {/* HEADER */}
-            <div className="relative overflow-hidden border-b border-slate-200/70 bg-gradient-to-r from-fuchsia-600 via-violet-600 to-blue-600 px-8 py-8 text-white dark:border-white/10">
+            <div className="relative overflow-hidden border-b border-neutral-200/70 bg-gradient-to-r from-primary-600 via-burgundy-600 to-carbon-800 px-8 py-8 text-white dark:border-white/[0.06]">
               <div className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-white/10 blur-2xl" />
               <div className="relative">
-                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-white/15 text-4xl shadow-lg">
-                  🔐
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white/15 text-4xl shadow-lg backdrop-blur-sm">
+                  <Lock className="inline-block mx-1 text-current" size={20} strokeWidth={2} />
                 </div>
 
-                <h3 className="text-3xl font-black">Recuperar Contraseña</h3>
+                <h3 className="text-3xl font-black tracking-tight">Recuperar Contraseña</h3>
 
                 <p className="mt-2 text-white/85">
-                  {tenant?.nombre
-                    ? `Solicita un enlace para restablecer el acceso a ${tenant.nombre}`
-                    : 'Solicita un enlace para restablecer tu acceso'}
+                  {tenant.nombre ? `Solicita un enlace para restablecer el acceso a ${tenant.nombre}` : 'Solicita un enlace para restablecer tu acceso'}
                 </p>
 
-                <div className="mt-4 inline-flex rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">
+                <div className="mt-4 inline-flex rounded-full bg-white/15 px-3 py-1 text-xs font-semibold tracking-wider uppercase">
                   /{tenantSlug}
                 </div>
               </div>
@@ -88,30 +87,30 @@ export const RecuperarPasswordTenant = () => {
               {success ? (
                 <div className="space-y-6 text-center">
                   <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500/15 text-5xl">
-                    ✅
+                    <CheckCircle className="inline-block mx-1 text-current" size={20} strokeWidth={2} />
                   </div>
 
                   <div>
-                    <h4 className="text-2xl font-bold text-slate-900 dark:text-white">
+                    <h4 className="text-2xl font-bold text-carbon-900 dark:text-white tracking-tight">
                       ¡Revisa tu email!
                     </h4>
-                    <p className="mt-3 text-slate-600 dark:text-slate-300">
+                    <p className="mt-3 text-carbon-600 dark:text-neutral-300">
                       Hemos enviado instrucciones para recuperar tu contraseña a{' '}
                       <strong>{submittedEmail}</strong>
                     </p>
                   </div>
 
-                  <div className="rounded-2xl border border-blue-200 bg-blue-50/90 p-4 text-blue-900 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200">
+                  <div className="rounded-xl border border-primary-200 bg-primary-50/90 p-4 text-primary-800 dark:border-primary-500/30 dark:bg-primary-500/10 dark:text-primary-200">
                     El enlace para restablecer tu contraseña expirará en 24 horas.
                   </div>
 
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                  <p className="text-sm text-carbon-500 dark:text-neutral-400">
                     Serás redirigido al login en unos momentos...
                   </p>
 
                   <Button
                     onClick={() => navigate(`/${tenantSlug}/login`)}
-                    className="w-full rounded-2xl bg-gradient-to-r from-fuchsia-600 via-violet-600 to-blue-600 px-5 py-3 font-semibold text-white shadow-lg shadow-violet-500/20 transition hover:scale-[1.02]"
+                    className="w-full rounded-xl bg-gradient-to-r from-primary-600 via-primary-500 to-burgundy-600 px-5 py-3 font-semibold uppercase tracking-wider text-white shadow-lg shadow-primary-900/20 transition hover:brightness-110 hover:shadow-xl"
                   >
                     Ir al Login Ahora
                   </Button>
@@ -119,7 +118,7 @@ export const RecuperarPasswordTenant = () => {
               ) : (
                 <>
                   {error && (
-                    <div className="mb-6 rounded-2xl border border-red-200 bg-red-50/90 p-4 text-red-700 shadow-sm dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200">
+                    <div className="mb-6 rounded-xl border border-primary-200 bg-primary-50/90 p-4 text-primary-700 shadow-sm dark:border-primary-500/30 dark:bg-primary-500/10 dark:text-primary-200">
                       {error}
                     </div>
                   )}
@@ -139,18 +138,18 @@ export const RecuperarPasswordTenant = () => {
                     <Button
                       type="submit"
                       disabled={loading || !email}
-                      className="w-full rounded-2xl bg-gradient-to-r from-fuchsia-600 via-violet-600 to-blue-600 px-5 py-3 font-semibold text-white shadow-lg shadow-violet-500/20 transition hover:scale-[1.02]"
+                      className="w-full rounded-xl bg-gradient-to-r from-primary-600 via-primary-500 to-burgundy-600 px-5 py-3 font-semibold uppercase tracking-wider text-white shadow-lg shadow-primary-900/20 transition hover:brightness-110 hover:shadow-xl"
                     >
                       {loading ? 'Enviando...' : 'Enviar Instrucciones'}
                     </Button>
                   </form>
 
-                  <div className="mt-8 space-y-4 border-t border-slate-200 pt-6 text-center text-sm dark:border-white/10">
-                    <p className="text-slate-600 dark:text-slate-300">
-                      ¿Recordaste tu contraseña?{' '}
+                  <div className="mt-8 space-y-4 border-t border-neutral-200 pt-6 text-center text-sm dark:border-white/[0.06]">
+                    <p className="text-carbon-600 dark:text-neutral-300">
+                      ¿Recordaste tu contraseña{' '}
                       <a
                         href={`/${tenantSlug}/login`}
-                        className="font-semibold text-violet-700 transition hover:text-violet-800 dark:text-violet-300 dark:hover:text-violet-200"
+                        className="font-semibold text-primary-600 transition hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
                       >
                         Inicia sesión aquí
                       </a>

@@ -11,18 +11,14 @@ import CitaDetalleModal from '../../components/citas/CitaDetalleModal'
 
 
 const estadoColorMap = {
-  PROGRAMADA: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-  PENDIENTE_APROBACION: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-  CANCELADA: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-  FINALIZADA: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+  PROGRAMADA: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200', PENDIENTE_APROBACION : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+  CANCELADA: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200', FINALIZADA : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
   NO_SHOW: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
 }
 
 const estadoLabelMap = {
-  PROGRAMADA: 'Programada',
-  PENDIENTE_APROBACION: 'Pendiente Aprobación',
-  CANCELADA: 'Cancelada',
-  FINALIZADA: 'Finalizada',
+  PROGRAMADA: 'Programada', PENDIENTE_APROBACION : 'Pendiente Aprobación',
+  CANCELADA: 'Cancelada', FINALIZADA : 'Finalizada',
   NO_SHOW: 'No Show',
 }
 
@@ -38,17 +34,14 @@ const GestionCitasView = () => {
 
   // Modal state
   const [modals, setModals] = useState({
-    crear: false,
-    editar: false,
-    reprogramar: false,
-    detalle: false,
+    crear: false, editar : false,
+    reprogramar: false, detalle : false,
   })
   const [citaSeleccionada, setCitaSeleccionada] = useState(null)
 
   // Filters
   const [filters, setFilters] = useState({
-    estado: '',
-    fecha_desde: '',
+    estado: '', fecha_desde : '',
     fecha_hasta: '',
   })
 
@@ -61,8 +54,7 @@ const GestionCitasView = () => {
         setError(null)
 
         const params = {
-          page: pageNum,
-          page_size: pagination.pageSize,
+          page: pageNum, page_size : pagination.pageSize,
         }
         if (filters.estado) params.estado = filters.estado
         if (filters.fecha_desde) params.fecha_desde = filters.fecha_desde
@@ -71,13 +63,12 @@ const GestionCitasView = () => {
         const response = await citasService.obtenerCitas(tenantSlug, params)
         setCitas(response.data || response.results || [])
         setPagination((prev) => ({
-          ...prev,
-          page: pageNum,
+          ...prev, page : pageNum,
           total: response.count || 0,
         }))
       } catch (err) {
         console.error('Error loading citas:', err)
-        setError(err.response?.data?.detail || 'Error loading citas')
+        setError(err.response.data.detail || 'Error loading citas')
       } finally {
         setLoading(false)
       }
@@ -145,14 +136,14 @@ const GestionCitasView = () => {
   }
 
   const handleCancelarCita = async (citaId) => {
-    if (!window.confirm('¿Cancelar esta cita?')) return
+    if (!window.confirm('¿Cancelar esta cita')) return
     try {
       await citasService.cancelarCita(tenantSlug, citaId)
       setSuccess('Cita cancelada correctamente')
       cargarCitas(pagination.page)
       setTimeout(() => setSuccess(null), 3000)
     } catch (err) {
-      setError(err.response?.data?.detail || 'Error al cancelar cita')
+      setError(err.response.data.detail || 'Error al cancelar cita')
     }
   }
 
@@ -162,10 +153,10 @@ const GestionCitasView = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Gestión de Citas</h1>
+        <h1 className="text-3xl font-bold text-carbon-900 dark:text-white">Gestión de Citas</h1>
         <button
           onClick={abrirModalCrear}
-          className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition"
+          className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg transition shadow-md shadow-primary-900/20"
         >
           + Nueva Cita
         </button>
@@ -173,21 +164,21 @@ const GestionCitasView = () => {
 
       {/* Success/Error */}
       {success && (
-        <div className="bg-green-50 text-green-700 px-4 py-3 rounded-lg border border-green-200">
+        <div className="bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-4 py-3 rounded-lg border border-green-200 dark:border-green-800/30">
           {success}
         </div>
       )}
       {error && (
-        <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg border border-red-200">
+        <div className="bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg border border-red-200 dark:border-red-800/30">
           {error}
         </div>
       )}
 
       {/* Filters */}
-      <div className="bg-white p-4 rounded-lg shadow-sm space-y-4">
+      <div className="bg-white dark:bg-carbon-900 p-4 rounded-lg shadow-sm border border-neutral-200/60 dark:border-white/[0.06] space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-carbon-700 dark:text-neutral-300 mb-1">
               Estado
             </label>
             <select
@@ -195,7 +186,7 @@ const GestionCitasView = () => {
               onChange={(e) =>
                 setFilters((prev) => ({ ...prev, estado: e.target.value }))
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
+              className="w-full px-3 py-2 border border-neutral-300 dark:border-white/[0.06] bg-white dark:bg-carbon-800 text-carbon-900 dark:text-white rounded-lg focus:ring-primary-500 focus:border-primary-500"
             >
               <option value="">Todos</option>
               <option value="PROGRAMADA">Programada</option>
@@ -205,7 +196,7 @@ const GestionCitasView = () => {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-carbon-700 dark:text-neutral-300 mb-1">
               Desde
             </label>
             <input
@@ -214,11 +205,11 @@ const GestionCitasView = () => {
               onChange={(e) =>
                 setFilters((prev) => ({ ...prev, fecha_desde: e.target.value }))
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
+              className="w-full px-3 py-2 border border-neutral-300 dark:border-white/[0.06] bg-white dark:bg-carbon-800 text-carbon-900 dark:text-white rounded-lg focus:ring-primary-500 focus:border-primary-500"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-carbon-700 dark:text-neutral-300 mb-1">
               Hasta
             </label>
             <input
@@ -227,24 +218,24 @@ const GestionCitasView = () => {
               onChange={(e) =>
                 setFilters((prev) => ({ ...prev, fecha_hasta: e.target.value }))
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
+              className="w-full px-3 py-2 border border-neutral-300 dark:border-white/[0.06] bg-white dark:bg-carbon-800 text-carbon-900 dark:text-white rounded-lg focus:ring-primary-500 focus:border-primary-500"
             />
           </div>
         </div>
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white dark:bg-carbon-900 rounded-lg shadow border border-neutral-200/60 dark:border-white/[0.06] overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center text-gray-500">Cargando...</div>
-        ) : citas.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">
+          <div className="p-8 text-center text-carbon-500 dark:text-neutral-400">Cargando...</div>
+          ) : citas.length === 0 ? (
+          <div className="p-8 text-center text-carbon-500 dark:text-neutral-400">
             No hay citas para mostrar
           </div>
-        ) : (
+              ) : (
           <>
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b">
+            <table className="w-full text-carbon-900 dark:text-white">
+              <thead className="bg-neutral-50 dark:bg-carbon-800 border-b dark:border-white/[0.06]">
                 <tr>
                   <th className="px-6 py-3 text-left text-sm font-semibold">
                     Inicio
@@ -263,19 +254,19 @@ const GestionCitasView = () => {
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y">
+              <tbody className="divide-y divide-neutral-200/60 dark:divide-white/[0.06]">
                 {citas.map((cita) => {
                   const estadoInfo =
                     estadoLabelMap[cita.estado] || cita.estado
                   const colorClass =
                     estadoColorMap[cita.estado] ||
-                    'bg-gray-100 text-gray-800'
+                    'bg-neutral-100 text-carbon-800 dark:bg-carbon-800 dark:text-neutral-300'
                   const inicioDate = new Date(
                     cita.fecha_hora_inicio_programada
                   ).toLocaleString()
 
                   return (
-                    <tr key={cita.id} className="hover:bg-gray-50">
+                    <tr key={cita.id} className="hover:bg-neutral-50 dark:hover:bg-carbon-800/50 transition-colors">
                       <td className="px-6 py-4 text-sm">{inicioDate}</td>
                       <td className="px-6 py-4 text-sm">
                         {cita.cliente_nombres || 'N/A'}
@@ -288,10 +279,10 @@ const GestionCitasView = () => {
                           {estadoInfo}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-right space-x-2">
+                      <td className="px-6 py-4 text-right space-x-3">
                         <button
                           onClick={() => abrirDetalle(cita)}
-                          className="text-blue-600 hover:text-blue-900 text-sm"
+                          className="text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 text-sm font-medium"
                         >
                           Ver
                         </button>
@@ -299,13 +290,13 @@ const GestionCitasView = () => {
                           <>
                             <button
                               onClick={() => abrirEditar(cita)}
-                              className="text-gray-600 hover:text-gray-900 text-sm"
+                              className="text-carbon-600 hover:text-carbon-900 dark:text-neutral-400 dark:hover:text-white text-sm font-medium"
                             >
                               Editar
                             </button>
                             <button
                               onClick={() => abrirReprogramar(cita)}
-                              className="text-orange-600 hover:text-orange-900 text-sm"
+                              className="text-orange-600 hover:text-orange-800 dark:text-orange-400 dark:hover:text-orange-300 text-sm font-medium"
                             >
                               Reprogramar
                             </button>
@@ -315,7 +306,7 @@ const GestionCitasView = () => {
                           cita.estado !== 'FINALIZADA' && (
                             <button
                               onClick={() => handleCancelarCita(cita.id)}
-                              className="text-red-600 hover:text-red-900 text-sm"
+                              className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 text-sm font-medium"
                             >
                               Cancelar
                             </button>
@@ -327,21 +318,21 @@ const GestionCitasView = () => {
               </tbody>
             </table>
             {numPages > 1 && (
-              <div className="flex justify-center gap-2 p-4">
+              <div className="flex justify-center gap-2 p-4 bg-white dark:bg-carbon-900 border-t border-neutral-200/60 dark:border-white/[0.06]">
                 <button
                   onClick={() => cargarCitas(pagination.page - 1)}
                   disabled={pagination.page === 1}
-                  className="px-3 py-1 rounded disabled:opacity-50"
+                  className="px-3 py-1 rounded bg-neutral-100 text-carbon-700 hover:bg-neutral-200 dark:bg-carbon-800 dark:text-neutral-300 dark:hover:bg-carbon-700 disabled:opacity-50 transition"
                 >
                   ← Anterior
                 </button>
-                <span className="px-3 py-1">
+                <span className="px-3 py-1 text-carbon-600 dark:text-neutral-400 font-medium">
                   Página {pagination.page} de {numPages}
                 </span>
                 <button
                   onClick={() => cargarCitas(pagination.page + 1)}
                   disabled={pagination.page >= numPages}
-                  className="px-3 py-1 rounded disabled:opacity-50"
+                  className="px-3 py-1 rounded bg-neutral-100 text-carbon-700 hover:bg-neutral-200 dark:bg-carbon-800 dark:text-neutral-300 dark:hover:bg-carbon-700 disabled:opacity-50 transition"
                 >
                   Siguiente →
                 </button>

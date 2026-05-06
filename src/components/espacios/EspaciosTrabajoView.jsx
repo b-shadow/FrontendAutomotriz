@@ -6,6 +6,7 @@
  * - tenantSlug: string
  * - onNavigate: function
  */
+import { Settings, X } from 'lucide-react';
 import { useState, useEffect } from 'react'
 import { EspacioTrabajoModal } from './EspacioTrabajoModal'
 import { CambiarEstadoEspacioModal } from './CambiarEstadoEspacioModal'
@@ -41,11 +42,8 @@ export const EspaciosTrabajoView = ({ user, tenantSlug }) => {
 
   // Filtros
   const [filtros, setFiltros] = useState({
-    search: '',
-    tipo: '',
-    estado: '',
-    activo: '', // '', 'true', 'false'
-    ordering: '-created_at',
+    search: '', tipo : '',
+    estado: '', activo : '', // '', 'true', 'false' ? ordering : '-created_at',
   })
 
   // Modales
@@ -96,8 +94,7 @@ export const EspaciosTrabajoView = ({ user, tenantSlug }) => {
 
   const handleFilterChange = (key, value) => {
     setFiltros((prev) => ({
-      ...prev,
-      [key]: value,
+      ...prev, [key] : value,
     }))
   }
 
@@ -195,15 +192,14 @@ export const EspaciosTrabajoView = ({ user, tenantSlug }) => {
     const nuevoActivo = !espacio.activo
     const actionText = nuevoActivo ? 'activar' : 'inactivar'
     
-    if (!window.confirm(`¿Deseas ${actionText} este espacio?`)) {
+    if (!window.confirm(`¿Deseas ${actionText} este espacio`)) {
       return
     }
 
     try {
       setIsSaving(true)
       await espaciosTrabajoService.cambiarActivoEspacio(tenantSlug, espacio.id, {
-        activo: nuevoActivo,
-        motivo: '', // Sin motivo por ahora, se puede agregar modal si es necesario
+        activo: nuevoActivo, motivo : '', // Sin motivo por ahora, se puede agregar modal si es necesario
       })
       setSuccess(`Espacio ${actionText}do correctamente`)
       await loadEspacios()
@@ -231,14 +227,13 @@ export const EspaciosTrabajoView = ({ user, tenantSlug }) => {
     <div className="space-y-4">
       {/* Header */}
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-          🛠️ Espacios de Trabajo
+        <h1 className="text-3xl font-bold text-carbon-900 dark:text-white">
+          <Settings className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Espacios de Trabajo
         </h1>
         {canManage && (
           <button
             onClick={() => handleOpenEspacioModal(null)}
-            className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg
-              disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg ? disabled : opacity-50 disabled:cursor-not-allowed"
             disabled={isSaving}
           >
             + Registrar Espacio
@@ -261,8 +256,8 @@ export const EspaciosTrabajoView = ({ user, tenantSlug }) => {
       )}
 
       {/* Filtros */}
-      <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-4 space-y-3">
-        <h3 className="font-semibold text-gray-900 dark:text-white">Filtros</h3>
+      <div className="bg-white dark:bg-carbon-800 rounded-lg shadow p-4 space-y-3">
+        <h3 className="font-semibold text-carbon-900 dark:text-white">Filtros</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
           {/* Búsqueda */}
           <input
@@ -270,18 +265,16 @@ export const EspaciosTrabajoView = ({ user, tenantSlug }) => {
             placeholder="Buscar por código o nombre..."
             value={filtros.search}
             onChange={(e) => handleFilterChange('search', e.target.value)}
-            className="px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg
-              bg-white dark:bg-slate-700 text-gray-900 dark:text-white
-              focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            className="px-3 py-2 border border-neutral-300 dark:border-white/[0.08] rounded-lg
+              bg-white dark:bg-carbon-700 text-carbon-900 dark:text-white ? focus : ring-2 focus:ring-primary-500 focus:border-transparent"
           />
 
           {/* Tipo */}
           <select
             value={filtros.tipo}
             onChange={(e) => handleFilterChange('tipo', e.target.value)}
-            className="px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg
-              bg-white dark:bg-slate-700 text-gray-900 dark:text-white
-              focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            className="px-3 py-2 border border-neutral-300 dark:border-white/[0.08] rounded-lg
+              bg-white dark:bg-carbon-700 text-carbon-900 dark:text-white ? focus : ring-2 focus:ring-primary-500 focus:border-transparent"
           >
             <option value="">Todos los tipos</option>
             {TIPOS.map((tipo) => (
@@ -295,9 +288,8 @@ export const EspaciosTrabajoView = ({ user, tenantSlug }) => {
           <select
             value={filtros.estado}
             onChange={(e) => handleFilterChange('estado', e.target.value)}
-            className="px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg
-              bg-white dark:bg-slate-700 text-gray-900 dark:text-white
-              focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            className="px-3 py-2 border border-neutral-300 dark:border-white/[0.08] rounded-lg
+              bg-white dark:bg-carbon-700 text-carbon-900 dark:text-white ? focus : ring-2 focus:ring-primary-500 focus:border-transparent"
           >
             <option value="">Todos los estados</option>
             {ESTADOS.map((est) => (
@@ -311,9 +303,8 @@ export const EspaciosTrabajoView = ({ user, tenantSlug }) => {
           <select
             value={filtros.activo}
             onChange={(e) => handleFilterChange('activo', e.target.value)}
-            className="px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg
-              bg-white dark:bg-slate-700 text-gray-900 dark:text-white
-              focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            className="px-3 py-2 border border-neutral-300 dark:border-white/[0.08] rounded-lg
+              bg-white dark:bg-carbon-700 text-carbon-900 dark:text-white ? focus : ring-2 focus:ring-primary-500 focus:border-transparent"
           >
             <option value="">Todos</option>
             <option value="true">Activos</option>
@@ -324,9 +315,8 @@ export const EspaciosTrabajoView = ({ user, tenantSlug }) => {
           <select
             value={filtros.ordering}
             onChange={(e) => handleFilterChange('ordering', e.target.value)}
-            className="px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg
-              bg-white dark:bg-slate-700 text-gray-900 dark:text-white
-              focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            className="px-3 py-2 border border-neutral-300 dark:border-white/[0.08] rounded-lg
+              bg-white dark:bg-carbon-700 text-carbon-900 dark:text-white ? focus : ring-2 focus:ring-primary-500 focus:border-transparent"
           >
             <option value="-created_at">Más recientes</option>
             <option value="created_at">Más antiguos</option>
@@ -341,14 +331,14 @@ export const EspaciosTrabajoView = ({ user, tenantSlug }) => {
       {/* Loading */}
       {loading && (
         <div className="flex justify-center py-12">
-          <div className="text-gray-600 dark:text-gray-400">Cargando espacios...</div>
+          <div className="text-carbon-600 dark:text-neutral-400">Cargando espacios...</div>
         </div>
       )}
 
       {/* Empty State */}
       {!loading && espacios.length === 0 && (
-        <div className="text-center py-12 bg-white dark:bg-slate-800 rounded-lg">
-          <p className="text-gray-600 dark:text-gray-400 mb-4">No hay espacios registrados</p>
+        <div className="text-center py-12 bg-white dark:bg-carbon-800 rounded-lg">
+          <p className="text-carbon-600 dark:text-neutral-400 mb-4">No hay espacios registrados</p>
           {canManage && (
             <button
               onClick={() => handleOpenEspacioModal(null)}
@@ -362,54 +352,52 @@ export const EspaciosTrabajoView = ({ user, tenantSlug }) => {
 
       {/* Tabla de Espacios */}
       {!loading && espacios.length > 0 && (
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow overflow-hidden">
+        <div className="bg-white dark:bg-carbon-800 rounded-lg shadow overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gray-100 dark:bg-slate-700 border-b border-gray-200 dark:border-slate-600">
+              <thead className="bg-neutral-100 dark:bg-carbon-700 border-b border-neutral-200 dark:border-white/[0.08]">
                 <tr>
-                  <th className="px-4 py-3 text-left font-medium text-gray-900 dark:text-white">
+                  <th className="px-4 py-3 text-left font-medium text-carbon-900 dark:text-white">
                     Código
                   </th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-900 dark:text-white">
+                  <th className="px-4 py-3 text-left font-medium text-carbon-900 dark:text-white">
                     Nombre
                   </th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-900 dark:text-white">
+                  <th className="px-4 py-3 text-left font-medium text-carbon-900 dark:text-white">
                     Tipo
                   </th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-900 dark:text-white">
+                  <th className="px-4 py-3 text-left font-medium text-carbon-900 dark:text-white">
                     Estado
                   </th>
-                  <th className="px-4 py-3 text-center font-medium text-gray-900 dark:text-white">
+                  <th className="px-4 py-3 text-center font-medium text-carbon-900 dark:text-white">
                     Activo
                   </th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-900 dark:text-white">
+                  <th className="px-4 py-3 text-right font-medium text-carbon-900 dark:text-white">
                     Acciones
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-slate-600">
+              <tbody className="divide-y divide-neutral-200 dark:divide-white/[0.08]">
                 {espacios.map((espacio) => (
                   <tr
                     key={espacio.id}
-                    className="hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors"
+                    className="hover:bg-neutral-50 dark:hover:bg-carbon-700/50 transition-colors"
                   >
-                    <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">
+                    <td className="px-4 py-3 font-medium text-carbon-900 dark:text-white">
                       {espacio.codigo}
                     </td>
-                    <td className="px-4 py-3 text-gray-900 dark:text-white">
+                    <td className="px-4 py-3 text-carbon-900 dark:text-white">
                       {espacio.nombre}
                     </td>
-                    <td className="px-4 py-3 text-gray-900 dark:text-white">
+                    <td className="px-4 py-3 text-carbon-900 dark:text-white">
                       {espacio.tipo_display}
                     </td>
                     <td className="px-4 py-3">
                       <span
                         className={`inline-block px-2 py-1 rounded text-xs font-medium ${
-                          espacio.estado === 'DISPONIBLE'
-                            ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400'
-                            : espacio.estado === 'OCUPADO'
-                            ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-400'
-                            : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400'
+                          espacio.estado === 'DISPONIBLE' ?
+                             'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400'
+                            : espacio.estado === 'OCUPADO' ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-400' : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400'
                         }`}
                       >
                         {espacio.estado_display}
@@ -418,9 +406,9 @@ export const EspaciosTrabajoView = ({ user, tenantSlug }) => {
                     <td className="px-4 py-3 text-center">
                       <span
                         className={`inline-block px-2 py-1 rounded text-xs font-medium ${
-                          espacio.activo
-                            ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400'
-                            : 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400'
+                          espacio.activo ?
+                             'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400'
+                            : 'bg-neutral-100 dark:bg-carbon-700 text-carbon-600 dark:text-neutral-400'
                         }`}
                       >
                         {espacio.activo ? 'Sí' : 'No'}
@@ -473,7 +461,7 @@ export const EspaciosTrabajoView = ({ user, tenantSlug }) => {
                         {canViewHorarios && (
                           <button
                             onClick={() => handleOpenHorariosModal(espacio)}
-                            className="text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 text-xs"
+                            className="text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 text-xs"
                           >
                             Horarios
                           </button>
@@ -491,7 +479,7 @@ export const EspaciosTrabajoView = ({ user, tenantSlug }) => {
       {/* Modal de Espacio */}
       {isEspacioModalOpen && (
         <EspacioTrabajoModal
-          key={`espacio-${selectedEspacio?.id || 'new'}`}
+          key={`espacio-${selectedEspacio.id || 'new'}`}
           isOpen={isEspacioModalOpen}
           onClose={handleCloseEspacioModal}
           onSave={handleSaveEspacio}
@@ -503,7 +491,7 @@ export const EspaciosTrabajoView = ({ user, tenantSlug }) => {
       {/* Modal de Estado */}
       {isEstadoModalOpen && (
         <CambiarEstadoEspacioModal
-          key={`estado-${selectedEspacio?.id}`}
+          key={`estado-${selectedEspacio.id}`}
           isOpen={isEstadoModalOpen}
           onClose={handleCloseEstadoModal}
           onSave={handleSaveEstado}
@@ -515,16 +503,16 @@ export const EspaciosTrabajoView = ({ user, tenantSlug }) => {
       {/* Modal de Horarios */}
       {isHorariosModalOpen && selectedEspacio && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-lg w-full max-w-6xl h-[90vh] p-6 overflow-y-auto">
+          <div className="bg-white dark:bg-carbon-800 rounded-lg shadow-lg w-full max-w-6xl h-[90vh] p-6 overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+              <h2 className="text-xl font-semibold text-carbon-900 dark:text-white">
                 Horarios del Espacio
               </h2>
               <button
                 onClick={handleCloseHorariosModal}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                className="text-carbon-500 hover:text-carbon-700 dark:text-neutral-400 dark:hover:text-neutral-200"
               >
-                ✕
+                <X className="inline-block mx-1 text-current" size={20} strokeWidth={2} />
               </button>
             </div>
             <HorariosEspacioPanel

@@ -95,18 +95,18 @@ const HorarioGrid = ({
   }
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900 w-full">
+    <div className="overflow-x-auto rounded-2xl border border-neutral-200 bg-white shadow-sm dark:border-white/[0.08] dark:bg-carbon-900 w-full">
       {/* Contenedor responsive */}
       <div className="min-w-[900px]">
         {/* Header */}
-        <div className="grid grid-cols-8 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-20">
-          <div className="sticky left-0 z-10 bg-slate-50 dark:bg-slate-800 p-2 sm:p-3 lg:p-4 text-xs sm:text-xs lg:text-xs font-bold text-slate-700 dark:text-slate-200 border-r border-slate-200 dark:border-slate-700">
+        <div className="grid grid-cols-8 border-b border-neutral-200 dark:border-white/[0.08] sticky top-0 z-20">
+          <div className="sticky left-0 z-10 bg-neutral-50 dark:bg-carbon-800 p-2 sm:p-3 lg:p-4 text-xs sm:text-xs lg:text-xs font-bold text-carbon-700 dark:text-neutral-200 border-r border-neutral-200 dark:border-white/[0.08]">
             Hora
           </div>
           {DAYS.map((day) => (
             <div
               key={day.value}
-              className="bg-slate-50 dark:bg-slate-800 p-2 sm:p-3 lg:p-4 text-center text-xs sm:text-xs lg:text-xs font-bold text-slate-800 dark:text-slate-100 border-l border-slate-200 dark:border-slate-700"
+              className="bg-neutral-50 dark:bg-carbon-800 p-2 sm:p-3 lg:p-4 text-center text-xs sm:text-xs lg:text-xs font-bold text-carbon-800 dark:text-neutral-100 border-l border-neutral-200 dark:border-white/[0.08]"
             >
               {day.label}
             </div>
@@ -118,9 +118,9 @@ const HorarioGrid = ({
           {timeSlots.map((time) => (
             <div
               key={time}
-              className="grid grid-cols-8 border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+              className="grid grid-cols-8 border-b border-neutral-100 dark:border-white/[0.06] hover:bg-neutral-50 dark:hover:bg-carbon-800/50 transition-colors"
             >
-              <div className="sticky left-0 z-10 bg-white dark:bg-slate-900 px-2 sm:px-3 lg:px-4 py-2 sm:py-3 lg:py-4 text-xs sm:text-xs lg:text-xs font-bold text-slate-600 dark:text-slate-400 border-r border-slate-200 dark:border-slate-700">
+              <div className="sticky left-0 z-10 bg-white dark:bg-carbon-900 px-2 sm:px-3 lg:px-4 py-2 sm:py-3 lg:py-4 text-xs sm:text-xs lg:text-xs font-bold text-carbon-600 dark:text-neutral-400 border-r border-neutral-200 dark:border-white/[0.08]">
                 {formatMinutesToHour(time)}
               </div>
 
@@ -130,16 +130,16 @@ const HorarioGrid = ({
                 return (
                   <div
                     key={`${day.value}-${time}`}
-                    className={`relative min-h-[40px] sm:min-h-[60px] lg:min-h-[80px] border-l border-slate-100 dark:border-slate-800 p-1 sm:p-2 lg:p-3 flex items-center justify-center ${
-                      block
-                        ? 'bg-emerald-100 dark:bg-emerald-900/40'
-                        : 'bg-white dark:bg-slate-900'
+                    className={`relative min-h-[40px] sm:min-h-[60px] lg:min-h-[80px] border-l border-neutral-100 dark:border-white/[0.06] p-1 sm:p-2 lg:p-3 flex items-center justify-center ${
+                      block ?
+                         'bg-emerald-100 dark:bg-emerald-900/40'
+                        : 'bg-white dark:bg-carbon-900'
                     }`}
                   >
                     {block && (
                       <div className="w-full rounded-xl border-3 border-emerald-400 dark:border-emerald-600 bg-emerald-500 dark:bg-emerald-600 px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-center text-white shadow-lg">
                         <div className="font-bold text-xs sm:text-xs lg:text-xs">
-                          {block.hora_inicio?.slice(0, 5)} - {block.hora_fin?.slice(0, 5)}
+                          {block.hora_inicio.slice(0, 5)} - {block.hora_fin.slice(0, 5)}
                         </div>
                         <div className="mt-1 text-xs opacity-95 font-medium">
                           {block.dia_semana_display || 'Activo'}

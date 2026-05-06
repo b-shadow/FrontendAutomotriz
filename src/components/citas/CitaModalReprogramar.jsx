@@ -7,6 +7,7 @@
  * - Backend recalculates and persists canonical state
  * - Reconsulta for canonical result
  */
+import { AlertTriangle } from 'lucide-react';
 import React, { useState } from 'react'
 import { useTenant } from '../../hooks/useTenant'
 import citasService from '../../services/citasService'
@@ -16,8 +17,7 @@ const CitaModalReprogramar = ({ cita, onClose, onSuccess }) => {
 
   const [step, setStep] = useState(1)
   const [formData, setFormData] = useState({
-    fecha_hora_inicio_programada: '',
-    observaciones_cliente: '',
+    fecha_hora_inicio_programada: '', observaciones_cliente : '',
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -30,8 +30,7 @@ const CitaModalReprogramar = ({ cita, onClose, onSuccess }) => {
 
       // Send reprogramming request
       await citasService.reprogramarCita(tenantSlug, cita.id, {
-        fecha_hora_inicio_programada: fechaLocal,
-        observaciones_cliente: formData.observaciones_cliente,
+        fecha_hora_inicio_programada: fechaLocal, observaciones_cliente : formData.observaciones_cliente,
       })
 
       // Reconsulta for canonical state
@@ -39,7 +38,7 @@ const CitaModalReprogramar = ({ cita, onClose, onSuccess }) => {
 
       onSuccess()
     } catch (err) {
-      setError(err.response?.data?.detail || 'Error al reprogramar')
+      setError(err.response.data.detail || 'Error al reprogramar')
     } finally {
       setLoading(false)
     }
@@ -50,7 +49,7 @@ const CitaModalReprogramar = ({ cita, onClose, onSuccess }) => {
       <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-screen overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold">Reprogramar Cita</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl">
+          <button onClick={onClose} className="text-carbon-500 hover:text-carbon-700 text-2xl">
             ×
           </button>
         </div>
@@ -62,24 +61,22 @@ const CitaModalReprogramar = ({ cita, onClose, onSuccess }) => {
         )}
 
         {/* Current schedule info */}
-        <div className="bg-gray-50 p-4 rounded-lg mb-6">
+        <div className="bg-neutral-50 p-4 rounded-lg mb-6">
           <h3 className="font-semibold mb-2">Cita actual</h3>
           <div className="text-sm space-y-1">
             <p>
-              <strong>Vehículo:</strong> {cita?.vehiculo?.placa}
+              <strong>Vehículo:</strong> {cita.vehiculo.placa}
             </p>
             <p>
-              <strong>Cliente:</strong> {cita?.cliente?.nombre_completo || cita?.cliente?.nombres}
+              <strong>Cliente:</strong> {cita.cliente.nombre_completo || cita.cliente.nombres}
             </p>
             <p>
               <strong>Inicio actual:</strong>{' '}
-              {new Date(cita?.fecha_hora_inicio_programada).toLocaleString()}
+              {new Date(cita.fecha_hora_inicio_programada).toLocaleString()}
             </p>
             <p>
               <strong>Fin actual:</strong>{' '}
-              {cita?.fecha_hora_fin_programada
-                ? new Date(cita.fecha_hora_fin_programada).toLocaleString()
-                : 'N/A'}
+              {cita.fecha_hora_fin_programada ? new Date(cita.fecha_hora_fin_programada).toLocaleString() : 'N/A'}
             </p>
           </div>
         </div>
@@ -93,16 +90,15 @@ const CitaModalReprogramar = ({ cita, onClose, onSuccess }) => {
               <label className="block text-sm font-medium mb-2">Fecha deseada</label>
               <input
                 type="date"
-                value={formData.fecha_hora_inicio_programada?.split('T')[0] || ''}
+                value={formData.fecha_hora_inicio_programada.split('T')[0] || ''}
                 onChange={(e) =>
                   setFormData((prev) => ({
-                    ...prev,
-                    fecha_hora_inicio_programada: `${e.target.value}T${
-                      formData.fecha_hora_inicio_programada?.split('T')[1] || '09:00:00'
+                    ...prev, fecha_hora_inicio_programada : `${e.target.value}T${
+                      formData.fecha_hora_inicio_programada.split('T')[1] || '09:00:00'
                     }`,
                   }))
                 }
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500"
               />
             </div>
 
@@ -111,32 +107,31 @@ const CitaModalReprogramar = ({ cita, onClose, onSuccess }) => {
               <input
                 type="time"
                 value={
-                  formData.fecha_hora_inicio_programada?.split('T')[1]?.slice(0, 5) || '09:00'
+                  formData.fecha_hora_inicio_programada.split('T')[1].slice(0, 5) || '09:00'
                 }
                 onChange={(e) =>
                   setFormData((prev) => ({
-                    ...prev,
-                    fecha_hora_inicio_programada: `${
-                      formData.fecha_hora_inicio_programada?.split('T')[0] || '2026-03-25'
+                    ...prev, fecha_hora_inicio_programada : `${
+                      formData.fecha_hora_inicio_programada.split('T')[0] || '2026-03-25'
                     }T${e.target.value}:00`,
                   }))
                 }
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500"
               />
             </div>
 
             <div className="bg-yellow-50 p-3 rounded-lg text-sm">
-              <strong>⚠️ Backend calculará:</strong> Hora fin, fragmentación, segmentos y estado final.
+              <strong><AlertTriangle className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Backend calculará:</strong> Hora fin, fragmentación, segmentos y estado final.
             </div>
 
             <div className="flex gap-2 justify-end">
-              <button onClick={onClose} className="px-4 py-2 text-gray-600">
+              <button onClick={onClose} className="px-4 py-2 text-carbon-600">
                 Cancelar
               </button>
               <button
                 onClick={() => setStep(2)}
                 disabled={!formData.fecha_hora_inicio_programada}
-                className="px-4 py-2 bg-purple-600 text-white rounded-lg disabled:opacity-50"
+                className="px-4 py-2 bg-primary-600 text-white rounded-lg disabled:opacity-50"
               >
                 Siguiente
               </button>
@@ -164,18 +159,17 @@ const CitaModalReprogramar = ({ cita, onClose, onSuccess }) => {
                 value={formData.observaciones_cliente}
                 onChange={(e) =>
                   setFormData((prev) => ({
-                    ...prev,
-                    observaciones_cliente: e.target.value,
+                    ...prev, observaciones_cliente : e.target.value,
                   }))
                 }
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500"
                 rows="3"
                 placeholder="Por qué se reprograma..."
               />
             </div>
 
             <div className="flex gap-2 justify-end">
-              <button onClick={() => setStep(1)} className="px-4 py-2 text-gray-600">
+              <button onClick={() => setStep(1)} className="px-4 py-2 text-carbon-600">
                 Anterior
               </button>
               <button

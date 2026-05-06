@@ -1,6 +1,7 @@
 /**
  * TenantResolver: Resuelve el tenant por slug desde la URL.Detecta slug dinámicamente
  */
+import { XCircle } from 'lucide-react';
 import { useParams } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import authService from '../services/authService'
@@ -47,13 +48,13 @@ export const TenantResolver = ({ children }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-neutral-50">
         <div className="text-center">
           <div className="inline-block">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600" />
-            <p className="text-gray-600 mt-4">Cargando empresa...</p>
+            <p className="text-carbon-600 mt-4">Cargando empresa...</p>
             {retryCount > 0 && (
-              <p className="text-gray-400 text-sm mt-2">(intento {retryCount} de {maxRetries})</p>
+              <p className="text-neutral-400 text-sm mt-2">(intento {retryCount} de {maxRetries})</p>
             )}
           </div>
         </div>
@@ -63,10 +64,10 @@ export const TenantResolver = ({ children }) => {
 
   if (error || !tenant) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-neutral-50">
         <div className="text-center p-6 bg-white rounded-lg shadow-lg max-w-md">
-          <h2 className="text-3xl font-bold text-red-600 mb-2">❌ Error</h2>
-          <p className="text-gray-700 mb-6">{error}</p>
+          <h2 className="text-3xl font-bold text-red-600 mb-2"><XCircle className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Error</h2>
+          <p className="text-carbon-700 mb-6">{error}</p>
           <a
             href="/"
             className="inline-block px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition"

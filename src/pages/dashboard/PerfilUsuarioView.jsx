@@ -1,3 +1,4 @@
+import { XCircle, CheckCircle, Pencil, Mail, Save, X, Lock, Key, RefreshCw, Info } from 'lucide-react';
 import { useState, useEffect } from 'react'
 import { Card, Button, Input } from '../../components/ui'
 import NotificationPreferencesSection from '../../components/NotificationPreferencesSection'
@@ -9,31 +10,29 @@ export const PerfilUsuarioView = ({ user, tenant }) => {
   // ESTADO: Edición de Perfil
   const [isEditing, setIsEditing] = useState(false)
   const [formData, setFormData] = useState({
-    nombres: user?.nombres || '',
-    apellidos: user?.apellidos || '',
-    telefono: user?.telefono || '',
+    nombres: user.nombres || '', apellidos : user.apellidos || '',
+    telefono: user.telefono || '',
   })
   const [isSaving, setIsSaving] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
   // ESTADO: Datos completos del usuario (para mostrar en tarjeta adicional)
   const [usuarioCompleto, setUsuarioCompleto] = useState({
-    rol: user?.rol,
+    rol: user.rol,
   })
   // EFECTO: Sincronizar con prop user cuando cambia (actualizaciones rápidas)
   useEffect(() => {
     setFormData({
-      nombres: user?.nombres || '',
-      apellidos: user?.apellidos || '',
-      telefono: user?.telefono || '',
+      nombres: user.nombres || '', apellidos : user.apellidos || '',
+      telefono: user.telefono || '',
     })
     setUsuarioCompleto({
-      rol: user?.rol,
+      rol: user.rol,
     })
-  }, [user?.nombres, user?.apellidos, user?.telefono, user?.rol])
+  }, [user.nombres, user.apellidos, user.telefono, user.rol])
 
   useEffect(() => {
-    if (!user?.id || !tenantSlug) return
+    if (!user.id || !tenantSlug) return
     const timer = setTimeout(async () => {
       try {
         const usuarioActualizado = await usuariosService.obtenerUsuario(
@@ -43,8 +42,7 @@ export const PerfilUsuarioView = ({ user, tenant }) => {
         
         // Actualizar formData
         setFormData((prev) => ({
-          nombres: usuarioActualizado.nombres || prev.nombres,
-          apellidos: usuarioActualizado.apellidos || prev.apellidos,
+          nombres: usuarioActualizado.nombres || prev.nombres, apellidos : usuarioActualizado.apellidos || prev.apellidos,
           telefono: usuarioActualizado.telefono || prev.telefono,
         }))
         setUsuarioCompleto({
@@ -56,11 +54,10 @@ export const PerfilUsuarioView = ({ user, tenant }) => {
     }, 300) // Pequeño delay 
 
     return () => clearTimeout(timer)
-  }, [user?.id, tenantSlug])
+  }, [user.id, tenantSlug])
   const [showPasswordForm, setShowPasswordForm] = useState(false)
   const [passwordFormData, setPasswordFormData] = useState({
-    contraseña_actual: '',
-    contraseña_nueva: '',
+    contraseña_actual: '', contraseña_nueva : '',
     contraseña_confirmacion: '',
   })
   const [isChangingPassword, setIsChangingPassword] = useState(false)
@@ -69,15 +66,13 @@ export const PerfilUsuarioView = ({ user, tenant }) => {
   const handleInputChange = (e) => {
     const { name, value } = e.target
     setFormData((prev) => ({
-      ...prev,
-      [name]: value,
+      ...prev, [name] : value,
     }))
   }
   const handlePasswordInputChange = (e) => {
     const { name, value } = e.target
     setPasswordFormData((prev) => ({
-      ...prev,
-      [name]: value,
+      ...prev, [name] : value,
     }))
   }
   // Guardar cambios de perfil
@@ -86,11 +81,11 @@ export const PerfilUsuarioView = ({ user, tenant }) => {
     
     // Validaciones
     if (!tenantSlug) {
-      setErrorMessage('❌ Error: No se encontró el tenant. Por favor recarga la página.')
+      setErrorMessage(<><XCircle className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Error: No se encontró el tenant. Por favor recarga la página.</>)
       return
     }
-    if (!user?.id) {
-      setErrorMessage('❌ Error: No se encontró tu ID de usuario. Por favor recarga la página.')
+    if (!user.id) {
+      setErrorMessage(<><XCircle className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Error: No se encontró tu ID de usuario. Por favor recarga la página.</>)
       return
     }
     setIsSaving(true)
@@ -110,8 +105,7 @@ export const PerfilUsuarioView = ({ user, tenant }) => {
       )
       // 3. Actualizar formData con los datos frescos del backend
       const datosActualizados = {
-        nombres: usuarioActualizado.nombres || formData.nombres,
-        apellidos: usuarioActualizado.apellidos || formData.apellidos,
+        nombres: usuarioActualizado.nombres || formData.nombres, apellidos : usuarioActualizado.apellidos || formData.apellidos,
         telefono: usuarioActualizado.telefono || formData.telefono,
       }
       setFormData(datosActualizados)
@@ -120,7 +114,7 @@ export const PerfilUsuarioView = ({ user, tenant }) => {
       localStorage.setItem(`perfil_${user.id}`, JSON.stringify(datosActualizados))
 
       // Éxito: Mostrar mensaje y salir de modo edición
-      setSuccessMessage('✅ Perfil actualizado correctamente')
+      setSuccessMessage(<><CheckCircle className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Perfil actualizado correctamente</>)
       setIsEditing(false)
 
       // Limpiar mensaje después de 3 segundos
@@ -130,11 +124,11 @@ export const PerfilUsuarioView = ({ user, tenant }) => {
     } catch (error) {
       // Error: Mostrar mensaje de error real
       const errorMsg =
-        error.response?.data?.detail ||
-        error.response?.data?.message ||
+        error.response.data.detail ||
+        error.response.data.message ||
         error.message ||
         'No se pudo actualizar el perfil'
-      setErrorMessage(`❌ Error: ${errorMsg}`)
+      setErrorMessage(` Error: ${errorMsg}`)
       console.error('Error al actualizar perfil:', error)
     } finally {
       setIsSaving(false)
@@ -144,9 +138,8 @@ export const PerfilUsuarioView = ({ user, tenant }) => {
   // Cancelar edición
   const handleCancel = () => {
     setFormData({
-      nombres: user?.nombres || '',
-      apellidos: user?.apellidos || '',
-      telefono: user?.telefono || '',
+      nombres: user.nombres || '', apellidos : user.apellidos || '',
+      telefono: user.telefono || '',
     })
     setIsEditing(false)
     setErrorMessage('')
@@ -158,7 +151,7 @@ export const PerfilUsuarioView = ({ user, tenant }) => {
 
     // Validaciones
     if (!tenantSlug) {
-      setPasswordErrorMessage('❌ Error: No se encontró el tenant. Por favor recarga la página.')
+      setPasswordErrorMessage(<><XCircle className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Error: No se encontró el tenant. Por favor recarga la página.</>)
       return
     }
 
@@ -167,17 +160,17 @@ export const PerfilUsuarioView = ({ user, tenant }) => {
       !passwordFormData.contraseña_nueva ||
       !passwordFormData.contraseña_confirmacion
     ) {
-      setPasswordErrorMessage('❌ Todos los campos son obligatorios')
+      setPasswordErrorMessage(<><XCircle className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Todos los campos son obligatorios</>)
       return
     }
 
     if (passwordFormData.contraseña_nueva !== passwordFormData.contraseña_confirmacion) {
-      setPasswordErrorMessage('❌ Las contraseñas nuevas no coinciden')
+      setPasswordErrorMessage(<><XCircle className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Las contraseñas nuevas no coinciden</>)
       return
     }
 
     if (passwordFormData.contraseña_nueva.length < 8) {
-      setPasswordErrorMessage('❌ La contraseña debe tener al menos 8 caracteres')
+      setPasswordErrorMessage(<><XCircle className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> La contraseña debe tener al menos 8 caracteres</>)
       return
     }
 
@@ -189,10 +182,9 @@ export const PerfilUsuarioView = ({ user, tenant }) => {
       await usuariosService.cambiarContrasena(tenantSlug, passwordFormData)
 
       // Éxito: Mostrar mensaje, limpiar formulario y cerrarlo
-      setPasswordSuccessMessage('✅ Contraseña cambiada correctamente')
+      setPasswordSuccessMessage(<><CheckCircle className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Contraseña cambiada correctamente</>)
       setPasswordFormData({
-        contraseña_actual: '',
-        contraseña_nueva: '',
+        contraseña_actual: '', contraseña_nueva : '',
         contraseña_confirmacion: '',
       })
       
@@ -204,11 +196,11 @@ export const PerfilUsuarioView = ({ user, tenant }) => {
     } catch (error) {
       // Error: Mostrar mensaje de error real
       const errorMsg =
-        error.response?.data?.detail ||
-        error.response?.data?.message ||
+        error.response.data.detail ||
+        error.response.data.message ||
         error.message ||
         'No se pudo cambiar la contraseña'
-      setPasswordErrorMessage(`❌ Error: ${errorMsg}`)
+      setPasswordErrorMessage(` Error: ${errorMsg}`)
       console.error('Error al cambiar contraseña:', error)
     } finally {
       setIsChangingPassword(false)
@@ -219,8 +211,7 @@ export const PerfilUsuarioView = ({ user, tenant }) => {
   const handleCancelPasswordForm = (e) => {
     e.preventDefault()
     setPasswordFormData({
-      contraseña_actual: '',
-      contraseña_nueva: '',
+      contraseña_actual: '', contraseña_nueva : '',
       contraseña_confirmacion: '',
     })
     setShowPasswordForm(false)
@@ -231,8 +222,8 @@ export const PerfilUsuarioView = ({ user, tenant }) => {
     <div className="space-y-6">
       {/* HEADER */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">✏️ Editar Mi Perfil</h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">Actualiza tu información personal</p>
+        <h1 className="text-3xl font-bold text-carbon-900 dark:text-white"><Pencil className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Editar Mi Perfil</h1>
+        <p className="text-carbon-600 dark:text-neutral-400 mt-1">Actualiza tu información personal</p>
       </div>
 
       {/* MENSAJES DE ÉXITO - PERFIL */}
@@ -252,7 +243,7 @@ export const PerfilUsuarioView = ({ user, tenant }) => {
       {/* PERFIL CARD */}
       <Card>
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Información Personal</h2>
+          <h2 className="text-2xl font-bold text-carbon-900 dark:text-white">Información Personal</h2>
           {!isEditing && (
             <Button
               onClick={() => setIsEditing(true)}
@@ -260,7 +251,7 @@ export const PerfilUsuarioView = ({ user, tenant }) => {
               variant="primary"
               className="bg-primary-600 dark:bg-primary-700 hover:bg-primary-700 dark:hover:bg-primary-600 text-white"
             >
-              ✏️ Editar
+              <Pencil className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Editar
             </Button>
           )}
         </div>
@@ -271,36 +262,36 @@ export const PerfilUsuarioView = ({ user, tenant }) => {
             // VISTA DE LECTURA
             <div className="grid md:grid-cols-2 gap-6">
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Nombres</p>
-                <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                <p className="text-sm text-carbon-600 dark:text-neutral-400 mb-1">Nombres</p>
+                <p className="text-lg font-semibold text-carbon-900 dark:text-white">
                   {formData.nombres}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Apellidos</p>
-                <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                <p className="text-sm text-carbon-600 dark:text-neutral-400 mb-1">Apellidos</p>
+                <p className="text-lg font-semibold text-carbon-900 dark:text-white">
                   {formData.apellidos || 'No especificado'}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Email (No editable)</p>
-                <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {user?.email}
+                <p className="text-sm text-carbon-600 dark:text-neutral-400 mb-1">Email (No editable)</p>
+                <p className="text-lg font-semibold text-carbon-900 dark:text-white">
+                  {user.email}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Teléfono</p>
-                <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                <p className="text-sm text-carbon-600 dark:text-neutral-400 mb-1">Teléfono</p>
+                <p className="text-lg font-semibold text-carbon-900 dark:text-white">
                   {formData.telefono || 'No especificado'}
                 </p>
               </div>
             </div>
-          ) : (
+              ) : (
             // FORMULARIO DE EDICIÓN
             <form onSubmit={handleSave} className="space-y-4">
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                  <label className="block text-sm font-semibold text-carbon-900 dark:text-white mb-2">
                     Nombres *
                   </label>
                   <Input
@@ -313,7 +304,7 @@ export const PerfilUsuarioView = ({ user, tenant }) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                  <label className="block text-sm font-semibold text-carbon-900 dark:text-white mb-2">
                     Apellidos
                   </label>
                   <Input
@@ -328,7 +319,7 @@ export const PerfilUsuarioView = ({ user, tenant }) => {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                <label className="block text-sm font-semibold text-carbon-900 dark:text-white mb-2">
                   Teléfono
                 </label>
                 <Input
@@ -341,9 +332,9 @@ export const PerfilUsuarioView = ({ user, tenant }) => {
                 />
               </div>
 
-              <div className="bg-gray-50 dark:bg-slate-700 p-4 rounded-lg text-sm text-gray-600 dark:text-gray-400">
-                <p>📧 Email no se puede modificar. Es el identificador único de tu cuenta.</p>
-                <p className="font-semibold text-gray-900 dark:text-white mt-1">{user?.email}</p>
+              <div className="bg-neutral-50 dark:bg-carbon-700 p-4 rounded-lg text-sm text-carbon-600 dark:text-neutral-400">
+                <p><Mail className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Email no se puede modificar. Es el identificador único de tu cuenta.</p>
+                <p className="font-semibold text-carbon-900 dark:text-white mt-1">{user.email}</p>
               </div>
 
               {/* BOTONES */}
@@ -354,7 +345,7 @@ export const PerfilUsuarioView = ({ user, tenant }) => {
                   variant="primary"
                   className="bg-green-600 dark:bg-green-700 hover:bg-green-700 dark:hover:bg-green-600 text-white flex-1"
                 >
-                  {isSaving ? '💾 Guardando...' : '💾 Guardar Cambios'}
+                  {isSaving ? <><Save className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Guardando...</> : <><Save className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Guardar Cambios</>}
                 </Button>
                 <Button
                   onClick={handleCancel}
@@ -362,7 +353,7 @@ export const PerfilUsuarioView = ({ user, tenant }) => {
                   variant="secondary"
                   className="flex-1"
                 >
-                  ✕ Cancelar
+                  <X className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Cancelar
                 </Button>
               </div>
             </form>
@@ -373,7 +364,7 @@ export const PerfilUsuarioView = ({ user, tenant }) => {
       {/* SEGURIDAD - CAMBIAR CONTRASEÑA */}
       <Card className="border-yellow-200 dark:border-yellow-700 bg-yellow-50 dark:bg-yellow-900/30">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white">🔐 Seguridad</h3>
+          <h3 className="text-lg font-bold text-carbon-900 dark:text-white"><Lock className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Seguridad</h3>
           {!showPasswordForm && (
             <Button
               onClick={() => setShowPasswordForm(true)}
@@ -381,7 +372,7 @@ export const PerfilUsuarioView = ({ user, tenant }) => {
               variant="secondary"
               className="text-sm"
             >
-              🔑 Cambiar Contraseña
+              <Key className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Cambiar Contraseña
             </Button>
           )}
         </div>
@@ -404,7 +395,7 @@ export const PerfilUsuarioView = ({ user, tenant }) => {
         {showPasswordForm && (
           <form onSubmit={handleCambiarContrasena} className="space-y-4">
             <div>
-              <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
+              <label className="block text-sm font-semibold text-carbon-900 dark:text-white mb-2">
                 Contraseña Actual *
               </label>
               <Input
@@ -418,7 +409,7 @@ export const PerfilUsuarioView = ({ user, tenant }) => {
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
+              <label className="block text-sm font-semibold text-carbon-900 dark:text-white mb-2">
                 Contraseña Nueva *
               </label>
               <Input
@@ -432,7 +423,7 @@ export const PerfilUsuarioView = ({ user, tenant }) => {
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
+              <label className="block text-sm font-semibold text-carbon-900 dark:text-white mb-2">
                 Confirmar Contraseña Nueva *
               </label>
               <Input
@@ -453,7 +444,7 @@ export const PerfilUsuarioView = ({ user, tenant }) => {
                 variant="primary"
                 className="bg-blue-600 dark:bg-blue-700 hover:bg-blue-700 dark:hover:bg-blue-600 text-white flex-1"
               >
-                {isChangingPassword ? '🔄 Actualizando...' : '✅ Cambiar Contraseña'}
+                {isChangingPassword ? <><RefreshCw className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Actualizando...</> : <><CheckCircle className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Cambiar Contraseña</>}
               </Button>
               <Button
                 onClick={handleCancelPasswordForm}
@@ -461,30 +452,30 @@ export const PerfilUsuarioView = ({ user, tenant }) => {
                 variant="secondary"
                 className="flex-1"
               >
-                ✕ Cancelar
+                <X className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Cancelar
               </Button>
             </div>
           </form>
         )}
 
         {!showPasswordForm && (
-          <div className="text-sm text-gray-700 dark:text-gray-300">
+          <div className="text-sm text-carbon-700 dark:text-neutral-300">
             Actualiza tu contraseña para mantener tu cuenta segura.
           </div>
         )}
       </Card>
 
       {/* PREFERENCIAS DE NOTIFICACIÓN */}
-      <NotificationPreferencesSection tenantSlug={tenantSlug} userId={user?.id} />
+      <NotificationPreferencesSection tenantSlug={tenantSlug} userId={user.id} />
 
       {/* INFORMACIÓN ADICIONAL */}
-      <Card className="bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600">
-        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">ℹ️ Información Adicional</h3>
+      <Card className="bg-neutral-50 dark:bg-carbon-700 border-neutral-200 dark:border-white/[0.08]">
+        <h3 className="text-lg font-bold text-carbon-900 dark:text-white mb-4"><Info className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Información Adicional</h3>
         <div className="text-sm">
           <div>
-            <p className="text-gray-600 dark:text-gray-400">Rol en {tenant?.nombre}</p>
-            <p className="text-gray-900 dark:text-white font-semibold text-lg">
-              {usuarioCompleto?.rol?.nombre || 'Usuario'}
+            <p className="text-carbon-600 dark:text-neutral-400">Rol en {tenant.nombre}</p>
+            <p className="text-carbon-900 dark:text-white font-semibold text-lg">
+              {usuarioCompleto.rol.nombre || 'Usuario'}
             </p>
           </div>
         </div>

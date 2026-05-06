@@ -1,3 +1,4 @@
+import { Briefcase, AlertTriangle, Check, User, Bookmark, X, Pencil, Lock, Unlock, Info, ClipboardList, RefreshCw } from 'lucide-react';
 import { useState, useEffect } from 'react'
 import { useTenant } from '../../hooks/useTenant'
 import { Card, Button } from '../../components/ui'
@@ -62,8 +63,8 @@ export const GestionUsuariosRolesView = ({ user }) => {
       setUsuarios(Array.isArray(usuariosData) ? usuariosData : usuariosData.results || [])
     } catch (err) {
       setError(
-        err.response?.data?.error ||
-        err.response?.data?.detail ||
+        err.response.data.error ||
+        err.response.data.detail ||
         'Error al cambiar rol'
       )
     } finally {
@@ -73,7 +74,7 @@ export const GestionUsuariosRolesView = ({ user }) => {
 
   // Desactivar usuario
   const handleDesactivarUsuario = async (usuarioId) => {
-    if (!window.confirm('¿Estás seguro de que deseas desactivar este usuario?')) {
+    if (!window.confirm('¿Estás seguro de que deseas desactivar este usuario')) {
       return
     }
 
@@ -96,7 +97,7 @@ export const GestionUsuariosRolesView = ({ user }) => {
 
   // Activar usuario
   const handleActivarUsuario = async (usuarioId) => {
-    if (!window.confirm('¿Estás seguro de que deseas activar este usuario?')) {
+    if (!window.confirm('¿Estás seguro de que deseas activar este usuario')) {
       return
     }
 
@@ -144,50 +145,50 @@ export const GestionUsuariosRolesView = ({ user }) => {
     <div className="space-y-6">
       {/* HEADER */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">👨‍💼 Gestionar Usuarios y Roles</h1>
-        <p className="text-slate-600 dark:text-slate-400 mt-1">Administra los usuarios y roles de tu empresa</p>
+        <h1 className="text-3xl font-bold text-carbon-900 dark:text-white"><Briefcase className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Gestionar Usuarios y Roles</h1>
+        <p className="text-carbon-600 dark:text-neutral-400 mt-1">Administra los usuarios y roles de tu empresa</p>
       </div>
 
       {/* MENSAJES DE ERROR Y ÉXITO */}
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg">
-          ⚠️ {error}
+          <AlertTriangle className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> {error}
         </div>
       )}
       {success && (
         <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg">
-          ✓ {success}
+          <Check className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> {success}
         </div>
       )}
 
       {/* TABS */}
-      <div className="flex gap-4 border-b border-slate-200 dark:border-slate-700">
+      <div className="flex gap-4 border-b border-neutral-200 dark:border-white/[0.08]">
         <button
           onClick={() => setActiveTab('usuarios')}
           className={`px-4 py-3 font-semibold border-b-2 transition-colors ${
-            activeTab === 'usuarios'
-              ? 'border-primary-600 text-primary-600 dark:border-primary-500 dark:text-primary-400'
-              : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+            activeTab === 'usuarios' ?
+               'border-primary-600 text-primary-600 dark:border-primary-500 dark:text-primary-400'
+              : 'border-transparent text-carbon-600 dark:text-neutral-400 hover:text-carbon-900 dark:hover:text-neutral-200'
           }`}
         >
-          👤 Usuarios ({usuarios.length})
+          <User className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Usuarios ({usuarios.length})
         </button>
         <button
           onClick={() => setActiveTab('roles')}
           className={`px-4 py-3 font-semibold border-b-2 transition-colors ${
-            activeTab === 'roles'
-              ? 'border-primary-600 text-primary-600 dark:border-primary-500 dark:text-primary-400'
-              : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+            activeTab === 'roles' ?
+               'border-primary-600 text-primary-600 dark:border-primary-500 dark:text-primary-400'
+              : 'border-transparent text-carbon-600 dark:text-neutral-400 hover:text-carbon-900 dark:hover:text-neutral-200'
           }`}
         >
-          🔖 Roles ({roles.length})
+          <Bookmark className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Roles ({roles.length})
         </button>
       </div>
 
       {/* TAB: USUARIOS */}
       {activeTab === 'usuarios' && (
         <div className="space-y-4">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Usuarios de la Empresa</h2>
+          <h2 className="text-xl font-bold text-carbon-900 dark:text-white">Usuarios de la Empresa</h2>
 
           {/* BUSCADOR */}
           <div className="flex gap-2">
@@ -196,14 +197,14 @@ export const GestionUsuariosRolesView = ({ user }) => {
               placeholder="Buscar por nombre o email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-lg text-sm focus:outline-none focus:border-primary-500 dark:focus:border-primary-400 focus:ring-1 focus:ring-primary-500 dark:focus:ring-primary-400"
+              className="flex-1 px-4 py-2 border border-neutral-300 dark:border-white/[0.08] bg-white dark:bg-carbon-800 text-carbon-900 dark:text-white rounded-lg text-sm focus:outline-none focus:border-primary-500 dark:focus:border-primary-400 focus:ring-1 focus:ring-primary-500 dark:focus:ring-primary-400"
             />
             {searchTerm && (
               <button
                 onClick={() => setSearchTerm('')}
-                className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors text-sm"
+                className="px-4 py-2 text-carbon-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-carbon-700 rounded-lg transition-colors text-sm"
               >
-                ✕ Limpiar
+                <X className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Limpiar
               </button>
             )}
           </div>
@@ -211,45 +212,45 @@ export const GestionUsuariosRolesView = ({ user }) => {
           {/* LISTADO DE USUARIOS */}
           <Card>
             {loading && usuarios.length === 0 ? (
-              <div className="text-center py-8 text-slate-500 dark:text-slate-400">Cargando usuarios...</div>
+              <div className="text-center py-8 text-carbon-500 dark:text-neutral-400">Cargando usuarios...</div>
             ) : usuarios.length === 0 ? (
-              <div className="text-center py-8 text-slate-500 dark:text-slate-400">No hay usuarios en la empresa</div>
+              <div className="text-center py-8 text-carbon-500 dark:text-neutral-400">No hay usuarios en la empresa</div>
             ) : usuariosFiltrados.length === 0 ? (
-              <div className="text-center py-8 text-slate-500 dark:text-slate-400">No se encontraron usuarios que coincidan con "{searchTerm}"</div>
-            ) : (
+              <div className="text-center py-8 text-carbon-500 dark:text-neutral-400">No se encontraron usuarios que coincidan con "{searchTerm}"</div>
+              ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-slate-200 dark:border-slate-700">
-                      <th className="text-left py-3 px-4 font-semibold text-slate-900 dark:text-white">Email</th>
-                      <th className="text-left py-3 px-4 font-semibold text-slate-900 dark:text-white">Nombre</th>
-                      <th className="text-left py-3 px-4 font-semibold text-slate-900 dark:text-white">Rol</th>
-                      <th className="text-left py-3 px-4 font-semibold text-slate-900 dark:text-white">Estado</th>
-                      <th className="text-left py-3 px-4 font-semibold text-slate-900 dark:text-white">Acciones</th>
+                    <tr className="border-b border-neutral-200 dark:border-white/[0.08]">
+                      <th className="text-left py-3 px-4 font-semibold text-carbon-900 dark:text-white">Email</th>
+                      <th className="text-left py-3 px-4 font-semibold text-carbon-900 dark:text-white">Nombre</th>
+                      <th className="text-left py-3 px-4 font-semibold text-carbon-900 dark:text-white">Rol</th>
+                      <th className="text-left py-3 px-4 font-semibold text-carbon-900 dark:text-white">Estado</th>
+                      <th className="text-left py-3 px-4 font-semibold text-carbon-900 dark:text-white">Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
                     {usuariosFiltrados.map((usuario) => (
-                      <tr key={usuario.id} className="border-b border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                      <tr key={usuario.id} className="border-b border-neutral-100 dark:border-white/[0.08] hover:bg-neutral-50 dark:hover:bg-carbon-800/50">
                         <td className="py-3 px-4">
-                          <span className="font-mono text-xs bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white px-2 py-1 rounded">
+                          <span className="font-mono text-xs bg-neutral-100 dark:bg-carbon-800 text-carbon-900 dark:text-white px-2 py-1 rounded">
                             {usuario.email}
                           </span>
                         </td>
-                        <td className="py-3 px-4 text-slate-900 dark:text-white">
+                        <td className="py-3 px-4 text-carbon-900 dark:text-white">
                           {usuario.nombres} {usuario.apellidos || ''}
                         </td>
                         <td className="py-3 px-4">
                           {editingUsuarioId === usuario.id ? (
                             <select
-                              value={usuario.rol?.id || ''}
+                              value={usuario.rol.id || ''}
                               onChange={(e) => {
                                 if (e.target.value) {
                                   handleCambiarRol(usuario.id, e.target.value)
                                 }
                               }}
                               disabled={loading}
-                              className="px-2 py-1 border border-primary-300 dark:border-primary-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded text-xs"
+                              className="px-2 py-1 border border-primary-300 dark:border-primary-700 bg-white dark:bg-carbon-800 text-carbon-900 dark:text-white rounded text-xs"
                             >
                               <option value="">Seleccionar rol...</option>
                               {roles.map((rol) => (
@@ -258,22 +259,22 @@ export const GestionUsuariosRolesView = ({ user }) => {
                                 </option>
                               ))}
                             </select>
-                          ) : (
+                            ) : (
                             <span className="px-3 py-1 rounded-full text-xs font-semibold bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300">
-                              {usuario.rol?.nombre || 'Sin rol'}
+                              {usuario.rol.nombre || 'Sin rol'}
                             </span>
                           )}
                         </td>
                         <td className="py-3 px-4">
                           {usuario.is_active ? (
-                            <span className="text-emerald-700 dark:text-emerald-400 font-semibold">✓ Activo</span>
+                            <span className="text-emerald-700 dark:text-emerald-400 font-semibold"><Check className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Activo</span>
                           ) : (
-                            <span className="text-red-700 dark:text-red-400 font-semibold">✕ Inactivo</span>
+                            <span className="text-red-700 dark:text-red-400 font-semibold"><X className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Inactivo</span>
                           )}
                         </td>
                         <td className="py-3 px-4">
                           <div className="flex flex-col md:flex-row gap-2">
-                            {usuario.is_active && usuario.email !== user?.email && (
+                            {usuario.is_active && usuario.email !== user.email && (
                               <>
                                 {editingUsuarioId === usuario.id ? (
                                   <Button
@@ -281,15 +282,14 @@ export const GestionUsuariosRolesView = ({ user }) => {
                                     disabled={loading}
                                     className="text-xs"
                                   >
-                                    ✓ Listo
-                                  </Button>
-                                ) : (
+                                    <Check className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Listo
+                                  </Button> ) : (
                                   <Button
                                     onClick={() => setEditingUsuarioId(usuario.id)}
                                     disabled={loading}
                                     className="text-xs"
                                   >
-                                    ✏️
+                                    <Pencil className="inline-block mx-1 text-current" size={20} strokeWidth={2} />
                                   </Button>
                                 )}
                                 <Button
@@ -297,21 +297,21 @@ export const GestionUsuariosRolesView = ({ user }) => {
                                   disabled={loading}
                                   className="text-xs text-orange-600"
                                 >
-                                  🔒 Desactivar
+                                  <Lock className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Desactivar
                                 </Button>
                               </>
                             )}
-                            {!usuario.is_active && usuario.email !== user?.email && (
+                            {!usuario.is_active && usuario.email !== user.email && (
                               <Button
                                 onClick={() => handleActivarUsuario(usuario.id)}
                                 disabled={loading}
                                 className="text-xs text-green-600"
                               >
-                                🔓 Activar
+                                <Unlock className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Activar
                               </Button>
                             )}
-                            {usuario.email === user?.email && (
-                              <span className="text-xs text-slate-500 dark:text-slate-400">Eres tú</span>
+                            {usuario.email === user.email && (
+                              <span className="text-xs text-carbon-500 dark:text-neutral-400">Eres tú</span>
                             )}
                           </div>
                         </td>
@@ -328,24 +328,24 @@ export const GestionUsuariosRolesView = ({ user }) => {
       {/* TAB: ROLES */}
       {activeTab === 'roles' && (
         <div className="space-y-4">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Roles Disponibles</h2>
+          <h2 className="text-xl font-bold text-carbon-900 dark:text-white">Roles Disponibles</h2>
 
           {/* GRID DE ROLES */}
           {loading && roles.length === 0 ? (
-            <div className="text-center py-8 text-slate-500 dark:text-slate-400">Cargando roles...</div>
+            <div className="text-center py-8 text-carbon-500 dark:text-neutral-400">Cargando roles...</div>
           ) : roles.length === 0 ? (
-            <div className="text-center py-8 text-slate-500 dark:text-slate-400">No hay roles</div>
-          ) : (
+            <div className="text-center py-8 text-carbon-500 dark:text-neutral-400">No hay roles</div>
+              ) : (
             <div className="grid md:grid-cols-2 gap-4">
               {roles.map((rol) => (
                 <Card key={rol.id} className="hover:shadow-lg transition-shadow">
-                  <h3 className="text-lg font-bold text-gray-900">{rol.nombre}</h3>
-                  <p className="text-sm text-gray-600 mt-1">
+                  <h3 className="text-lg font-bold text-carbon-900">{rol.nombre}</h3>
+                  <p className="text-sm text-carbon-600 mt-1">
                     {rol.descripcion || 'Sin descripción'}
                   </p>
                   {rol.es_sistema && (
                     <span className="text-xs text-orange-600 font-semibold mt-2 inline-block">
-                      🔒 Rol de sistema
+                      <Lock className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Rol de sistema
                     </span>
                   )}
                 </Card>
@@ -357,15 +357,15 @@ export const GestionUsuariosRolesView = ({ user }) => {
 
       {/* INFO */}
       <Card className="bg-blue-50 border-blue-200">
-        <h3 className="text-lg font-bold text-gray-900 mb-2">ℹ️ Información</h3>
-        <p className="text-gray-700 text-sm mb-2">
+        <h3 className="text-lg font-bold text-carbon-900 mb-2"><Info className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Información</h3>
+        <p className="text-carbon-700 text-sm mb-2">
           Gestiona los usuarios de tu empresa con estas opciones:
         </p>
-        <ul className="text-gray-700 text-sm list-disc list-inside space-y-1">
-          <li>📋 Ver listado de todos los usuarios de la empresa</li>
-          <li>🔄 Cambiar el rol de un usuario haciendo clic en el icono ✏️</li>
-          <li>🔒 Desactivar usuarios que ya no pertenecen a la empresa</li>
-          <li>🔖 Consultar los roles disponibles en tu empresa</li>
+        <ul className="text-carbon-700 text-sm list-disc list-inside space-y-1">
+          <li><ClipboardList className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Ver listado de todos los usuarios de la empresa</li>
+          <li><RefreshCw className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Cambiar el rol de un usuario haciendo clic en el icono <Pencil className="inline-block mx-1 text-current" size={20} strokeWidth={2} /></li>
+          <li><Lock className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Desactivar usuarios que ya no pertenecen a la empresa</li>
+          <li><Bookmark className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Consultar los roles disponibles en tu empresa</li>
         </ul>
       </Card>
     </div>

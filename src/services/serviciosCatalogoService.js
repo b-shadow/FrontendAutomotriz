@@ -28,9 +28,7 @@ const serviciosCatalogoService = {
       if (filtros.page) params.append('page', filtros.page)
 
       const queryString = params.toString()
-      const url = queryString
-        ? `/api/${tenantSlug}/servicios/?${queryString}`
-        : `/api/${tenantSlug}/servicios/`
+      const url = queryString ? `/api/${tenantSlug}/servicios/?${queryString}` : `/api/${tenantSlug}/servicios/`
 
       const response = await apiClient.get(url)
       return response.data

@@ -1,31 +1,27 @@
 /**
  * UserModal.jsx - Modal para crear nuevo usuario
  */
+import { Plus, Check } from 'lucide-react';
 import { useState } from 'react'
 import { Card, Button, Input } from '../../components/ui'
 
 export const UserModal = ({ isOpen, onClose, onSubmit, isLoading = false }) => {
   const [formData, setFormData] = useState({
-    nombres: '',
-    apellidos: '',
-    email: '',
-    password: '',
-    confirmarPassword: '',
-    telefono: '',
+    nombres: '', apellidos : '',
+    email: '', password : '',
+    confirmarPassword: '', telefono : '',
   })
   const [errors, setErrors] = useState({})
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
     setFormData((prev) => ({
-      ...prev,
-      [name]: value,
+      ...prev, [name] : value,
     }))
     // Limpiar error del campo cuando el usuario empieza a escribir
     if (errors[name]) {
       setErrors((prev) => ({
-        ...prev,
-        [name]: '',
+        ...prev, [name] : '',
       }))
     }
   }
@@ -70,10 +66,8 @@ export const UserModal = ({ isOpen, onClose, onSubmit, isLoading = false }) => {
 
     // Preparar datos para enviar (sin confirmarPassword)
     const userData = {
-      nombres: formData.nombres.trim(),
-      apellidos: formData.apellidos.trim(),
-      email: formData.email.trim(),
-      password: formData.password,
+      nombres: formData.nombres.trim(), apellidos : formData.apellidos.trim(),
+      email: formData.email.trim(), password : formData.password,
       telefono: formData.telefono.trim() || undefined,
     }
 
@@ -81,20 +75,16 @@ export const UserModal = ({ isOpen, onClose, onSubmit, isLoading = false }) => {
       await onSubmit(userData)
       // Limpiar formulario
       setFormData({
-        nombres: '',
-        apellidos: '',
-        email: '',
-        password: '',
-        confirmarPassword: '',
-        telefono: '',
+        nombres: '', apellidos : '',
+        email: '', password : '',
+        confirmarPassword: '', telefono : '',
       })
       setErrors({})
     } catch (error) {
       // El manejo de errores se hace en el componente padre
-      if (error.response?.data?.usuario?.email) {
+      if (error.response.data.usuario.email) {
         setErrors((prev) => ({
-          ...prev,
-          email: error.response.data.usuario.email[0],
+          ...prev, email : error.response.data.usuario.email[0],
         }))
       }
     }
@@ -106,10 +96,10 @@ export const UserModal = ({ isOpen, onClose, onSubmit, isLoading = false }) => {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <Card className="w-full max-w-md max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">➕ Crear Usuario</h2>
+          <h2 className="text-2xl font-bold text-carbon-900"><Plus className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Crear Usuario</h2>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 text-2xl h-8 w-8 flex items-center justify-center"
+            className="text-carbon-500 hover:text-carbon-700 text-2xl h-8 w-8 flex items-center justify-center"
           >
             ×
           </button>
@@ -118,7 +108,7 @@ export const UserModal = ({ isOpen, onClose, onSubmit, isLoading = false }) => {
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Nombres */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">
+            <label className="block text-sm font-semibold text-carbon-700 mb-1">
               Nombres *
             </label>
             <Input
@@ -136,7 +126,7 @@ export const UserModal = ({ isOpen, onClose, onSubmit, isLoading = false }) => {
 
           {/* Apellidos */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">
+            <label className="block text-sm font-semibold text-carbon-700 mb-1">
               Apellidos
             </label>
             <Input
@@ -150,7 +140,7 @@ export const UserModal = ({ isOpen, onClose, onSubmit, isLoading = false }) => {
 
           {/* Email */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">
+            <label className="block text-sm font-semibold text-carbon-700 mb-1">
               Email *
             </label>
             <Input
@@ -168,7 +158,7 @@ export const UserModal = ({ isOpen, onClose, onSubmit, isLoading = false }) => {
 
           {/* Teléfono */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">
+            <label className="block text-sm font-semibold text-carbon-700 mb-1">
               Teléfono
             </label>
             <Input
@@ -182,7 +172,7 @@ export const UserModal = ({ isOpen, onClose, onSubmit, isLoading = false }) => {
 
           {/* Password */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">
+            <label className="block text-sm font-semibold text-carbon-700 mb-1">
               Contraseña *
             </label>
             <Input
@@ -197,15 +187,15 @@ export const UserModal = ({ isOpen, onClose, onSubmit, isLoading = false }) => {
               <p className="text-red-500 text-sm mt-1">{errors.password}</p>
             )}
             {!errors.password && formData.password && (
-              <p className="text-xs text-gray-500 mt-1">
-                ✓ Contraseña segura
+              <p className="text-xs text-carbon-500 mt-1">
+                <Check className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Contraseña segura
               </p>
             )}
           </div>
 
           {/* Confirmar Password */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">
+            <label className="block text-sm font-semibold text-carbon-700 mb-1">
               Confirmar Contraseña *
             </label>
             <Input
@@ -248,7 +238,7 @@ export const UserModal = ({ isOpen, onClose, onSubmit, isLoading = false }) => {
               disabled={isLoading}
               className="flex-1"
             >
-              {isLoading ? 'Creando...' : '✓ Crear Usuario'}
+              {isLoading ? 'Creando...' : <><Check className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Crear Usuario</>}
             </Button>
           </div>
         </form>

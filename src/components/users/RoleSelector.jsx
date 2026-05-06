@@ -1,6 +1,7 @@
 /**
  * RoleSelector.jsx - Componente para cambiar el rol de un usuario
  */
+import { Pencil, AlertTriangle, Check } from 'lucide-react';
 import { useState } from 'react'
 import { Card, Button } from '../../components/ui'
 
@@ -12,11 +13,11 @@ export const RoleSelector = ({
   isLoading = false,
 }) => {
   const [isEditing, setIsEditing] = useState(false)
-  const [selectedRoleId, setSelectedRoleId] = useState(usuario.rol?.id || '')
+  const [selectedRoleId, setSelectedRoleId] = useState(usuario.rol.id || '')
   const [error, setError] = useState('')
 
   // No permitir editar si es el usuario autenticado
-  const isCurrentUser = usuarioAutenticado?.id === usuario.id
+  const isCurrentUser = usuarioAutenticado.id === usuario.id
   const canEdit = !isCurrentUser && !isLoading
 
   const handleSave = async () => {
@@ -25,7 +26,7 @@ export const RoleSelector = ({
       return
     }
 
-    if (selectedRoleId === usuario.rol?.id) {
+    if (selectedRoleId === usuario.rol.id) {
       setIsEditing(false)
       return
     }
@@ -36,15 +37,15 @@ export const RoleSelector = ({
       setIsEditing(false)
     } catch (err) {
       setError(
-        err.response?.data?.error ||
-        err.response?.data?.detail ||
+        err.response.data.error ||
+        err.response.data.detail ||
         'Error al cambiar el rol'
       )
     }
   }
 
   const handleCancel = () => {
-    setSelectedRoleId(usuario.rol?.id || '')
+    setSelectedRoleId(usuario.rol.id || '')
     setIsEditing(false)
     setError('')
   }
@@ -53,7 +54,7 @@ export const RoleSelector = ({
     return (
       <div className="flex items-center gap-2">
         <span className="inline-block px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold">
-          {usuario.rol?.nombre || 'Sin rol'}
+          {usuario.rol.nombre || 'Sin rol'}
         </span>
         {canEdit && (
           <button
@@ -61,11 +62,11 @@ export const RoleSelector = ({
             className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 p-1 rounded transition-colors"
             title="Editar rol"
           >
-            ✏️
+            <Pencil className="inline-block mx-1 text-current" size={20} strokeWidth={2} />
           </button>
         )}
         {isCurrentUser && (
-          <span className="text-xs text-gray-500">
+          <span className="text-xs text-carbon-500">
             (No puedes cambiar tu propio rol)
           </span>
         )}
@@ -77,12 +78,12 @@ export const RoleSelector = ({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <Card className="w-full max-w-sm">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-bold text-gray-900">
+          <h3 className="text-lg font-bold text-carbon-900">
             Cambiar rol de {usuario.nombres}
           </h3>
           <button
             onClick={handleCancel}
-            className="text-gray-500 hover:text-gray-700 text-2xl h-8 w-8 flex items-center justify-center"
+            className="text-carbon-500 hover:text-carbon-700 text-2xl h-8 w-8 flex items-center justify-center"
           >
             ×
           </button>
@@ -91,15 +92,15 @@ export const RoleSelector = ({
         <div className="space-y-4">
           {/* Rol actual */}
           <div>
-            <label className="text-sm text-gray-600">Rol actual</label>
-            <p className="font-semibold text-gray-900">
-              {usuario.rol?.nombre}
+            <label className="text-sm text-carbon-600">Rol actual</label>
+            <p className="font-semibold text-carbon-900">
+              {usuario.rol.nombre}
             </p>
           </div>
 
           {/* Selector de rol */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <label className="block text-sm font-semibold text-carbon-700 mb-2">
               Nuevo rol
             </label>
             <select
@@ -109,7 +110,7 @@ export const RoleSelector = ({
                 setError('')
               }}
               disabled={isLoading}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+              className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-carbon-900"
             >
               <option value="">-- Seleccionar rol --</option>
               {roles.map((role) => (
@@ -124,7 +125,7 @@ export const RoleSelector = ({
           {/* Error */}
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-800">
-              ⚠️ {error}
+              <AlertTriangle className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> {error}
             </div>
           )}
 
@@ -153,7 +154,7 @@ export const RoleSelector = ({
               disabled={isLoading || !selectedRoleId}
               className="flex-1"
             >
-              {isLoading ? 'Guardando...' : '✓ Guardar'}
+              {isLoading ? 'Guardando...' : <><Check className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Guardar</>}
             </Button>
           </div>
         </div>

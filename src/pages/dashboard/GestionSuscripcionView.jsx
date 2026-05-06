@@ -1,3 +1,4 @@
+import { CreditCard, AlertTriangle, Check, ClipboardList, Clock, X, RefreshCcw, RefreshCw, Package, Hourglass, Info, Lock, ScrollText, Lightbulb } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react'
 import { useTenant } from '../../hooks/useTenant'
 import { Card, Button } from '../../components/ui'
@@ -10,8 +11,8 @@ export const GestionSuscripcionView = () => {
   const isSimulatedPayment = (intent) => {
     if (!intent) return false
     return (
-      intent.id?.startsWith('pi_dev_') ||
-      intent.client_secret?.startsWith('pi_dev_')
+      intent.id.startsWith('pi_dev_') ||
+      intent.client_secret.startsWith('pi_dev_')
     )
   }
 
@@ -35,10 +36,8 @@ export const GestionSuscripcionView = () => {
   const [paymentIntent, setPaymentIntent] = useState(null)
   const [programandoCambio, setProgramandoCambio] = useState(false)
   const [cardData, setCardData] = useState({
-    cardNumber: '',
-    expiryDate: '',
-    cvc: '',
-    cardholderName: ''
+    cardNumber: '', expiryDate : '',
+    cvc: '', cardholderName : ''
   })
 
   // Cargar datos iniciales
@@ -66,6 +65,9 @@ export const GestionSuscripcionView = () => {
     }
   }, [cargarDatos, tenantSlug])
 
+  const currentPlanId = suscripcionActual?.plan?.id || null
+  const selectedPlanId = planSeleccionado?.id || null
+
   // Confirmar pago en modo simulado
   const handleConfirmarPagoSimulado = useCallback(async () => {
     // Validar datos de tarjeta
@@ -91,17 +93,14 @@ export const GestionSuscripcionView = () => {
       const confirmacion = await suscripcionService.confirmarPago(
         tenantSlug,
         {
-          paymentIntentId: paymentIntent.id,
-          planId: planSeleccionado.id,
+          paymentIntentId: paymentIntent.id, planId : planSeleccionado.id,
           accion: modoAccion
         }
       )
 
       if (confirmacion.success) {
         setSuccess(
-          modoAccion === 'cambiar'
-            ? `¡Cambio programado! Tu plan cambiará después del período actual.`
-            : `¡Renovación exitosa! Tu suscripción se extiende hasta ${new Date(confirmacion.nueva_fecha_fin).toLocaleDateString()}`
+          modoAccion === 'cambiar' ? `¡Cambio programado! Tu plan cambiará después del período actual.` : `¡Renovación exitosa! Tu suscripción se extiende hasta ${new Date(confirmacion.nueva_fecha_fin).toLocaleDateString()}`
         )
         // Limpiar estado
         setModoAccion(null)
@@ -137,8 +136,7 @@ export const GestionSuscripcionView = () => {
         const intentData = await suscripcionService.crearPaymentIntent(
           tenantSlug,
           {
-            planId: planSeleccionado.id,
-            accion: modoAccion
+            planId: planSeleccionado.id, accion : modoAccion
           }
         )
 
@@ -194,17 +192,14 @@ export const GestionSuscripcionView = () => {
         const confirmacion = await suscripcionService.confirmarPago(
           tenantSlug,
           {
-            paymentIntentId: confirmedIntent.id,
-            planId: planSeleccionado.id,
+            paymentIntentId: confirmedIntent.id, planId : planSeleccionado.id,
             accion: modoAccion
           }
         )
 
         if (confirmacion.success) {
           setSuccess(
-            modoAccion === 'cambiar'
-              ? `¡Cambio programado! Tu plan cambiará a ${planSeleccionado.nombre} después del período actual`
-              : `¡Renovación exitosa! Tu suscripción se extiende hasta ${new Date(confirmacion.nueva_fecha_fin).toLocaleDateString()}`
+            modoAccion === 'cambiar' ? `¡Cambio programado! Tu plan cambiará a ${planSeleccionado.nombre} después del período actual` : `¡Renovación exitosa! Tu suscripción se extiende hasta ${new Date(confirmacion.nueva_fecha_fin).toLocaleDateString()}`
           )
           setModoAccion(null)
           setPlanSeleccionado(null)
@@ -232,11 +227,9 @@ export const GestionSuscripcionView = () => {
 
       const elements = stripe.elements()
       const cardElement = elements.create('card', {
-        hidePostalCode: true,
-        style: {
+        hidePostalCode: true, style : {
           base: {
-            fontSize: '16px',
-            color: '#424770',
+            fontSize: '16px', color : '#424770',
             '::placeholder': {
               color: '#aab7c4',
             },
@@ -315,7 +308,7 @@ export const GestionSuscripcionView = () => {
 
   // Confirmar cambio seleccionado (desde el botón "Siguiente: Ir a Pago")
   const handleConfirmarSeleccionCambio = () => {
-    if (planSeleccionado?.id) {
+    if (planSeleccionado.id) {
       // Programar el cambio en backend
       handleProgramarCambio(planSeleccionado.id)
     }
@@ -324,7 +317,7 @@ export const GestionSuscripcionView = () => {
   // Abrir selector de planes para cambiar
   const handleAbrirCambioPlan = () => {
     // Preseleccionar el primer plan distinto del actual
-    const planDistinto = planes?.find(p => p.id !== suscripcionActual?.plan?.id)
+    const planDistinto = planes.find(p => p.id !== suscripcionActual.plan.id)
     if (planDistinto) {
       setPlanSeleccionado(planDistinto)
     } else {
@@ -365,17 +358,15 @@ export const GestionSuscripcionView = () => {
   // Iniciar acción de renovación
   const handleRenovarSuscripcion = () => {
     // Validar que no haya cambio pendiente
-    if (suscripcionActual?.tiene_cambio_pendiente) {
+    if (suscripcionActual.tiene_cambio_pendiente) {
       setError('No puedes renovar mientras hay un cambio de plan programado. Cancela el cambio primero.')
       return
     }
 
     // Crear objeto plan basado en suscripcionActual (estructura actual con plan anidado)
     const planActual = {
-      id: suscripcionActual?.plan?.id,
-      nombre: suscripcionActual?.plan?.nombre,
-      precio_centavos: suscripcionActual?.plan?.precio_centavos,
-      descripcion: suscripcionActual?.plan?.descripcion
+      id: suscripcionActual.plan.id, nombre : suscripcionActual.plan.nombre,
+      precio_centavos: suscripcionActual.plan.precio_centavos, descripcion : suscripcionActual.plan.descripcion
     }
     setPlanSeleccionado(planActual)
     setModoAccion('renovar')
@@ -429,7 +420,7 @@ export const GestionSuscripcionView = () => {
 
   if (loading) {
     return (
-      <div className="text-center text-gray-500 dark:text-gray-400 py-12">
+      <div className="text-center text-carbon-500 dark:text-neutral-400 py-12">
         <p>Cargando información de suscripción...</p>
       </div>
     )
@@ -439,42 +430,42 @@ export const GestionSuscripcionView = () => {
     <div className="space-y-6">
       {/* HEADER */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">💳 Gestionar Suscripción</h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">Administra tu plan y renovaciones</p>
+        <h1 className="text-3xl font-bold text-carbon-900 dark:text-white"><CreditCard className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Gestionar Suscripción</h1>
+        <p className="text-carbon-600 dark:text-neutral-400 mt-1">Administra tu plan y renovaciones</p>
       </div>
 
       {/* MENSAJES */}
       {error && (
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-300 px-4 py-3 rounded-lg">
-          ⚠️ {error}
+          <AlertTriangle className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> {error}
         </div>
       )}
       {success && (
         <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-800 dark:text-green-300 px-4 py-3 rounded-lg">
-          ✓ {success}
+          <Check className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> {success}
         </div>
       )}
 
       {/* SUSCRIPCIÓN ACTUAL */}
       {suscripcionActual ? (
-        <Card className="border-l-4 border-l-green-600 bg-green-50 dark:bg-slate-800">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">📋 Tu Suscripción Actual</h2>
+        <Card className="border-l-4 border-l-green-600 bg-green-50 dark:bg-carbon-800">
+          <h2 className="text-2xl font-bold text-carbon-900 dark:text-white mb-4"><ClipboardList className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Tu Suscripción Actual</h2>
           <div className="grid md:grid-cols-3 gap-4 mb-6">
             <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Plan Activo</p>
+              <p className="text-sm text-carbon-600 dark:text-neutral-400">Plan Activo</p>
               <p className="text-xl font-bold text-green-600 dark:text-green-400 mt-1">
-                {suscripcionActual.plan?.nombre}
+                {suscripcionActual.plan.nombre}
               </p>
             </div>
             <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Estado</p>
+              <p className="text-sm text-carbon-600 dark:text-neutral-400">Estado</p>
               <p className="text-xl font-bold text-green-600 dark:text-green-400 mt-1">
                 {suscripcionActual.estado}
               </p>
             </div>
             <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Vencimiento</p>
-              <p className="text-lg font-bold text-gray-900 dark:text-white mt-1">
+              <p className="text-sm text-carbon-600 dark:text-neutral-400">Vencimiento</p>
+              <p className="text-lg font-bold text-carbon-900 dark:text-white mt-1">
                 {new Date(suscripcionActual.fin).toLocaleDateString()}
               </p>
             </div>
@@ -485,49 +476,48 @@ export const GestionSuscripcionView = () => {
             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
               <div className="flex justify-between items-start">
                 <div className="flex-1">
-                  <p className="text-sm font-bold text-blue-900 dark:text-blue-300">⏱️ Cambio Programado</p>
+                  <p className="text-sm font-bold text-blue-900 dark:text-blue-300"><Clock className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Cambio Programado</p>
                   <p className="text-blue-800 dark:text-blue-300 text-sm mt-1">
-                    Tu plan cambiará a <strong>{suscripcionActual.plan_pendiente?.nombre}</strong> el{' '}
+                    Tu plan cambiará a <strong>{suscripcionActual.plan_pendiente.nombre}</strong> el{' '}
                     <strong>{new Date(suscripcionActual.fecha_aplicacion_plan_pendiente).toLocaleDateString()}</strong>
                   </p>
                 </div>
                 <button
                   onClick={handleCancelarCambioPendiente}
                   disabled={loading}
-                  className="ml-4 px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm rounded disabled:bg-gray-400 dark:disabled:bg-gray-600"
+                  className="ml-4 px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm rounded disabled:bg-neutral-400 dark:disabled:bg-neutral-600"
                 >
-                  {loading ? '...' : '✕ Cancelar'}
+                  {loading ? '...' : <><X className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Cancelar</>}
                 </button>
               </div>
             </div>
           )}
 
           {!modoAccion && (
-            <div className="flex gap-2 pt-4 border-t dark:border-slate-700">
+            <div className="flex gap-2 pt-4 border-t dark:border-white/[0.08]">
               <Button
                 onClick={handleRenovarSuscripcion}
-                disabled={suscripcionActual?.tiene_cambio_pendiente}
+                disabled={suscripcionActual.tiene_cambio_pendiente}
                 className={`${
-                  suscripcionActual?.tiene_cambio_pendiente
-                    ? 'bg-gray-400 cursor-not-allowed text-white'
+                  suscripcionActual.tiene_cambio_pendiente ?
+                     'bg-neutral-400 cursor-not-allowed text-white'
                     : 'bg-green-600 hover:bg-green-700 text-white'
                 }`}
               >
-                ♻️ Renovar Suscripción
+                <RefreshCcw className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Renovar Suscripción
               </Button>
               <Button
                 onClick={handleAbrirCambioPlan}
                 variant="secondary"
               >
-                🔄 Cambiar de Plan
+                <RefreshCw className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Cambiar de Plan
               </Button>
             </div>
           )}
-        </Card>
-      ) : (
-        <Card className="bg-yellow-50 dark:bg-slate-800 border-yellow-200 dark:border-slate-700">
-          <h2 className="text-xl font-bold text-yellow-900 dark:text-white">⚠️ Sin Suscripción Activa</h2>
-          <p className="text-yellow-800 dark:text-gray-300 mt-2 mb-4">
+        </Card> ) : (
+        <Card className="bg-yellow-50 dark:bg-carbon-800 border-yellow-200 dark:border-white/[0.08]">
+          <h2 className="text-xl font-bold text-yellow-900 dark:text-white"><AlertTriangle className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Sin Suscripción Activa</h2>
+          <p className="text-yellow-800 dark:text-neutral-300 mt-2 mb-4">
             Tu empresa no tiene una suscripción activa. Selecciona un plan para comenzar.
           </p>
         </Card>
@@ -535,7 +525,7 @@ export const GestionSuscripcionView = () => {
 
       {/* PLANES DISPONIBLES */}
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">📦 Planes Disponibles</h2>
+        <h2 className="text-2xl font-bold text-carbon-900 dark:text-white mb-4"><Package className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Planes Disponibles</h2>
         
         {!modoAccion || modoAccion === 'seleccionar-cambio' ? (
           <div className="grid md:grid-cols-4 gap-6">
@@ -544,35 +534,31 @@ export const GestionSuscripcionView = () => {
                 <Card
                   key={plan.id}
                   className={`border-2 transition-all cursor-pointer ${
-                    suscripcionActual?.plan?.id === plan.id && !modoAccion
-                      ? 'border-green-600 bg-green-50 dark:bg-green-900/20 dark:border-green-700'
-                      : planSeleccionado?.id === plan.id && modoAccion === 'seleccionar-cambio'
-                      ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-400 dark:ring-blue-600'
-                      : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-blue-400 dark:hover:border-blue-500'
+                    currentPlanId === plan.id && !modoAccion ?
+                       'border-green-600 bg-green-50 dark:bg-green-900/20 dark:border-green-700'
+                      : selectedPlanId === plan.id && modoAccion === 'seleccionar-cambio' ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-400 dark:ring-blue-600' : 'border-neutral-200 dark:border-white/[0.08] bg-white dark:bg-carbon-800 hover:border-blue-400 dark:hover:border-blue-500'
                   }`}
                   onClick={() => modoAccion === 'seleccionar-cambio' && handleCambiarPlan(plan)}
                 >
                   <div className="mb-4">
-                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">{plan.nombre}</h3>
-                    {plan.descripcion && (
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{plan.descripcion}</p>
+                    <h3 className="text-xl font-bold text-carbon-900 dark:text-white">{plan.nombre}</h3>
+                    {plan.descripcion && (<p className="text-sm text-carbon-600 dark:text-neutral-400 mt-1">{plan.descripcion}</p>
                     )}
                   </div>
 
-                  <div className="mb-4 pb-4 border-b dark:border-slate-700">
-                    <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                  <div className="mb-4 pb-4 border-b dark:border-white/[0.08]">
+                    <p className="text-3xl font-bold text-carbon-900 dark:text-white">
                       ${(plan.precio_centavos / 100).toFixed(2)}
                     </p>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">USD / mes</p>
+                    <p className="text-xs text-carbon-600 dark:text-neutral-400 mt-1">USD / mes</p>
                   </div>
 
                   {plan.caracteristicas && (
-                    <ul className="space-y-2 mb-6 text-sm text-gray-700 dark:text-gray-300">
+                    <ul className="space-y-2 mb-6 text-sm text-carbon-700 dark:text-neutral-300">
                       {typeof plan.caracteristicas === 'string' ? (
-                        <li>✓ {plan.caracteristicas}</li>
-                      ) : (
+                        <li><Check className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> {plan.caracteristicas}</li> ) : (
                         plan.caracteristicas.map((car, idx) => (
-                          <li key={idx}>✓ {car}</li>
+                          <li key={idx}><Check className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> {car}</li>
                         ))
                       )}
                     </ul>
@@ -581,37 +567,34 @@ export const GestionSuscripcionView = () => {
                   {modoAccion === 'seleccionar-cambio' ? (
                     <Button
                       onClick={() => setPlanSeleccionado(plan)}
-                      disabled={suscripcionActual?.plan?.id === plan.id}
+                      disabled={currentPlanId === plan.id}
                       className={`w-full transition-all ${
-                        suscripcionActual?.plan?.id === plan.id
-                          ? 'bg-gray-400 text-white cursor-not-allowed'
-                          : planSeleccionado?.id === plan.id
-                          ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                          : 'bg-gray-200 hover:bg-gray-300 text-gray-800'
+                        currentPlanId === plan.id ?
+                           'bg-neutral-400 text-white cursor-not-allowed'
+                          : selectedPlanId === plan.id ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-neutral-200 hover:bg-neutral-300 text-carbon-800'
                       }`}
                     >
-                      {suscripcionActual?.plan?.id === plan.id ? '✓ Plan Actual' : planSeleccionado?.id === plan.id ? '✓ Seleccionado' : 'Seleccionar'}
+                      {currentPlanId === plan.id ? <><Check className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Plan Actual</> : selectedPlanId === plan.id ? <><Check className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Seleccionado</> : 'Seleccionar'}
                     </Button>
                   ) : (
                     <Button
                       onClick={() => handleCambiarPlan(plan)}
-                      disabled={suscripcionActual?.plan?.id === plan.id}
+                      disabled={currentPlanId === plan.id}
                       className={
-                        suscripcionActual?.plan?.id === plan.id
-                          ? 'w-full bg-gray-400 text-white cursor-not-allowed'
+                        suscripcionActual.plan.id === plan.id ?
+                           'w-full bg-neutral-400 text-white cursor-not-allowed'
                           : 'w-full bg-blue-600 hover:bg-blue-700 text-white'
                       }
                     >
-                      {suscripcionActual?.plan?.id === plan.id ? '✓ Plan Actual' : 'Elegir Plan'}
+                      {suscripcionActual.plan.id === plan.id ? <><Check className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Plan Actual</> : 'Elegir Plan'}
                     </Button>
                   )}
                 </Card>
               ))
-            ) : (
-              <p className="text-gray-500 dark:text-gray-400 col-span-4">No hay planes disponibles</p>
+              ) : (
+              <p className="text-carbon-500 dark:text-neutral-400 col-span-4">No hay planes disponibles</p>
             )}
-          </div>
-        ) : null}
+          </div>) : null}
 
         {modoAccion === 'seleccionar-cambio' && planSeleccionado && (
           <div className="flex gap-3 mt-6">
@@ -620,7 +603,7 @@ export const GestionSuscripcionView = () => {
               disabled={programandoCambio}
               className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
             >
-              {programandoCambio ? '⏳ Programando...' : 'Siguiente: Ir a Pago →'}
+              {programandoCambio ? <><Hourglass className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Programando...</> : 'Siguiente: Ir a Pago →'}
             </Button>
             <Button
               onClick={() => {
@@ -630,25 +613,25 @@ export const GestionSuscripcionView = () => {
               variant="secondary"
               className="flex-1"
             >
-              ✕ Cancelar
+              <X className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Cancelar
             </Button>
           </div>
         )}
 
         {(modoAccion === 'cambiar' || modoAccion === 'renovar') && (
-          <Card className="border-blue-400 bg-blue-50 dark:bg-slate-800 dark:border-blue-900">
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-              {modoAccion === 'cambiar' ? '🔄 Cambiar a Plan' : '♻️ Renovar Suscripción'}
+          <Card className="border-blue-400 bg-blue-50 dark:bg-carbon-800 dark:border-blue-900">
+            <h3 className="text-xl font-bold text-carbon-900 dark:text-white mb-4">
+              {modoAccion === 'cambiar' ? <><RefreshCw className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Cambiar a Plan</> : <><RefreshCcw className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Renovar Suscripción</>}
             </h3>
 
-            <div className="bg-white dark:bg-slate-800 p-4 rounded-lg mb-6 border border-blue-200 dark:border-blue-800">
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Plan Seleccionado:</p>
+            <div className="bg-white dark:bg-carbon-800 p-4 rounded-lg mb-6 border border-blue-200 dark:border-blue-800">
+              <p className="text-sm text-carbon-600 dark:text-neutral-400 mb-2">Plan Seleccionado:</p>
               <div className="flex justify-between items-center">
-                <span className="text-lg font-bold text-gray-900 dark:text-white">
-                  {planSeleccionado?.nombre}
+                <span className="text-lg font-bold text-carbon-900 dark:text-white">
+                  {planSeleccionado.nombre}
                 </span>
                 <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                  ${(planSeleccionado?.precio_centavos / 100).toFixed(2)}/mes
+                  ${(planSeleccionado.precio_centavos / 100).toFixed(2)}/mes
                 </span>
               </div>
             </div>
@@ -656,7 +639,7 @@ export const GestionSuscripcionView = () => {
             {/* Información sobre renovación adelantada */}
             {modoAccion === 'renovar' && suscripcionActual && (
               <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-6">
-                <p className="text-sm font-semibold text-green-900 dark:text-green-300 mb-2">ℹ️ Renovación Adelantada</p>
+                <p className="text-sm font-semibold text-green-900 dark:text-green-300 mb-2"><Info className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Renovación Adelantada</p>
                 <p className="text-sm text-green-800 dark:text-green-300 mb-2">
                   Si renuevas ahora, la nueva suscripción comenzará después del vencimiento de la actual.
                 </p>
@@ -671,12 +654,12 @@ export const GestionSuscripcionView = () => {
 
             {/* Elemento de tarjeta Stripe - SOLO en modo real */}
             {paymentIntent && !isSimulatedPayment(paymentIntent) && (
-              <div className="mb-6 p-4 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800">
-                <label className="block text-sm font-semibold text-gray-700 dark:text-white mb-3">
+              <div className="mb-6 p-4 border border-neutral-300 dark:border-white/[0.08] rounded-lg bg-white dark:bg-carbon-800">
+                <label className="block text-sm font-semibold text-carbon-700 dark:text-white mb-3">
                   Información de la Tarjeta *
                 </label>
-                <div id="card-element" className="p-3 border border-gray-200 dark:border-slate-600 rounded dark:bg-slate-700"></div>
-                <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
+                <div id="card-element" className="p-3 border border-neutral-200 dark:border-white/[0.08] rounded dark:bg-carbon-700"></div>
+                <p className="text-xs text-carbon-600 dark:text-neutral-400 mt-2">
                   Tus datos de tarjeta se procesan de forma segura con Stripe
                 </p>
               </div>
@@ -685,26 +668,26 @@ export const GestionSuscripcionView = () => {
             {/* MODO SIMULADO: Formulario visual de tarjeta simulada */}
             {paymentIntent && isSimulatedPayment(paymentIntent) && (
               <div className="mb-6 p-4 border border-amber-300 dark:border-amber-700 rounded-lg bg-amber-50 dark:bg-amber-900/20">               
-                <label className="block text-sm font-semibold text-gray-700 dark:text-white mb-3">
+                <label className="block text-sm font-semibold text-carbon-700 dark:text-white mb-3">
                   Información de la Tarjeta
                 </label>
 
                 {/* Nombre del titular */}
                 <div className="mb-3">
-                  <label className="text-xs text-gray-600 dark:text-gray-400">Nombre del Titular *</label>
+                  <label className="text-xs text-carbon-600 dark:text-neutral-400">Nombre del Titular *</label>
                   <input
                     type="text"
                     name="cardholderName"
                     placeholder="John Doe"
                     value={cardData.cardholderName}
                     onChange={handleCardChange}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded mt-1 focus:outline-none focus:border-blue-500 dark:bg-slate-700 dark:text-white dark:focus:border-blue-400"
+                    className="w-full px-3 py-2 border border-neutral-300 dark:border-white/[0.08] rounded mt-1 focus:outline-none focus:border-blue-500 dark:bg-carbon-700 dark:text-white dark:focus:border-blue-400"
                   />
                 </div>
 
                 {/* Número de tarjeta */}
                 <div className="mb-3">
-                  <label className="text-xs text-gray-600 dark:text-gray-400">Número de Tarjeta (16 dígitos) *</label>
+                  <label className="text-xs text-carbon-600 dark:text-neutral-400">Número de Tarjeta (16 dígitos) *</label>
                   <input
                     type="text"
                     name="cardNumber"
@@ -712,14 +695,14 @@ export const GestionSuscripcionView = () => {
                     value={cardData.cardNumber}
                     onChange={handleCardChange}
                     maxLength="19"
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded mt-1 font-mono focus:outline-none focus:border-blue-500 dark:bg-slate-700 dark:text-white dark:focus:border-blue-400"
+                    className="w-full px-3 py-2 border border-neutral-300 dark:border-white/[0.08] rounded mt-1 font-mono focus:outline-none focus:border-blue-500 dark:bg-carbon-700 dark:text-white dark:focus:border-blue-400"
                   />
                 </div>
 
                 {/* Fecha y CVC */}
                 <div className="grid grid-cols-2 gap-3 mb-3">
                   <div>
-                    <label className="text-xs text-gray-600 dark:text-gray-400">Expiración (MM/YY) *</label>
+                    <label className="text-xs text-carbon-600 dark:text-neutral-400">Expiración (MM/YY) *</label>
                     <input
                       type="text"
                       name="expiryDate"
@@ -727,11 +710,11 @@ export const GestionSuscripcionView = () => {
                       value={cardData.expiryDate}
                       onChange={handleCardChange}
                       maxLength="5"
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded mt-1 font-mono focus:outline-none focus:border-blue-500 dark:bg-slate-700 dark:text-white dark:focus:border-blue-400"
+                      className="w-full px-3 py-2 border border-neutral-300 dark:border-white/[0.08] rounded mt-1 font-mono focus:outline-none focus:border-blue-500 dark:bg-carbon-700 dark:text-white dark:focus:border-blue-400"
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-gray-600 dark:text-gray-400">CVC (3-4 dígitos) *</label>
+                    <label className="text-xs text-carbon-600 dark:text-neutral-400">CVC (3-4 dígitos) *</label>
                     <input
                       type="text"
                       name="cvc"
@@ -739,7 +722,7 @@ export const GestionSuscripcionView = () => {
                       value={cardData.cvc}
                       onChange={handleCardChange}
                       maxLength="4"
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded mt-1 font-mono focus:outline-none focus:border-blue-500 dark:bg-slate-700 dark:text-white dark:focus:border-blue-400"
+                      className="w-full px-3 py-2 border border-neutral-300 dark:border-white/[0.08] rounded mt-1 font-mono focus:outline-none focus:border-blue-500 dark:bg-carbon-700 dark:text-white dark:focus:border-blue-400"
                     />
                   </div>
                 </div>
@@ -749,7 +732,7 @@ export const GestionSuscripcionView = () => {
             {/* Información de seguridad - SOLO en modo real */}
             {paymentIntent && !isSimulatedPayment(paymentIntent) && (
               <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-300 dark:border-green-800 rounded-lg">
-                <p className="text-sm text-green-900 dark:text-green-300 mb-2">🔒 Pago Seguro con Stripe</p>
+                <p className="text-sm text-green-900 dark:text-green-300 mb-2"><Lock className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Pago Seguro con Stripe</p>
                 <p className="text-xs text-green-800 dark:text-green-300">
                   Tu información de pago se procesa de forma segura. No almacenamos datos de tarjeta.
                 </p>
@@ -763,7 +746,7 @@ export const GestionSuscripcionView = () => {
                 disabled={procesandoPago}
                 className="flex-1 bg-green-600 hover:bg-green-700 text-white"
               >
-                {procesandoPago ? '⏳ Procesando...' : '✓ Confirmar Pago'}
+                {procesandoPago ? <><Hourglass className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Procesando...</> : <><Check className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Confirmar Pago</>}
               </Button>
               <Button
                 onClick={handleCancelar}
@@ -771,12 +754,12 @@ export const GestionSuscripcionView = () => {
                 variant="secondary"
                 className="flex-1"
               >
-                ✕ Cancelar
+                <X className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Cancelar
               </Button>
             </div>
 
             {/* Disclaimer */}
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-4 text-center">
+            <p className="text-xs text-carbon-500 dark:text-neutral-400 mt-4 text-center">
               Al confirmar, aceptas nuestros términos de servicio y política de privacidad.
             </p>
           </Card>
@@ -785,44 +768,44 @@ export const GestionSuscripcionView = () => {
 
       {/* HISTORIAL DE SUSCRIPCIONES */}
       <Card>
-        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">📜 Historial de Cambios</h3>
+        <h3 className="text-xl font-bold text-carbon-900 dark:text-white mb-4"><ScrollText className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Historial de Cambios</h3>
         <div className="space-y-3">
           {suscripcionActual ? (
-            <div className="flex justify-between items-center pb-3 border-b dark:border-slate-700">
+            <div className="flex justify-between items-center pb-3 border-b dark:border-white/[0.08]">
               <div>
-                <p className="font-semibold text-gray-900 dark:text-white">Plan Actual: {suscripcionActual.plan?.nombre}</p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <p className="font-semibold text-carbon-900 dark:text-white">Plan Actual: {suscripcionActual.plan.nombre}</p>
+                <p className="text-sm text-carbon-600 dark:text-neutral-400">
                   Desde {new Date(suscripcionActual.inicio).toLocaleDateString()} hasta{' '}
                   {new Date(suscripcionActual.fin).toLocaleDateString()}
                 </p>
               </div>
               <div className="text-right">
-                <p className="font-bold text-gray-900 dark:text-white">
-                  ${(suscripcionActual.plan?.precio_centavos / 100).toFixed(2)}
+                <p className="font-bold text-carbon-900 dark:text-white">
+                  ${(suscripcionActual.plan.precio_centavos / 100).toFixed(2)}
                 </p>
                 <p className="text-xs text-green-600 dark:text-green-400">Activo</p>
               </div>
             </div>
-          ) : (
-            <p className="text-gray-500 dark:text-gray-400 text-center py-4">Sin historial de suscripciones</p>
+              ) : (
+            <p className="text-carbon-500 dark:text-neutral-400 text-center py-4">Sin historial de suscripciones</p>
           )}
         </div>
       </Card>
 
       {/* INFORMACIÓN ÚTIL */}
-      <Card className="bg-blue-50 dark:bg-slate-800 border-blue-200 dark:border-slate-700">
-        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-3">💡 Preguntas Frecuentes</h3>
-        <div className="space-y-3 text-sm text-gray-700 dark:text-gray-300">
+      <Card className="bg-blue-50 dark:bg-carbon-800 border-blue-200 dark:border-white/[0.08]">
+        <h3 className="text-lg font-bold text-carbon-900 dark:text-white mb-3"><Lightbulb className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Preguntas Frecuentes</h3>
+        <div className="space-y-3 text-sm text-carbon-700 dark:text-neutral-300">
           <div>
-            <p className="font-semibold text-gray-900 dark:text-white">¿Qué pasa si cambio de plan?</p>
+            <p className="font-semibold text-carbon-900 dark:text-white">¿Qué pasa si cambio de plan</p>
             <p>El nuevo plan se aplicará después del vencimiento de tu período actual. Mientras tanto, continuarás con tu plan actual.</p>
           </div>
           <div>
-            <p className="font-semibold text-gray-900 dark:text-white">¿Puedo renovar antes de que venza?</p>
+            <p className="font-semibold text-carbon-900 dark:text-white">¿Puedo renovar antes de que venza</p>
             <p>Sí, puedes renovar adelantadamente. El nuevo período comenzará después del actual.</p>
           </div>
           <div>
-            <p className="font-semibold text-gray-900 dark:text-white">¿Cómo cancelo la suscripción?</p>
+            <p className="font-semibold text-carbon-900 dark:text-white">¿Cómo cancelo la suscripción</p>
             <p>Contacta a soporte para cancelar. Tu acceso continuará hasta fin de período.</p>
           </div>
         </div>
@@ -831,18 +814,18 @@ export const GestionSuscripcionView = () => {
       {/* MODAL DE CONFIRMACIÓN DE CANCELACIÓN */}
       {mostrarConfirmacionCancelacion && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <Card className="max-w-md w-full bg-white dark:bg-slate-800 border-red-300 dark:border-red-700">
+          <Card className="max-w-md w-full bg-white dark:bg-carbon-800 border-red-300 dark:border-red-700">
             <div className="flex items-center gap-3 mb-4">
-              <span className="text-3xl">⚠️</span>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white">Confirmar Cancelación</h3>
+              <span className="text-3xl"><AlertTriangle className="inline-block mx-1 text-current" size={20} strokeWidth={2} /></span>
+              <h3 className="text-xl font-bold text-carbon-900 dark:text-white">Confirmar Cancelación</h3>
             </div>
 
             <div className="space-y-4 mb-6">
-              <p className="text-gray-700 dark:text-gray-300">
+              <p className="text-carbon-700 dark:text-neutral-300">
                 Estás a punto de cancelar un cambio de plan programado.
               </p>
               <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-4">
-                <p className="text-sm font-semibold text-red-900 dark:text-red-300 mb-2">⚠️ Importante:</p>
+                <p className="text-sm font-semibold text-red-900 dark:text-red-300 mb-2"><AlertTriangle className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Importante:</p>
                 <ul className="text-sm text-red-800 dark:text-red-300 space-y-1">
                   <li>• Tu plan actual continuará sin cambios</li>
                   <li>• Se perderá el cambio de plan programado</li>
@@ -853,13 +836,13 @@ export const GestionSuscripcionView = () => {
 
               <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg p-4">
                 <p className="text-sm text-yellow-800 dark:text-yellow-300">
-                  <strong>¿Quieres continuar?</strong> Por favor confirma que entiendes las implicaciones.
+                  <strong>¿Quieres continuar</strong> Por favor confirma que entiendes las implicaciones.
                 </p>
               </div>
             </div>
 
             {/* Checkbox de confirmación */}
-            <div className="flex items-center gap-3 mb-6 p-3 bg-gray-100 dark:bg-slate-700 rounded-lg">
+            <div className="flex items-center gap-3 mb-6 p-3 bg-neutral-100 dark:bg-carbon-700 rounded-lg">
               <input
                 type="checkbox"
                 id="confirmar-cancelacion"
@@ -867,7 +850,7 @@ export const GestionSuscripcionView = () => {
                 onChange={(e) => setCancelacionConfirmada(e.target.checked)}
                 className="w-5 h-5 cursor-pointer"
               />
-              <label htmlFor="confirmar-cancelacion" className="cursor-pointer text-sm text-gray-700 dark:text-gray-300">
+              <label htmlFor="confirmar-cancelacion" className="cursor-pointer text-sm text-carbon-700 dark:text-neutral-300">
                 Confirmo que he leído y entiendo que esta acción no se puede deshacer
               </label>
             </div>
@@ -888,13 +871,13 @@ export const GestionSuscripcionView = () => {
               <Button
                 onClick={confirmarCancelacion}
                 disabled={!cancelacionConfirmada || loading}
-                className="flex-1 bg-red-600 hover:bg-red-700 hover:enabled:bg-red-700 text-white disabled:bg-gray-400 disabled:cursor-not-allowed"
+                className="flex-1 bg-red-600 hover:bg-red-700 hover:enabled:bg-red-700 text-white disabled:bg-neutral-400 disabled:cursor-not-allowed"
               >
-                {loading ? '⏳ Cancelando...' : '✕ Cancelar Cambio'}
+                {loading ? <><Hourglass className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Cancelando...</> : <><X className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Cancelar Cambio</>}
               </Button>
             </div>
 
-            <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-4">
+            <p className="text-xs text-carbon-500 dark:text-neutral-400 text-center mt-4">
               Si tienes preguntas, contacta con soporte
             </p>
           </Card>

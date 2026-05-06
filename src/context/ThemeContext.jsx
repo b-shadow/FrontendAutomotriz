@@ -40,8 +40,7 @@ export const ThemeProvider = ({ children }) => {
 
   const value = {
     theme,
-    toggleTheme,
-    isLight: theme === 'light',
+    toggleTheme, isLight : theme === 'light',
     isDark: theme === 'dark',
   }
 

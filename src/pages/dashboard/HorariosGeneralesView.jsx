@@ -48,8 +48,7 @@ export const HorariosGeneralesView = ({ user, tenantSlug }) => {
       setLoadingEspacios(true)
       setError(null)
       const data = await espaciosTrabajoService.listarEspacios(tenantSlug, {
-        search: '',
-        ordering: 'nombre',
+        search: '', ordering : 'nombre',
       })
       
       const espaciosList = data.espacios || []
@@ -145,7 +144,7 @@ export const HorariosGeneralesView = ({ user, tenantSlug }) => {
   }
 
   const handleDeleteHorario = async (horario) => {
-    if (!window.confirm(`¿Eliminar horario ${DIAS_SEMANA[horario.dia_semana]} ${horario.hora_inicio} - ${horario.hora_fin}?`)) {
+    if (!window.confirm(`¿Eliminar horario ${DIAS_SEMANA[horario.dia_semana]} ${horario.hora_inicio} - ${horario.hora_fin}`)) {
       return
     }
 
@@ -172,10 +171,10 @@ export const HorariosGeneralesView = ({ user, tenantSlug }) => {
       {/* Encabezado */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+          <h1 className="text-3xl font-bold text-carbon-900 dark:text-white">
             Horarios
           </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
+          <p className="text-carbon-600 dark:text-neutral-400 mt-1">
             Gestiona los horarios de los espacios de trabajo
           </p>
         </div>
@@ -189,28 +188,27 @@ export const HorariosGeneralesView = ({ user, tenantSlug }) => {
       )}
 
       {/* Selector de Espacio */}
-      <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-6">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+      <div className="bg-white dark:bg-carbon-800 rounded-lg shadow p-6">
+        <label className="block text-sm font-medium text-carbon-700 dark:text-neutral-300 mb-3">
           Seleccionar Espacio de Trabajo
         </label>
         
         {loadingEspacios ? (
           <div className="text-center py-4">
-            <p className="text-gray-600 dark:text-gray-400">Cargando espacios...</p>
+            <p className="text-carbon-600 dark:text-neutral-400">Cargando espacios...</p>
           </div>
-        ) : espacios.length === 0 ? (
+          ) : espacios.length === 0 ? (
           <div className="text-center py-4">
-            <p className="text-gray-600 dark:text-gray-400">
+            <p className="text-carbon-600 dark:text-neutral-400">
               No hay espacios de trabajo disponibles
             </p>
           </div>
-        ) : (
+              ) : (
           <select
             value={selectedEspacioId || ''}
             onChange={(e) => setSelectedEspacioId(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-200 dark:border-slate-600 rounded-lg
-              bg-white dark:bg-slate-700 text-gray-900 dark:text-white
-              focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="w-full px-4 py-2 border border-neutral-200 dark:border-white/[0.08] rounded-lg
+              bg-white dark:bg-carbon-700 text-carbon-900 dark:text-white ? focus : outline-none focus:ring-2 focus:ring-primary-500"
           >
             {espacios.map((espacio) => (
               <option key={espacio.id} value={espacio.id}>
@@ -223,17 +221,16 @@ export const HorariosGeneralesView = ({ user, tenantSlug }) => {
 
       {/* Tabla de Horarios */}
       {selectedEspacioId && (
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow overflow-hidden">
+        <div className="bg-white dark:bg-carbon-800 rounded-lg shadow overflow-hidden">
           {/* Header de la tabla */}
-          <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-700 flex justify-between items-center">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Horarios de {selectedEspacio?.nombre}
+          <div className="px-6 py-4 border-b border-neutral-200 dark:border-white/[0.08] flex justify-between items-center">
+            <h2 className="text-lg font-semibold text-carbon-900 dark:text-white">
+              Horarios de {selectedEspacio.nombre}
             </h2>
             {canManage && (
               <button
                 onClick={() => handleOpenModal(null)}
-                className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg
-                  disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg ? disabled : opacity-50 disabled:cursor-not-allowed transition-colors"
                 disabled={isSaving || loadingHorarios}
               >
                 + Agregar Horario
@@ -244,11 +241,11 @@ export const HorariosGeneralesView = ({ user, tenantSlug }) => {
           {/* Contenido de la tabla */}
           {loadingHorarios ? (
             <div className="flex justify-center py-8">
-              <p className="text-gray-600 dark:text-gray-400">Cargando horarios...</p>
+              <p className="text-carbon-600 dark:text-neutral-400">Cargando horarios...</p>
             </div>
           ) : horarios.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-gray-600 dark:text-gray-400 mb-4">
+              <p className="text-carbon-600 dark:text-neutral-400 mb-4">
                 No hay horarios registrados para este espacio
               </p>
               {canManage && (
@@ -260,53 +257,53 @@ export const HorariosGeneralesView = ({ user, tenantSlug }) => {
                 </button>
               )}
             </div>
-          ) : (
+              ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-gray-100 dark:bg-slate-700 border-b border-gray-200 dark:border-slate-600">
+                <thead className="bg-neutral-100 dark:bg-carbon-700 border-b border-neutral-200 dark:border-white/[0.08]">
                   <tr>
-                    <th className="px-6 py-3 text-left font-medium text-gray-900 dark:text-white">
+                    <th className="px-6 py-3 text-left font-medium text-carbon-900 dark:text-white">
                       Día
                     </th>
-                    <th className="px-6 py-3 text-left font-medium text-gray-900 dark:text-white">
+                    <th className="px-6 py-3 text-left font-medium text-carbon-900 dark:text-white">
                       Hora Inicio
                     </th>
-                    <th className="px-6 py-3 text-left font-medium text-gray-900 dark:text-white">
+                    <th className="px-6 py-3 text-left font-medium text-carbon-900 dark:text-white">
                       Hora Fin
                     </th>
-                    <th className="px-6 py-3 text-center font-medium text-gray-900 dark:text-white">
+                    <th className="px-6 py-3 text-center font-medium text-carbon-900 dark:text-white">
                       Estado
                     </th>
                     {canManage && (
-                      <th className="px-6 py-3 text-right font-medium text-gray-900 dark:text-white">
+                      <th className="px-6 py-3 text-right font-medium text-carbon-900 dark:text-white">
                         Acciones
                       </th>
                     )}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200 dark:divide-slate-600">
+                <tbody className="divide-y divide-neutral-200 dark:divide-white/[0.08]">
                   {horarios.map((horario) => (
                     <tr
                       key={horario.id}
-                      className="hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors"
+                      className="hover:bg-neutral-50 dark:hover:bg-carbon-700/50 transition-colors"
                     >
-                      <td className="px-6 py-3 text-gray-900 dark:text-white">
+                      <td className="px-6 py-3 text-carbon-900 dark:text-white">
                         <span className="font-medium">
                           {DIAS_SEMANA[horario.dia_semana]}
                         </span>
                       </td>
-                      <td className="px-6 py-3 text-gray-900 dark:text-white">
+                      <td className="px-6 py-3 text-carbon-900 dark:text-white">
                         {horario.hora_inicio}
                       </td>
-                      <td className="px-6 py-3 text-gray-900 dark:text-white">
+                      <td className="px-6 py-3 text-carbon-900 dark:text-white">
                         {horario.hora_fin}
                       </td>
                       <td className="px-6 py-3 text-center">
                         <span
                           className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${
-                            horario.activo
-                              ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400'
-                              : 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400'
+                            horario.activo ?
+                               'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400'
+                              : 'bg-neutral-100 dark:bg-carbon-700 text-carbon-600 dark:text-neutral-400'
                           }`}
                         >
                           {horario.activo ? 'Activo' : 'Inactivo'}
@@ -326,8 +323,8 @@ export const HorariosGeneralesView = ({ user, tenantSlug }) => {
                             <button
                               onClick={() => handleToggleActivo(horario)}
                               className={`transition-colors ${
-                                horario.activo
-                                  ? 'text-orange-600 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300'
+                                horario.activo ?
+                                   'text-orange-600 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300'
                                   : 'text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300'
                               }`}
                               title={horario.activo ? 'Desactivar' : 'Activar'}

@@ -98,14 +98,13 @@ export const HorariosEspacioPanel = ({ espacio, user, tenantSlug }) => {
     <div className="space-y-4 w-full h-full max-w-none">
       {/* Header */}
       <div className="flex justify-between items-center">
-        <h3 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+        <h3 className="text-2xl sm:text-3xl font-bold text-carbon-900 dark:text-white">
           Horarios - {espacio.nombre}
         </h3>
         {canManage && (
           <button
             onClick={() => handleOpenModal(null)}
-            className="px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-base font-medium
-              disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-base font-medium ? disabled : opacity-50 disabled:cursor-not-allowed transition-colors"
             disabled={isSaving}
           >
             + Agregar Horario
@@ -123,14 +122,14 @@ export const HorariosEspacioPanel = ({ espacio, user, tenantSlug }) => {
       {/* Loading */}
       {loading && (
         <div className="flex justify-center py-8">
-          <div className="text-gray-600 dark:text-gray-400">Cargando horarios...</div>
+          <div className="text-carbon-600 dark:text-neutral-400">Cargando horarios...</div>
         </div>
       )}
 
       {/* Empty State */}
       {!loading && horarios.length === 0 && (
-        <div className="text-center py-8 bg-gray-50 dark:bg-slate-700 rounded-lg">
-          <p className="text-gray-600 dark:text-gray-400">No hay horarios registrados</p>
+        <div className="text-center py-8 bg-neutral-50 dark:bg-carbon-700 rounded-lg">
+          <p className="text-carbon-600 dark:text-neutral-400">No hay horarios registrados</p>
           {canManage && (
             <button
               onClick={() => handleOpenModal(null)}
@@ -150,7 +149,7 @@ export const HorariosEspacioPanel = ({ espacio, user, tenantSlug }) => {
       {/* Modal */}
       {isModalOpen && (
         <HorarioEspacioModal
-          key={`horario-${selectedHorario?.id || 'new'}`}
+          key={`horario-${selectedHorario.id || 'new'}`}
           isOpen={isModalOpen}
           onClose={handleCloseModal}
           onSave={handleSaveHorario}

@@ -166,9 +166,7 @@ export const canSelectPropietarioVehiculo = (user) => {
 export const isVehiculoOwner = (user, vehiculo) => {
   if (!user || !vehiculo) return false
 
-  const propietarioId = typeof vehiculo.propietario === 'object' 
-    ? vehiculo.propietario.id 
-    : vehiculo.propietario
+  const propietarioId = typeof vehiculo.propietario === 'object' ? vehiculo.propietario.id : vehiculo.propietario
   
   return user.id === propietarioId
 }

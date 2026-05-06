@@ -1,3 +1,4 @@
+import { Users, BarChart, Pencil, Building2, Briefcase, CreditCard, Car, ClipboardList, Settings, Clock, Calendar, Mailbox, Save, LogOut, Sparkles, Bot, NotebookTabs, ClipboardCheck } from 'lucide-react';
 import { useState } from 'react'
 import {
   canViewBitacora,
@@ -39,9 +40,8 @@ export const TenantSidebar = ({
   onLogout = () => {},
 }) => {
   const [expandedModules, setExpandedModules] = useState({
-    gestionUsuarios: true,
-    reportesEstadisticas: false,
-    modulo2: false,
+    gestionUsuarios: true, reportesEstadisticas : false,
+    modulo2: false, inteligenciaArtificial : false,
     // modulo3: false, // Deshabilitado
     // modulo4: false, // Deshabilitado
   })
@@ -59,8 +59,7 @@ export const TenantSidebar = ({
 
   const toggleModule = (moduleName) => {
     setExpandedModules((prev) => ({
-      ...prev,
-      [moduleName]: !prev[moduleName],
+      ...prev, [moduleName] : !prev[moduleName],
     }))
   }
 
@@ -73,111 +72,102 @@ export const TenantSidebar = ({
 
   const menuItems = {
     gestionUsuarios: {
-      label: '👥 Gestión de Usuarios',
-      icon: '👥',
+      label: 'Gestión de Usuarios', icon : <Users className="inline-block mx-1 text-current" size={20} strokeWidth={2} />,
       items: [
-        { id: 'dashboard', label: '📊 Dashboard', visible: true },
-        { id: 'editarPerfil', label: '✏️ Editar Perfil de Usuario', visible: true },
+        { id: 'dashboard', label: <><BarChart className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Dashboard</>, visible: true },
+        { id: 'editarPerfil', label: <><Pencil className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Editar Perfil de Usuario</>, visible: true },
         {
-          id: 'gestionEmpresa',
-          label: '🏢 Gestionar Empresa',
+          id: 'gestionEmpresa', label : <><Building2 className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Gestionar Empresa</>,
           visible: canManageCompany(user),
         },
         {
-          id: 'gestionUsuariosRoles',
-          label: '👨‍💼 Gestionar Usuarios y Roles',
+          id: 'gestionUsuariosRoles', label : <><Briefcase className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Gestionar Usuarios y Roles</>,
           visible: canManageUsers(user),
         },
         {
-          id: 'gestionSuscripciones',
-          label: '💳 Gestionar Suscripción',
+          id: 'gestionSuscripciones', label : <><CreditCard className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Gestionar Suscripción</>,
           visible: canManageSuscription(user),
         },
-        /*{ id: 'notificaciones', label: '🔔 Gestionar Notificaciones', visible: true },*/
       ],
     },
     modulo2: {
-      label: '🚗 Vehículos, Servicios y Citas',
-      icon: '🚗',
+      label: 'Vehículos, Servicios y Citas', icon : <Car className="inline-block mx-1 text-current" size={20} strokeWidth={2} />,
       items: [
         {
-          id: 'gestionVehiculos',
-          label: '🚗 Gestionar Vehículos',
+          id: 'gestionVehiculos', label : <><Car className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Gestionar Vehículos</>,
           visible: canViewVehiculos(user),
         },
         {
-          id: 'planVehiculo',
-          label: '📋 Plan de Vehículo',
+          id: 'planVehiculo', label : <><ClipboardList className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Plan de Vehículo</>,
           visible: canViewPlanVehiculo(user),
         },
         {
-          id: 'catalogoServicios',
-          label: '🛠️ Catálogo de Servicios',
+          id: 'catalogoServicios', label : <><Settings className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Catálogo de Servicios</>,
           visible: canViewServiciosCatalogo(user),
         },
         {
-          id: 'espaciosTrabajo',
-          label: '🛠️ Espacios de Trabajo',
+          id: 'espaciosTrabajo', label : <><Settings className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Espacios de Trabajo</>,
           visible: canViewEspaciosTrabajo(user),
         },
         {
-          id: 'horarios',
-          label: '⏰ Horarios',
+          id: 'horarios', label : <><Clock className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Horarios</>,
           visible: canViewEspaciosTrabajo(user),
         },
         {
-          id: 'citas',
-          label: '📅 Gestionar Citas',
+          id: 'citas', label : <><Calendar className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Gestionar Citas</>,
+          visible: canViewCitas(user),
+        },
+        {
+          id: 'recepcionVehiculo', label : <><ClipboardCheck className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Recepción de Vehículos</>,
           visible: canViewCitas(user),
         },
       ],
     },
-    /* TODO: Habilitar en futuras versiones
-    modulo3: {
-      label: '📈 Módulo',
-      icon: '📈',
+    /* TODO: Habilitar en futuras versiones ? modulo3 : {
+      label: '📈 Módulo', icon : '📈',
       items: [
         {
-          id: 'modulo3placeholder',
-          label: '⏳ Próximamente',
+          id: 'modulo3placeholder', label : '⏳ Próximamente',
           visible: true,
         },
       ],
     },
     modulo4: {
-      label: '⚙️ Módulo',
-      icon: '⚙️',
+      label: '⚙️ Módulo', icon : '⚙️',
       items: [
         {
-          id: 'modulo4placeholder',
-          label: '⏳ Próximamente',
+          id: 'modulo4placeholder', label : '⏳ Próximamente',
           visible: true,
         },
       ],
     },
     */
     reportesEstadisticas: {
-      label: '📊 Reportes y Estadísticas',
-      icon: '📊',
+      label: 'Reportes y Estadísticas', icon : <BarChart className="inline-block mx-1 text-current" size={20} strokeWidth={2} />,
       items: [
         {
-          id: 'generarReportes',
-          label: '📄 Generar Reportes',
+          id: 'generarReportes', label : <><NotebookTabs className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Generar Reportes</>,
           visible: true,
         },
         {
-          id: 'bitacora',
-          label: '📋 Visualizar Bitácora',
+          id: 'bitacora', label : <><ClipboardList className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Visualizar Bitácora</>,
           visible: canViewBitacora(user),
         },
         {
-          id: 'historialNotificaciones',
-          label: '📬 Historial de Notificaciones',
+          id: 'historialNotificaciones', label : <><Mailbox className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Historial de Notificaciones</>,
           visible: true,
         },
         {
-          id: 'gestionarBackup',
-          label: '💾 Gestionar Backup',
+          id: 'gestionarBackup', label : <><Save className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Gestionar Backup</>,
+          visible: true,
+        },
+      ],
+    },
+    inteligenciaArtificial: {
+      label: 'Inteligencia Artificial', icon : <Sparkles className="inline-block mx-1 text-current" size={20} strokeWidth={2} />,
+      items: [
+        {
+          id: 'asistenteIA', label : <><Bot className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Asistente IA</>,
           visible: true,
         },
       ],
@@ -190,22 +180,23 @@ export const TenantSidebar = ({
     // 'modulo3', // Deshabilitado por el momento
     // 'modulo4', // Deshabilitado por el momento
     'reportesEstadisticas',
+    'inteligenciaArtificial',
   ]
 
   return (
     <>
       {isMobileOpen && (
         <div
-          className="fixed inset-0 z-40 bg-slate-950/45 backdrop-blur-sm md:hidden"
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden"
           onClick={onMobileClose}
         />
       )}
 
       <aside
-        className={`min-h-screen w-64 flex-col border-r border-slate-200/70 bg-white/95 text-slate-800 shadow-[0_20px_50px_rgba(15,23,42,0.10)] backdrop-blur-xl transition-colors duration-300 dark:border-white/10 dark:bg-[#0f0a25]/95 dark:text-slate-100 dark:shadow-[0_20px_50px_rgba(2,6,23,0.45)]
+        className={`h-screen w-64 flex-col border-r border-neutral-200/70 bg-white text-carbon-800 shadow-lg transition-colors duration-300 dark:border-white/[0.06] dark:bg-carbon-950 dark:text-neutral-100
         ${
-          isMobileOpen
-            ? 'fixed left-0 top-0 z-50 flex md:z-30'
+          isMobileOpen ?
+             'fixed left-0 top-0 z-50 flex md:z-30'
             : 'hidden md:fixed md:left-0 md:top-0 md:z-30 md:flex'
         }`}
       >
@@ -213,7 +204,7 @@ export const TenantSidebar = ({
         <div className="absolute right-4 top-4 z-20 md:hidden">
           <button
             onClick={onMobileClose}
-            className="flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200/70 bg-white/80 text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-neutral-200 bg-neutral-50 text-carbon-600 transition hover:bg-primary-50 hover:text-primary-500 hover:border-primary-300 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-neutral-400 dark:hover:bg-primary-900/20 dark:hover:text-primary-400"
             aria-label="Cerrar menú"
           >
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -223,18 +214,18 @@ export const TenantSidebar = ({
         </div>
 
         {/* Header */}
-        <div className="sticky top-0 z-10 border-b border-slate-200/70 bg-white/95 px-4 py-5 backdrop-blur-xl dark:border-white/10 dark:bg-[#120a2f]/95">
-          <div className="rounded-[26px] border border-slate-200/60 bg-gradient-to-br from-fuchsia-500 via-violet-500 to-blue-500 p-4 text-white shadow-[0_20px_45px_rgba(91,33,182,0.18)] dark:border-white/10 dark:from-fuchsia-600/90 dark:via-violet-600/90 dark:to-blue-600/90 dark:shadow-[0_20px_45px_rgba(91,33,182,0.35)]">
+        <div className="sticky top-0 z-10 border-b border-neutral-200/70 bg-white px-4 py-5 dark:border-white/[0.06] dark:bg-carbon-950">
+          <div className="rounded-2xl border border-primary-200/60 bg-gradient-to-br from-primary-600 via-burgundy-600 to-carbon-900 p-4 text-white shadow-lg shadow-primary-900/20 dark:border-primary-800/40 dark:from-primary-700 dark:via-burgundy-700 dark:to-carbon-950">
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 text-lg font-bold shadow-lg">
-                {tenant?.nombre?.charAt(0)?.toUpperCase() || 'T'}
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/15 text-lg font-bold shadow-inner backdrop-blur-sm">
+                {tenant.nombre.charAt(0).toUpperCase() || 'T'}
               </div>
 
               <div className="min-w-0 flex-1">
-                <h3 className="truncate text-sm font-bold text-white">
-                  {tenant?.nombre || 'Tenant'}
+                <h3 className="truncate text-sm font-bold text-white tracking-wide">
+                  {tenant.nombre || 'Tenant'}
                 </h3>
-                <p className="truncate text-xs text-white/80">/{tenantSlug}</p>
+                <p className="truncate text-xs text-white/70">/{tenantSlug}</p>
               </div>
             </div>
           </div>
@@ -255,23 +246,23 @@ export const TenantSidebar = ({
               return (
                 <div
                   key={moduleName}
-                  className="overflow-hidden rounded-[24px] border border-slate-200/70 bg-slate-100/70 dark:border-white/8 dark:bg-white/[0.03]"
+                  className="overflow-hidden rounded-xl border border-neutral-200/70 bg-neutral-50/70 dark:border-white/[0.04] dark:bg-white/[0.02]"
                 >
                   {/* Módulo */}
                   <button
                     onClick={() => toggleModule(moduleName)}
                     className={`w-full flex items-center justify-between px-4 py-3 text-left transition duration-200 ${
-                      hasActiveChild
-                        ? 'bg-gradient-to-r from-fuchsia-500/10 via-violet-500/10 to-blue-500/10 text-slate-900 dark:from-fuchsia-500/15 dark:via-violet-500/10 dark:to-blue-500/15 dark:text-white'
-                        : 'text-slate-700 hover:bg-white/70 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/[0.05] dark:hover:text-white'
+                      hasActiveChild ?
+                         'bg-primary-50/80 text-carbon-900 dark:bg-primary-900/15 dark:text-white'
+                        : 'text-carbon-700 hover:bg-neutral-100 hover:text-carbon-900 dark:text-neutral-300 dark:hover:bg-white/[0.04] dark:hover:text-white'
                     }`}
                   >
                     <span className="flex min-w-0 items-center gap-3">
-                      <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-white text-base shadow-sm dark:bg-white/10 dark:shadow-inner">
+                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-base shadow-sm dark:bg-white/[0.06] dark:shadow-inner">
                         {module.icon}
                       </span>
-                      <span className="truncate text-sm font-semibold">
-                        {module.label.replace(/^..\s/, '')}
+                      <span className="truncate text-sm font-semibold tracking-wide">
+                        {module.label}
                       </span>
                     </span>
 
@@ -285,7 +276,7 @@ export const TenantSidebar = ({
                   {/* Items */}
                   {isExpanded && (
                     <div className="px-2 pb-2">
-                      <div className="space-y-1 rounded-2xl bg-white/70 p-2 dark:bg-black/10">
+                      <div className="space-y-1 rounded-xl bg-white/80 p-2 dark:bg-black/20">
                         {visibleItems.map((item) => {
                           const isActive = activeView === item.id
 
@@ -294,10 +285,10 @@ export const TenantSidebar = ({
                               key={item.id}
                               onClick={() => handleNavigateMobile(item.id)}
                               title={item.label}
-                              className={`group w-full rounded-2xl px-3 py-2.5 text-left text-sm transition duration-200 ${
-                                isActive
-                                  ? 'bg-gradient-to-r from-fuchsia-600 via-violet-600 to-blue-600 text-white shadow-lg shadow-violet-500/20'
-                                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/[0.06] dark:hover:text-slate-100'
+                              className={`group w-full rounded-xl px-3 py-2.5 text-left text-sm transition duration-200 ${
+                                isActive ?
+                                   'bg-gradient-to-r from-primary-600 via-burgundy-600 to-carbon-800 text-white shadow-lg shadow-primary-900/20'
+                                  : 'text-carbon-600 hover:bg-neutral-100 hover:text-carbon-900 dark:text-neutral-400 dark:hover:bg-white/[0.05] dark:hover:text-neutral-100'
                               }`}
                             >
                               <span className="flex items-center gap-2.5">
@@ -321,37 +312,37 @@ export const TenantSidebar = ({
         </nav>
 
         {/* Footer */}
-        <div className="border-t border-slate-200/70 px-4 py-4 dark:border-white/10">
+        <div className="border-t border-neutral-200/70 px-4 py-4 dark:border-white/[0.06]">
           <button
             onClick={handleLogoutClick}
-            className="w-full rounded-2xl bg-gradient-to-r from-red-600 to-rose-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-red-900/20 transition hover:scale-[1.01] hover:from-red-500 hover:to-rose-500"
+            className="w-full rounded-xl bg-gradient-to-r from-primary-600 to-burgundy-700 px-4 py-3 text-sm font-semibold uppercase tracking-wider text-white shadow-lg shadow-primary-900/20 transition hover:brightness-110 hover:shadow-xl"
           >
-            🚪 Cerrar Sesión
+            <LogOut className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Cerrar Sesión
           </button>
         </div>
       </aside>
 
       {/* Modal de confirmación */}
       {showLogoutConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-3xl border border-slate-200/70 bg-white/98 p-6 shadow-2xl dark:border-white/10 dark:bg-[#0f0a25]/98">
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">
-              ¿Cerrar sesión?
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl border border-neutral-200 bg-white p-6 shadow-2xl dark:border-white/[0.08] dark:bg-carbon-900">
+            <h2 className="text-xl font-bold text-carbon-900 dark:text-white mb-2 tracking-tight">
+              ¿Cerrar sesión
             </h2>
-            <p className="text-slate-600 dark:text-slate-400 mb-6">
-              ¿Estás seguro de que deseas cerrar sesión? Tendrás que volver a iniciar sesión para acceder a tu cuenta.
+            <p className="text-carbon-600 dark:text-neutral-400 mb-6">
+              ¿Estás seguro de que deseas cerrar sesión Tendrás que volver a iniciar sesión para acceder a tu cuenta.
             </p>
 
             <div className="flex gap-3">
               <button
                 onClick={() => setShowLogoutConfirm(false)}
-                className="flex-1 rounded-2xl border border-slate-200/70 bg-slate-100 px-4 py-3 font-semibold text-slate-900 transition hover:bg-slate-200 dark:border-white/10 dark:bg-white/[0.06] dark:text-slate-100 dark:hover:bg-white/[0.12]"
+                className="flex-1 rounded-xl border border-neutral-200 bg-neutral-100 px-4 py-3 font-semibold text-carbon-900 transition hover:bg-neutral-200 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-neutral-100 dark:hover:bg-white/[0.08]"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleConfirmLogout}
-                className="flex-1 rounded-2xl bg-gradient-to-r from-red-600 to-rose-600 px-4 py-3 font-semibold text-white shadow-lg shadow-red-900/20 transition hover:from-red-500 hover:to-rose-500"
+                className="flex-1 rounded-xl bg-gradient-to-r from-primary-600 to-burgundy-700 px-4 py-3 font-semibold text-white shadow-lg shadow-primary-900/20 transition hover:brightness-110"
               >
                 Cerrar Sesión
               </button>

@@ -28,6 +28,7 @@ const auditoriaService = {
    */
   listarEventos: async (tenantSlug, filtros = {}) => {
     try {
+      const normalizeString = (value) => (typeof value === 'string' ? value.trim() : '')
       // Construir query params, ignorando vacíos
       const params = new URLSearchParams()
 
@@ -36,18 +37,27 @@ const auditoriaService = {
       if (filtros.page_size) params.append('page_size', filtros.page_size)
 
       // Búsqueda y filtros
-      if (filtros.search?.trim()) params.append('search', filtros.search.trim())
-      if (filtros.accion?.trim()) params.append('accion', filtros.accion.trim())
-      if (filtros.entidad_tipo?.trim()) params.append('entidad_tipo', filtros.entidad_tipo.trim())
-      if (filtros.usuario?.trim()) params.append('usuario', filtros.usuario.trim())
+      const search = normalizeString(filtros.search)
+      const accion = normalizeString(filtros.accion)
+      const entidadTipo = normalizeString(filtros.entidad_tipo)
+      const usuario = normalizeString(filtros.usuario)
+
+      if (search) params.append('search', search)
+      if (accion) params.append('accion', accion)
+      if (entidadTipo) params.append('entidad_tipo', entidadTipo)
+      if (usuario) params.append('usuario', usuario)
 
       // Rango de fechas
-      if (filtros.created_at__gte?.trim()) params.append('created_at__gte', filtros.created_at__gte.trim())
-      if (filtros.created_at__lte?.trim()) params.append('created_at__lte', filtros.created_at__lte.trim())
+      const createdAtGte = normalizeString(filtros.created_at__gte)
+      const createdAtLte = normalizeString(filtros.created_at__lte)
+
+      if (createdAtGte) params.append('created_at__gte', createdAtGte)
+      if (createdAtLte) params.append('created_at__lte', createdAtLte)
 
       // Ordenamiento
-      if (filtros.ordering?.trim()) {
-        params.append('ordering', filtros.ordering.trim())
+      const ordering = normalizeString(filtros.ordering)
+      if (ordering) {
+        params.append('ordering', ordering)
       } else {
         params.append('ordering', '-created_at') // Por defecto descendente
       }

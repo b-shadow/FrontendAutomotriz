@@ -479,7 +479,7 @@ export const EspaciosTrabajoView = ({ user, tenantSlug }) => {
       {/* Modal de Espacio */}
       {isEspacioModalOpen && (
         <EspacioTrabajoModal
-          key={`espacio-${selectedEspacio.id || 'new'}`}
+          key={`espacio-${selectedEspacio?.id || 'new'}`}
           isOpen={isEspacioModalOpen}
           onClose={handleCloseEspacioModal}
           onSave={handleSaveEspacio}
@@ -491,7 +491,7 @@ export const EspaciosTrabajoView = ({ user, tenantSlug }) => {
       {/* Modal de Estado */}
       {isEstadoModalOpen && (
         <CambiarEstadoEspacioModal
-          key={`estado-${selectedEspacio.id}`}
+          key={`estado-${selectedEspacio?.id || 'current'}`}
           isOpen={isEstadoModalOpen}
           onClose={handleCloseEstadoModal}
           onSave={handleSaveEstado}

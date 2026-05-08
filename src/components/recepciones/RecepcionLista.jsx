@@ -45,7 +45,8 @@ export default function RecepcionLista({ recepciones }) {
             <th className="px-4 py-3 text-right font-semibold text-carbon-700 dark:text-neutral-300">Km ingreso</th>
             <th className="px-4 py-3 text-center font-semibold text-carbon-700 dark:text-neutral-300">Combustible</th>
             <th className="px-4 py-3 text-left font-semibold text-carbon-700 dark:text-neutral-300">Asesor</th>
-            <th className="px-4 py-3 text-left font-semibold text-carbon-700 dark:text-neutral-300">Fecha</th>
+            <th className="px-4 py-3 text-left font-semibold text-carbon-700 dark:text-neutral-300">Fecha recepcion</th>
+            <th className="px-4 py-3 text-left font-semibold text-carbon-700 dark:text-neutral-300">Recogida</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-neutral-200/60 dark:divide-white/[0.06]">
@@ -68,6 +69,20 @@ export default function RecepcionLista({ recepciones }) {
               </td>
               <td className="px-4 py-3 text-carbon-900 dark:text-white text-sm">{recepcion.asesor_nombre}</td>
               <td className="px-4 py-3 text-carbon-600 dark:text-neutral-400 text-xs">{formatFecha(recepcion.fecha_recepcion)}</td>
+              <td className="px-4 py-3 text-xs">
+                {recepcion.fecha_recogida ? (
+                  <div className="space-y-1">
+                    <span className="inline-block px-2 py-1 rounded bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 font-medium">
+                      Recogido
+                    </span>
+                    <div className="text-carbon-600 dark:text-neutral-400">{formatFecha(recepcion.fecha_recogida)}</div>
+                  </div>
+                ) : (
+                  <span className="inline-block px-2 py-1 rounded bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 font-medium">
+                    Pendiente
+                  </span>
+                )}
+              </td>
             </tr>
           ))}
         </tbody>

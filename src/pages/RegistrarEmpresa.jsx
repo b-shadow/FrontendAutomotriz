@@ -18,9 +18,9 @@ function RegistrarEmpresa() {
   const [selectedPlan, setSelectedPlan] = useState(null)
   // Step 2: Empresa + Usuario data
   const [formData, setFormData] = useState({
-    // Empresa ? nombre : '',
+    nombre: '',
     slug: '', nit : '',
-    // Usuario admin ? nombres : '',
+    nombres: '',
     apellidos: '', email : '',
     password: '', confirmPassword : '',
   })
@@ -639,7 +639,7 @@ function RegistrarEmpresa() {
                   <div>
                     <p className="text-sm text-carbon-600 dark:text-neutral-400">Usuario Administrativo:</p>
                     <p className="font-semibold text-carbon-900 dark:text-white">
-                      {usuario.email || formData.email}
+                      {usuario?.email || formData.email}
                     </p>
                   </div>
                   <div>

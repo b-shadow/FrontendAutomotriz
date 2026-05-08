@@ -1,4 +1,4 @@
-/** TenantDashboard: Dashboard principal para usuarios logueados en un tenant
+﻿/** TenantDashboard: Dashboard principal para usuarios logueados en un tenant
  * Ruta: /:tenantSlug/app (protegida por TenantGuard)
  */
 import { useState } from 'react'
@@ -23,8 +23,15 @@ import { HorariosGeneralesView } from './dashboard/HorariosGeneralesView'
 import PlanVehiculoView from './dashboard/PlanVehiculoView'
 import GestionCitasView from './dashboard/GestionCitasView'
 import RecepcionVehiculoView from './dashboard/RecepcionVehiculoView'
+import GestionPresupuestosView from './dashboard/GestionPresupuestosView'
+import GestionOrdenesTrabajoView from './dashboard/GestionOrdenesTrabajoView'
+import GestionTallerInternoView from './dashboard/GestionTallerInternoView'
+import GestionAvanceVehiculoView from './dashboard/GestionAvanceVehiculoView'
+import GestionInventarioView from './dashboard/GestionInventarioView'
+import GestionSolicitudesRepuestoView from './dashboard/GestionSolicitudesRepuestoView'
 import AsistenteIAView from './dashboard/AsistenteIAView'
 import { GenerarReportesView } from './dashboard/GenerarReportesView'
+import GestionBackupView from './dashboard/GestionBackupView'
 import { FloatingAIAvatar } from '../components/FloatingAIAvatar'
 
 export const TenantDashboard = () => {
@@ -34,7 +41,7 @@ export const TenantDashboard = () => {
 
   // Estado de la vista activa - por defecto muestra "dashboard"
   const [activeView, setActiveView] = useState('dashboard')
-  // Estado del menú móvil
+  // Estado del menÃº mÃ³vil
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   // Redireccionar si no hay usuario o tenant
@@ -50,7 +57,7 @@ export const TenantDashboard = () => {
   }
 
   const handleLogout = async () => {
-    // logout ahora es async: llama backend para revocar sesión
+    // logout ahora es async: llama backend para revocar sesiÃ³n
     await authService.logoutTenant(tenantSlug)
     // Redirigir al login
     navigate(`/${tenantSlug}/login`)
@@ -93,10 +100,24 @@ export const TenantDashboard = () => {
         return <GestionCitasView user={user} tenantSlug={tenantSlug} onNavigate={handleNavigate} />
       case 'recepcionVehiculo':
         return <RecepcionVehiculoView tenantSlug={tenantSlug} />
+      case 'presupuestos':
+        return <GestionPresupuestosView tenantSlug={tenantSlug} />
+      case 'ordenesTrabajo':
+        return <GestionOrdenesTrabajoView tenantSlug={tenantSlug} />
+      case 'tallerInterno':
+        return <GestionTallerInternoView tenantSlug={tenantSlug} />
+      case 'avanceVehiculo':
+        return <GestionAvanceVehiculoView tenantSlug={tenantSlug} />
+      case 'inventario':
+        return <GestionInventarioView tenantSlug={tenantSlug} />
+      case 'solicitudesRepuesto':
+        return <GestionSolicitudesRepuestoView tenantSlug={tenantSlug} />
       case 'asistenteIA':
         return <AsistenteIAView />
       case 'generarReportes':
         return <GenerarReportesView />
+      case 'gestionarBackup':
+        return <GestionBackupView />
       default:
         return <DashboardHome user={user} tenant={tenant} tenantSlug={tenantSlug} onNavigate={handleNavigate} />
     }
@@ -104,7 +125,7 @@ export const TenantDashboard = () => {
 
   return (
     <div className="min-h-screen bg-neutral-100 dark:bg-carbon-950 flex flex-col md:flex-row transition-colors duration-300">
-      {/* OVERLAY PARA MÓVIL */}
+      {/* OVERLAY PARA MÃ“VIL */}
       {isMobileMenuOpen && (
         <div
           className="fixed inset-0 bg-black/60 z-40 md:hidden"
@@ -130,11 +151,11 @@ export const TenantDashboard = () => {
         {/* TOPBAR */}
         <header className="sticky top-0 z-40 bg-white dark:bg-carbon-900 shadow-sm border-b border-neutral-200 dark:border-white/[0.06] transition-colors duration-300">
           <div className="px-4 md:px-8 py-4 flex justify-between items-center">
-            {/* Botón hamburguesa en móvil */}
+            {/* BotÃ³n hamburguesa en mÃ³vil */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className="md:hidden p-2 text-carbon-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/[0.05] rounded-lg transition-colors"
-              aria-label="Abrir menú"
+              aria-label="Abrir menÃº"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -142,7 +163,7 @@ export const TenantDashboard = () => {
             </button>
 
             <div>
-              <h2 className="text-sm font-semibold text-carbon-500 dark:text-neutral-400 tracking-wide uppercase">Main Property •</h2>
+              <h2 className="text-sm font-semibold text-carbon-500 dark:text-neutral-400 tracking-wide uppercase">Main Property â€¢</h2>
               <h1 className="text-xl font-bold text-carbon-900 dark:text-white tracking-tight">{tenant.nombre}</h1>
             </div>
 
@@ -183,3 +204,5 @@ export const TenantDashboard = () => {
 }
 
 export default TenantDashboard
+
+

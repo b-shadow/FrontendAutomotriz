@@ -608,3 +608,13 @@ export const canReprogramarCita = (user) => {
 
   return isAdminTenant(user) || isAsesorServicio(user)
 }
+
+export const canViewTallerInterno = (user) => {
+  if (!user) return false
+  return isAdminTenant(user) || isAsesorServicio(user) || isMecanico(user)
+}
+
+export const canViewInventario = (user) => {
+  if (!user) return false
+  return isAdminTenant(user) || isAlmacenero(user)
+}

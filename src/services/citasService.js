@@ -184,6 +184,23 @@ const citasService = {
   },
 
   /**
+   * Marcar cita como NO_SHOW
+   * POST /api/{slug}/citas/{id}/marcar-no-show/
+   */
+  marcarNoShow: async (tenantSlug, citaId, payload = {}) => {
+    try {
+      const response = await apiClient.post(
+        `/api/${tenantSlug}/citas/${citaId}/marcar-no-show/`,
+        payload
+      )
+      return response.data
+    } catch (error) {
+      console.error('❌ Error al marcar no-show:', error)
+      throw error
+    }
+  },
+
+  /**
    * Reprogramar una cita existente
    * POST /api/{slug}/citas/{id}/reprogramar/
    *
@@ -329,6 +346,55 @@ const citasService = {
       return response.data
     } catch (error) {
       console.error('❌ Error al validar disponibilidad de espacio:', error)
+      throw error
+    }
+  },
+
+  /**
+   * Obtener bloques de inicio disponibles según fecha/espacio/duración
+   * GET /api/{slug}/citas/bloques-disponibles/
+   */
+  obtenerBloquesDisponibles: async (tenantSlug, params) => {
+    try {
+      const query = new URLSearchParams()
+      query.append('espacio_trabajo_id', params.espacio_trabajo_id)
+      query.append('fecha', params.fecha)
+      query.append('duracion_min', String(params.duracion_min))
+      if (params.horizonte_dias) query.append('horizonte_dias', String(params.horizonte_dias))
+      if (params.max_resultados) query.append('max_resultados', String(params.max_resultados))
+
+      const response = await apiClient.get(
+        `/api/${tenantSlug}/citas/bloques-disponibles/?${query.toString()}`
+      )
+      return response.data
+    } catch (error) {
+      console.error('❌ Error al obtener bloques disponibles:', error)
+      throw error
+    }
+  },
+
+  /**
+   * Obtener agenda operativa de citas (CU19)
+   * GET /api/{slug}/citas/agenda/
+   */
+  obtenerAgenda: async (tenantSlug, filtros = {}) => {
+    try {
+      const params = new URLSearchParams()
+      if (filtros.vista) params.append('vista', filtros.vista)
+      if (filtros.fecha) params.append('fecha', filtros.fecha)
+      if (filtros.estado) params.append('estado', filtros.estado)
+      if (filtros.cliente_id) params.append('cliente_id', filtros.cliente_id)
+      if (filtros.vehiculo_id) params.append('vehiculo_id', filtros.vehiculo_id)
+      if (filtros.espacio_id) params.append('espacio_id', filtros.espacio_id)
+      if (filtros.asesor_id) params.append('asesor_id', filtros.asesor_id)
+      if (filtros.search) params.append('search', filtros.search)
+
+      const qs = params.toString()
+      const url = qs ? `/api/${tenantSlug}/citas/agenda/?${qs}` : `/api/${tenantSlug}/citas/agenda/`
+      const response = await apiClient.get(url)
+      return response.data
+    } catch (error) {
+      console.error('❌ Error al obtener agenda de citas:', error)
       throw error
     }
   },

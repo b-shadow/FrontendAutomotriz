@@ -18,6 +18,20 @@ import vehiculosService from '../../services/vehiculosService'
 import planVehiculoService from '../../services/planVehiculoService'
 import espaciosTrabajoService from '../../services/espaciosTrabajoService'
 
+const HORAS_BLOQUE = Array.from({ length: 48 }, (_, i) => {
+  const minutos = i * 30
+  const h = String(Math.floor(minutos / 60)).padStart(2, '0')
+  const m = String(minutos % 60).padStart(2, '0')
+  return `${h}:${m}`
+})
+
+const obtenerFechaHoy = () => new Date().toISOString().split('T')[0]
+
+const limpiarMensajeMojibake = (texto) => {
+  if (!texto) return ''
+  return texto.replace(/âœ“/g, '').replace(/âœ/g, '').replace(/\s+/g, ' ').trim()
+}
+
 const CitaModalCrear = ({ onClose, onSuccess }) => {
   const { tenantSlug } = useTenant()
 
@@ -49,6 +63,13 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
   // Real-time espacio availability validation (Step 3)
   const [espacioValidation, setEspacioValidation] = useState(null)
   const [espacioValidationLoading, setEspacioValidationLoading] = useState(false)
+  const [bloquesDisponibles, setBloquesDisponibles] = useState([])
+  const [loadingBloques, setLoadingBloques] = useState(false)
+
+  const valoresInicioDisponibles = React.useMemo(
+    () => new Set(bloquesDisponibles.map((b) => `${b.fecha}T${b.hora}:00`)),
+    [bloquesDisponibles]
+  )
 
   // Load initial data
   useEffect(() => {
@@ -172,6 +193,49 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
     return () => clearTimeout(timer)
   }, [formData.espacio_trabajo_id, formData.fecha_hora_inicio_programada, duracionEstimada, tenantSlug])
 
+  useEffect(() => {
+    if (!formData.espacio_trabajo_id || bloquesDisponibles.length === 0) return
+    if (valoresInicioDisponibles.has(formData.fecha_hora_inicio_programada)) return
+
+    // Mantener la hora elegida; la validacion recomendara el siguiente disponible si aplica.
+  }, [bloquesDisponibles, formData.espacio_trabajo_id, formData.fecha_hora_inicio_programada, valoresInicioDisponibles])
+
+  // Cargar bloques disponibles reales cuando hay espacio + fecha + duración
+  useEffect(() => {
+    const cargarBloques = async () => {
+      if (!formData.espacio_trabajo_id || duracionEstimada <= 0) {
+        setBloquesDisponibles([])
+        return
+      }
+
+      const fecha = formData.fecha_hora_inicio_programada.split('T')[0]
+      if (!fecha) {
+        setBloquesDisponibles([])
+        return
+      }
+
+      setLoadingBloques(true)
+      try {
+        const data = await citasService.obtenerBloquesDisponibles(tenantSlug, {
+          espacio_trabajo_id: formData.espacio_trabajo_id,
+          fecha,
+          duracion_min: duracionEstimada,
+          horizonte_dias: 30,
+          max_resultados: 80,
+        })
+        setBloquesDisponibles(data.bloques_disponibles || [])
+      } catch (err) {
+        console.error('Error cargando bloques disponibles:', err)
+        setBloquesDisponibles([])
+      } finally {
+        setLoadingBloques(false)
+      }
+    }
+
+    const timer = setTimeout(cargarBloques, 350)
+    return () => clearTimeout(timer)
+  }, [formData.espacio_trabajo_id, formData.fecha_hora_inicio_programada, duracionEstimada, tenantSlug])
+
   // When vehicle changes
   const handleVehiculoChange = async (vehiculoId) => {
     setFormData((prev) => ({
@@ -266,6 +330,7 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
 
   const vehiculoSeleccionado = vehiculos.find((v) => v.id === formData.vehiculo_id)
   const cliente = vehiculoSeleccionado?.propietario || vehiculoSeleccionado?.cliente
+  const horaSeleccionadaValida = Boolean(formData.fecha_hora_inicio_programada)
 
   return (
     <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50">
@@ -416,18 +481,37 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
 
             <div>
               <label className="block text-sm font-medium mb-2">Hora deseada</label>
-              <input
-                type="time"
-                value={formData.fecha_hora_inicio_programada.split('T')[1].slice(0, 5) || '09:00'}
-                onChange={(e) =>
+              <select
+                value={formData.fecha_hora_inicio_programada.split('T')[1]?.slice(0, 5) || ''}
+                onChange={(e) => {
                   setFormData((prev) => ({
                     ...prev, fecha_hora_inicio_programada : `${
-                      formData.fecha_hora_inicio_programada.split('T')[0] || '2026-03-25'
+                      formData.fecha_hora_inicio_programada.split('T')[0] || obtenerFechaHoy()
                     }T${e.target.value}:00`,
                   }))
-                }
+                }}
                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 bg-white dark:bg-carbon-900 text-carbon-900 dark:text-white border-neutral-200 dark:border-white/[0.08]"
-              />
+              >
+                <option value="">Selecciona hora</option>
+                {HORAS_BLOQUE.map((hora) => (
+                  <option key={hora} value={hora}>
+                    {hora}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-carbon-500 dark:text-neutral-400 mt-1">
+                {formData.espacio_trabajo_id
+                  ? 'La validacion indicara si el horario esta disponible'
+                  : 'Selecciona espacio para ver disponibilidad real'}
+              </p>
+              {loadingBloques && (
+                <p className="text-xs text-blue-600 dark:text-blue-300 mt-1">Consultando bloques disponibles...</p>
+              )}
+              {formData.espacio_trabajo_id && !loadingBloques && bloquesDisponibles.length === 0 && (
+                <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1">
+                  No hay bloques disponibles para esa fecha y duración.
+                </p>
+              )}
             </div>
 
             <div>
@@ -471,14 +555,14 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
                     <>
                       {espacioValidation.disponible ? (
                         <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/40 p-3 rounded-lg text-sm">
-                          <p className="text-green-800 dark:text-green-200 font-semibold"><Check className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> {espacioValidation.mensaje}</p>
+                          <p className="text-green-800 dark:text-green-200 font-semibold"><Check className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> {limpiarMensajeMojibake(espacioValidation.mensaje)}</p>
                           <p className="text-green-700 dark:text-green-300 text-xs mt-1">
                             Disponible desde {new Date(espacioValidation.fecha_hora_inicio).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}
                           </p>
                         </div>
               ) : (
                         <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800/40 p-3 rounded-lg text-sm space-y-2">
-                          <p className="text-yellow-800 dark:text-yellow-200 font-semibold"><AlertTriangle className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> {espacioValidation.mensaje}</p>
+                          <p className="text-yellow-800 dark:text-yellow-200 font-semibold"><AlertTriangle className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> El espacio no esta disponible en el horario solicitado.</p>
                           {espacioValidation.proximo_horario_disponible && (
                             <div className="bg-yellow-100 dark:bg-yellow-900/30 p-2 rounded flex items-center justify-between">
                               <span className="text-yellow-700 dark:text-yellow-300 text-xs">
@@ -506,11 +590,33 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
                   )}
                 </div>
               )}
+
+              {!formData.espacio_trabajo_id && preview?.es_valida && preview?.espacio_trabajo_id && (
+                <div className="mt-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/40 p-3 rounded-lg text-sm">
+                  <p className="text-blue-800 dark:text-blue-200 font-semibold">
+                    <Info className="inline-block mx-1 text-current" size={20} strokeWidth={2} />
+                    Espacio recomendado: <strong>{preview.espacio_trabajo_nombre}</strong>
+                  </p>
+                  <div className="mt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormData((prev) => ({
+                          ...prev,
+                          espacio_trabajo_id: preview.espacio_trabajo_id,
+                        }))
+                      }}
+                      className="bg-blue-700 hover:bg-blue-800 text-white px-2 py-1 rounded text-xs font-semibold"
+                    >
+                      Usar este espacio
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="bg-yellow-50 dark:bg-yellow-900/20 text-carbon-800 dark:text-yellow-100 p-3 rounded-lg text-sm">
-              <strong><Info className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Nota:</strong> Esta es tu intención de horario. El backend validará 
-              disponibilidad y puede ajustar si hay conflictos (fragmentación, múltiples espacios, etc).
+              <strong><Info className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Nota:</strong> Esta es tu intención de horario. Si no esta disponible se te recomendara el siguiente horario disponible.
             </div>
 
             <div className="flex gap-2 justify-end">
@@ -522,7 +628,7 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
               </button>
               <button
                 onClick={() => setStep(4)}
-                disabled={!formData.fecha_hora_inicio_programada}
+                disabled={!horaSeleccionadaValida}
                 className="px-4 py-2 bg-primary-600 text-white rounded-lg disabled:opacity-50"
               >
                 Siguiente

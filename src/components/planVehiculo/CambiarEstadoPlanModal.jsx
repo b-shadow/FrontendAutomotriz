@@ -1,5 +1,5 @@
 import { RefreshCw, X, Hourglass, Check } from 'lucide-react';
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import planVehiculoService from '../../services/planVehiculoService'
 
 /**
@@ -10,6 +10,7 @@ export const CambiarEstadoPlanModal = ({
   plan,
   onClose,
   onSuccess,
+  aiPrefill = null,
 }) => {
   const [nuevoEstado, setNuevoEstado] = useState(plan.estado || '')
   const [motivo, setMotivo] = useState('')
@@ -20,6 +21,44 @@ export const CambiarEstadoPlanModal = ({
     'LIBRE',
     'EN_EJECUCION',
   ]
+
+  // Ghost User Effect
+  useEffect(() => {
+    if (!aiPrefill) return;
+
+    if (aiPrefill.status === 'PENDIENTE') {
+      const typingSpeed = 10;
+      
+      if (aiPrefill.estado && aiPrefill.estado !== nuevoEstado) {
+        setNuevoEstado(aiPrefill.estado);
+      }
+
+      const targetMotivo = String(aiPrefill.motivo || '');
+      
+      if (targetMotivo && targetMotivo !== motivo) {
+        let currentCharIndex = 0;
+        const typeNextChar = () => {
+          if (currentCharIndex < targetMotivo.length) {
+            setMotivo(targetMotivo.substring(0, currentCharIndex + 1));
+            currentCharIndex++;
+            setTimeout(typeNextChar, typingSpeed);
+          }
+        };
+        typeNextChar();
+      }
+    } else if (aiPrefill.status === 'EJECUTADA') {
+      // Asegurar que los valores estén seteados antes de clickear (por si vino directo como EJECUTADA)
+      if (aiPrefill.estado) setNuevoEstado(aiPrefill.estado);
+      if (aiPrefill.motivo) setMotivo(aiPrefill.motivo);
+
+      setTimeout(() => {
+        const btn = document.getElementById('estado-submit-btn');
+        if (btn && !btn.disabled) {
+          btn.click();
+        }
+      }, 500);
+    }
+  }, [aiPrefill]);
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -128,6 +167,7 @@ export const CambiarEstadoPlanModal = ({
             Cancelar
           </button>
           <button
+            id="estado-submit-btn"
             onClick={handleSubmit}
             disabled={loading}
             className="px-4 py-2 bg-orange-600 hover:bg-orange-700 dark:bg-orange-700 dark:hover:bg-orange-600 text-white rounded-lg font-medium transition-colors disabled:opacity-50"

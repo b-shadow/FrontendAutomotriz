@@ -12,6 +12,7 @@ export const PlanVehiculoDetalleFormModal = ({
   detalle,
   onClose,
   onSuccess,
+  aiPrefill = null,
 }) => {
   const [servicios, setServicios] = useState([])
   const [loadingServicios, setLoadingServicios] = useState(false)
@@ -104,6 +105,73 @@ export const PlanVehiculoDetalleFormModal = ({
       setPrecio('')
     }
   }
+
+  // Ghost User Effect
+  useEffect(() => {
+    if (!aiPrefill || loadingServicios) return;
+
+    if (aiPrefill.status === 'PENDIENTE') {
+      const formUpdates = {};
+      const fieldsToSimulate = [];
+      const typingSpeed = 10;
+
+      // Intentar encontrar el ID del servicio si AI pasa nombre_servicio
+      if (aiPrefill.nombre_servicio && !servicioId) {
+        const nombreBuscado = aiPrefill.nombre_servicio.toLowerCase();
+        // Buscar coincidencia exacta o parcial
+        const servicioEncontrado = servicios.find(s => s.nombre.toLowerCase() === nombreBuscado) 
+          || servicios.find(s => s.nombre.toLowerCase().includes(nombreBuscado));
+        
+        if (servicioEncontrado) {
+          // Usamos timeout para simular que el usuario lo seleccionó
+          setTimeout(() => {
+            handleServicioChange({ target: { value: servicioEncontrado.id } });
+          }, 300);
+        }
+      }
+
+      if (aiPrefill.prioridad && aiPrefill.prioridad !== prioridad) {
+        setPrioridad(aiPrefill.prioridad.toUpperCase());
+      }
+
+      const targetObs = String(aiPrefill.observaciones || '');
+      if (targetObs && targetObs !== observaciones) {
+        fieldsToSimulate.push({ field: 'observaciones', value: targetObs });
+      }
+
+      if (fieldsToSimulate.length > 0) {
+        let currentCharIndex = 0;
+        const typeNextChar = () => {
+          if (currentCharIndex < targetObs.length) {
+            setObservaciones(targetObs.substring(0, currentCharIndex + 1));
+            currentCharIndex++;
+            setTimeout(typeNextChar, typingSpeed);
+          }
+        };
+        setTimeout(typeNextChar, 500); // Dar tiempo a que cargue el servicio
+      }
+    } else if (aiPrefill.status === 'EJECUTADA') {
+      // Asegurar valores en caso de venir directo como EJECUTADA
+      if (aiPrefill.nombre_servicio && !servicioId) {
+        const nombreBuscado = aiPrefill.nombre_servicio.toLowerCase();
+        const servicioEncontrado = servicios.find(s => s.nombre.toLowerCase() === nombreBuscado) 
+          || servicios.find(s => s.nombre.toLowerCase().includes(nombreBuscado));
+        if (servicioEncontrado) {
+          handleServicioChange({ target: { value: servicioEncontrado.id } });
+        }
+      }
+      if (aiPrefill.prioridad) setPrioridad(aiPrefill.prioridad.toUpperCase());
+      if (aiPrefill.observaciones) setObservaciones(aiPrefill.observaciones);
+
+      setTimeout(() => {
+        const btn = document.getElementById('detalle-submit-btn');
+        if (btn && !btn.disabled) {
+          btn.click();
+        }
+      }, 800); // Dar un poco más de tiempo para que react renderice el state
+    }
+  }, [aiPrefill, loadingServicios, servicios]);
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError(null)
@@ -303,6 +371,7 @@ export const PlanVehiculoDetalleFormModal = ({
             Cancelar
           </button>
           <button
+            id="detalle-submit-btn"
             onClick={handleSubmit}
             className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
             disabled={loading}

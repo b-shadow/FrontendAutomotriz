@@ -1,16 +1,18 @@
-import { XCircle, CheckCircle, Pencil, Mail, Save, X, Lock, Key, RefreshCw, Info } from 'lucide-react';
+import { XCircle, CheckCircle, Pencil, Mail, Save, X, Lock, Key, RefreshCw, Info, Sparkles } from 'lucide-react';
 import { useState, useEffect } from 'react'
 import { Card, Button, Input } from '../../components/ui'
 import NotificationPreferencesSection from '../../components/NotificationPreferencesSection'
 import { useTenant } from '../../hooks/useTenant'
 import usuariosService from '../../services/usuariosService'
 
-export const PerfilUsuarioView = ({ user, tenant }) => {
+export const PerfilUsuarioView = ({ user, tenant, aiPrefill, onSuccess }) => {
   const { tenantSlug } = useTenant()
   // ESTADO: Edición de Perfil
   const [isEditing, setIsEditing] = useState(false)
+  const [isSimulating, setIsSimulating] = useState(false)
+  const [isAiClickingEdit, setIsAiClickingEdit] = useState(false) // Nueva bandera para click visual
   const [formData, setFormData] = useState({
-    nombres: user.nombres || '', apellidos : user.apellidos || '',
+    nombres: user.nombres || '', apellidos: user.apellidos || '',
     telefono: user.telefono || '',
   })
   const [isSaving, setIsSaving] = useState(false)
@@ -22,42 +24,118 @@ export const PerfilUsuarioView = ({ user, tenant }) => {
   })
   // EFECTO: Sincronizar con prop user cuando cambia (actualizaciones rápidas)
   useEffect(() => {
-    setFormData({
-      nombres: user.nombres || '', apellidos : user.apellidos || '',
-      telefono: user.telefono || '',
-    })
+    // Restauramos el bloque que permite ver los cambios fluir
+    if (!aiPrefill && !isSimulating) {
+      setFormData({
+        nombres: user.nombres || '',
+        apellidos: user.apellidos || '',
+        telefono: user.telefono || '',
+      })
+    }
+
     setUsuarioCompleto({
       rol: user.rol,
     })
-  }, [user.nombres, user.apellidos, user.telefono, user.rol])
+  }, [user.nombres, user.apellidos, user.telefono, user.rol, aiPrefill, isSimulating])
 
+  // EFECTO: Cerrar formularios automáticamente cuando la acción de la IA se completa o cancela
   useEffect(() => {
-    if (!user.id || !tenantSlug) return
-    const timer = setTimeout(async () => {
-      try {
-        const usuarioActualizado = await usuariosService.obtenerUsuario(
-          tenantSlug,
-          user.id
-        )
-        
-        // Actualizar formData
-        setFormData((prev) => ({
-          nombres: usuarioActualizado.nombres || prev.nombres, apellidos : usuarioActualizado.apellidos || prev.apellidos,
-          telefono: usuarioActualizado.telefono || prev.telefono,
-        }))
-        setUsuarioCompleto({
-          rol: usuarioActualizado.rol,
-        })
-      } catch (error) {
-        console.error('Error refetching usuario:', error)
-      }
-    }, 300) // Pequeño delay 
+    // Si antes había una acción y ahora es null, cerramos los modos de edición
+    if (!aiPrefill && !isSimulating) {
+      setIsEditing(false);
+      setShowPasswordForm(false);
+    }
+  }, [aiPrefill, isSimulating]);
 
-    return () => clearTimeout(timer)
-  }, [user.id, tenantSlug])
+  // EFECTO: Simulación de "Escritura" por la IA (Pre-llenado Visual)
+  useEffect(() => {
+    if (!aiPrefill) {
+      console.log("Simulación: No hay acción pendiente.");
+      return;
+    }
+
+    console.log("Simulación: Iniciando para acción con TS", aiPrefill._ts);
+
+    const simulateTyping = async (field, value) => {
+      console.log(`Simulación: Escribiendo '${value}' en campo '${field}'`);
+      let current = "";
+      for (let i = 0; i <= value.length; i++) {
+        current = value.substring(0, i);
+        setFormData(prev => ({ ...prev, [field]: current }));
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+    };
+
+    const simulateTypingPassword = async (field, value) => {
+      console.log(`Simulación: Escribiendo contraseña en campo '${field}'`);
+      let current = "";
+      for (let i = 0; i <= value.length; i++) {
+        current = value.substring(0, i);
+        setPasswordFormData(prev => ({ ...prev, [field]: current }));
+        await new Promise(resolve => setTimeout(resolve, 150)); // Un poco más rápido que antes pero aún visible
+      }
+    };
+
+    const processPrefill = async () => {
+      setIsSimulating(true);
+
+      // 1. Manejar cambios de perfil (Nombre, Apellido, Teléfono)
+      if (aiPrefill.nuevo_nombre || aiPrefill.nuevo_telefono || aiPrefill.nuevo_apellido) {
+        if (!isEditing) {
+          console.log("Simulación: Abriendo formulario de perfil...");
+          setIsAiClickingEdit(true);
+          await new Promise(resolve => setTimeout(resolve, 800));
+          setIsEditing(true);
+          setIsAiClickingEdit(false);
+          await new Promise(resolve => setTimeout(resolve, 600)); // Esperar animación de entrada
+        } else {
+          // Si ya está abierto, esperar un poco para que el usuario note que la IA va a escribir
+          await new Promise(resolve => setTimeout(resolve, 400));
+        }
+
+        if (aiPrefill.nuevo_nombre) await simulateTyping('nombres', aiPrefill.nuevo_nombre);
+        if (aiPrefill.nuevo_apellido) await simulateTyping('apellidos', aiPrefill.nuevo_apellido);
+        if (aiPrefill.nuevo_telefono) await simulateTyping('telefono', aiPrefill.nuevo_telefono);
+      }
+
+      // 2. Manejar cambios de contraseña
+      if (aiPrefill.nueva_contrasena || aiPrefill.contrasena_actual) {
+        console.log("Simulación: Abriendo formulario de contraseña...");
+        setShowPasswordForm(true);
+        await new Promise(resolve => setTimeout(resolve, 800));
+
+        if (aiPrefill.contrasena_actual) {
+          await simulateTypingPassword('contraseña_actual', aiPrefill.contrasena_actual);
+        }
+        if (aiPrefill.nueva_contrasena) {
+          await simulateTypingPassword('contraseña_nueva', aiPrefill.nueva_contrasena);
+          await simulateTypingPassword('contraseña_confirmacion', aiPrefill.nueva_contrasena);
+        }
+      }
+
+      console.log("Simulación: Finalizada.");
+      setIsSimulating(false);
+
+      if (aiPrefill.status === 'EJECUTADA' || aiPrefill.estado === 'EJECUTADA') {
+        await new Promise(resolve => setTimeout(resolve, 800));
+        
+        if (aiPrefill.accion === 'CAMBIAR_CONTRASENA' || aiPrefill.type === 'CAMBIAR_CONTRASENA') {
+           const btn = document.getElementById('password-submit-btn');
+           if (btn) btn.click();
+        } else if (aiPrefill.accion === 'CAMBIAR_USUARIO' || aiPrefill.type === 'CAMBIAR_USUARIO' || aiPrefill.accion === 'CAMBIAR_TELEFONO' || aiPrefill.type === 'CAMBIAR_TELEFONO') {
+           const btn = document.getElementById('perfil-submit-btn');
+           if (btn) btn.click();
+        }
+      }
+    };
+
+    processPrefill();
+  }, [aiPrefill]);
+
+  // Eliminado el efecto de refetch redundante que causaba el regreso al nombre anterior
   const [showPasswordForm, setShowPasswordForm] = useState(false)
   const [passwordFormData, setPasswordFormData] = useState({
-    contraseña_actual: '', contraseña_nueva : '',
+    contraseña_actual: '', contraseña_nueva: '',
     contraseña_confirmacion: '',
   })
   const [isChangingPassword, setIsChangingPassword] = useState(false)
@@ -66,19 +144,19 @@ export const PerfilUsuarioView = ({ user, tenant }) => {
   const handleInputChange = (e) => {
     const { name, value } = e.target
     setFormData((prev) => ({
-      ...prev, [name] : value,
+      ...prev, [name]: value,
     }))
   }
   const handlePasswordInputChange = (e) => {
     const { name, value } = e.target
     setPasswordFormData((prev) => ({
-      ...prev, [name] : value,
+      ...prev, [name]: value,
     }))
   }
   // Guardar cambios de perfil
   const handleSave = async (e) => {
     e.preventDefault()
-    
+
     // Validaciones
     if (!tenantSlug) {
       setErrorMessage(<><XCircle className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Error: No se encontró el tenant. Por favor recarga la página.</>)
@@ -105,7 +183,7 @@ export const PerfilUsuarioView = ({ user, tenant }) => {
       )
       // 3. Actualizar formData con los datos frescos del backend
       const datosActualizados = {
-        nombres: usuarioActualizado.nombres || formData.nombres, apellidos : usuarioActualizado.apellidos || formData.apellidos,
+        nombres: usuarioActualizado.nombres || formData.nombres, apellidos: usuarioActualizado.apellidos || formData.apellidos,
         telefono: usuarioActualizado.telefono || formData.telefono,
       }
       setFormData(datosActualizados)
@@ -121,6 +199,8 @@ export const PerfilUsuarioView = ({ user, tenant }) => {
       setTimeout(() => {
         setSuccessMessage('')
       }, 3000)
+
+      if (onSuccess) onSuccess()
     } catch (error) {
       // Error: Mostrar mensaje de error real
       const errorMsg =
@@ -138,7 +218,7 @@ export const PerfilUsuarioView = ({ user, tenant }) => {
   // Cancelar edición
   const handleCancel = () => {
     setFormData({
-      nombres: user.nombres || '', apellidos : user.apellidos || '',
+      nombres: user.nombres || '', apellidos: user.apellidos || '',
       telefono: user.telefono || '',
     })
     setIsEditing(false)
@@ -184,15 +264,17 @@ export const PerfilUsuarioView = ({ user, tenant }) => {
       // Éxito: Mostrar mensaje, limpiar formulario y cerrarlo
       setPasswordSuccessMessage(<><CheckCircle className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Contraseña cambiada correctamente</>)
       setPasswordFormData({
-        contraseña_actual: '', contraseña_nueva : '',
+        contraseña_actual: '', contraseña_nueva: '',
         contraseña_confirmacion: '',
       })
-      
+
       // Cerrar formulario después de 2 segundos
       setTimeout(() => {
         setShowPasswordForm(false)
         setPasswordSuccessMessage('')
       }, 2000)
+
+      if (onSuccess) onSuccess()
     } catch (error) {
       // Error: Mostrar mensaje de error real
       const errorMsg =
@@ -211,7 +293,7 @@ export const PerfilUsuarioView = ({ user, tenant }) => {
   const handleCancelPasswordForm = (e) => {
     e.preventDefault()
     setPasswordFormData({
-      contraseña_actual: '', contraseña_nueva : '',
+      contraseña_actual: '', contraseña_nueva: '',
       contraseña_confirmacion: '',
     })
     setShowPasswordForm(false)
@@ -220,6 +302,16 @@ export const PerfilUsuarioView = ({ user, tenant }) => {
 
   return (
     <div className="space-y-6">
+      {/* INDICADOR DE SIMULACIÓN IA */}
+      {isSimulating && (
+        <div className="fixed top-24 right-8 z-50 animate-bounce">
+          <div className="bg-primary-600 text-white px-4 py-2 rounded-2xl shadow-2xl flex items-center gap-2 border border-primary-400 backdrop-blur-sm bg-opacity-90">
+            <Sparkles className="animate-pulse" size={18} />
+            <span className="text-sm font-bold tracking-tight">IA escribiendo...</span>
+          </div>
+        </div>
+      )}
+
       {/* HEADER */}
       <div>
         <h1 className="text-3xl font-bold text-carbon-900 dark:text-white"><Pencil className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Editar Mi Perfil</h1>
@@ -249,7 +341,7 @@ export const PerfilUsuarioView = ({ user, tenant }) => {
               onClick={() => setIsEditing(true)}
               type="button"
               variant="primary"
-              className="bg-primary-600 dark:bg-primary-700 hover:bg-primary-700 dark:hover:bg-primary-600 text-white"
+              className={`bg-primary-600 dark:bg-primary-700 hover:bg-primary-700 dark:hover:bg-primary-600 text-white transition-all duration-300 ${isAiClickingEdit ? 'ring-4 ring-primary-400 scale-110 shadow-xl shadow-primary-500/50' : ''}`}
             >
               <Pencil className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Editar
             </Button>
@@ -286,7 +378,7 @@ export const PerfilUsuarioView = ({ user, tenant }) => {
                 </p>
               </div>
             </div>
-              ) : (
+          ) : (
             // FORMULARIO DE EDICIÓN
             <form onSubmit={handleSave} className="space-y-4">
               <div className="grid md:grid-cols-2 gap-4">
@@ -300,7 +392,7 @@ export const PerfilUsuarioView = ({ user, tenant }) => {
                     value={formData.nombres}
                     onChange={handleInputChange}
                     placeholder="Tu nombre"
-                    className="w-full"
+                    className={`w-full transition-all duration-300 ${aiPrefill?.nuevo_nombre ? 'ring-2 ring-primary-500 shadow-lg shadow-primary-500/20' : ''}`}
                   />
                 </div>
                 <div>
@@ -312,8 +404,8 @@ export const PerfilUsuarioView = ({ user, tenant }) => {
                     name="apellidos"
                     value={formData.apellidos}
                     onChange={handleInputChange}
-                    placeholder="Tu apellido"
-                    className="w-full"
+                    placeholder="Tus apellidos"
+                    className={`w-full transition-all duration-300 ${aiPrefill?.nuevo_apellido ? 'ring-2 ring-primary-500 shadow-lg shadow-primary-500/20' : ''}`}
                   />
                 </div>
               </div>
@@ -328,7 +420,7 @@ export const PerfilUsuarioView = ({ user, tenant }) => {
                   value={formData.telefono}
                   onChange={handleInputChange}
                   placeholder="+57 3XX XXXX XXX"
-                  className="w-full"
+                  className={`w-full transition-all duration-300 ${aiPrefill?.nuevo_telefono ? 'ring-2 ring-primary-500 shadow-lg shadow-primary-500/20' : ''}`}
                 />
               </div>
 
@@ -340,6 +432,7 @@ export const PerfilUsuarioView = ({ user, tenant }) => {
               {/* BOTONES */}
               <div className="flex gap-3 pt-4">
                 <Button
+                  id="perfil-submit-btn"
                   type="submit"
                   disabled={isSaving}
                   variant="primary"
@@ -404,7 +497,7 @@ export const PerfilUsuarioView = ({ user, tenant }) => {
                 value={passwordFormData.contraseña_actual}
                 onChange={handlePasswordInputChange}
                 placeholder="Ingresa tu contraseña actual"
-                className="w-full"
+                className={`w-full transition-all duration-300 ${aiPrefill?.contrasena_actual ? 'ring-2 ring-primary-500 shadow-lg shadow-primary-500/20' : ''}`}
               />
             </div>
 
@@ -418,7 +511,7 @@ export const PerfilUsuarioView = ({ user, tenant }) => {
                 value={passwordFormData.contraseña_nueva}
                 onChange={handlePasswordInputChange}
                 placeholder="Ingresa tu nueva contraseña (mínimo 8 caracteres)"
-                className="w-full"
+                className={`w-full transition-all duration-300 ${aiPrefill?.nueva_contrasena ? 'ring-2 ring-primary-500 shadow-lg shadow-primary-500/20' : ''}`}
               />
             </div>
 
@@ -432,13 +525,14 @@ export const PerfilUsuarioView = ({ user, tenant }) => {
                 value={passwordFormData.contraseña_confirmacion}
                 onChange={handlePasswordInputChange}
                 placeholder="Confirma tu nueva contraseña"
-                className="w-full"
+                className={`w-full transition-all duration-300 ${aiPrefill?.nueva_contrasena ? 'ring-2 ring-primary-500 shadow-lg shadow-primary-500/20' : ''}`}
               />
             </div>
 
             {/* BOTONES */}
             <div className="flex gap-3 pt-4">
               <Button
+                id="password-submit-btn"
                 type="submit"
                 disabled={isChangingPassword}
                 variant="primary"
@@ -466,7 +560,7 @@ export const PerfilUsuarioView = ({ user, tenant }) => {
       </Card>
 
       {/* PREFERENCIAS DE NOTIFICACIÓN */}
-      <NotificationPreferencesSection tenantSlug={tenantSlug} userId={user.id} />
+      <NotificationPreferencesSection tenantSlug={tenantSlug} userId={user.id} aiPrefill={aiPrefill} onSuccess={onSuccess} />
 
       {/* INFORMACIÓN ADICIONAL */}
       <Card className="bg-neutral-50 dark:bg-carbon-700 border-neutral-200 dark:border-white/[0.08]">

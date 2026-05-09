@@ -21,46 +21,50 @@ const TenantLayout = () => {
   )
 }
 
+import { RefreshProvider } from './context/RefreshContext'
+
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* ===== RUTAS GLOBALES / HOME ===== */}
-        <Route path="/" element={<Home />} />
-        
-        {/* Registro de nueva empresa (multi-paso wizard) */}
-        <Route path="/empresas/nueva" element={<RegistrarEmpresa />} />
-        
-        {/* Listado público de empresas */}
-        <Route path="/empresas" element={<ListarEmpresas />} />
-
-        {/* ===== RUTAS POR TENANT ===== */}
-        {/* Layout que resuelve tenant por slug */}
-        <Route element={<TenantLayout />}>
-          {/* Login por tenant */}
-          <Route path="/:tenantSlug/login" element={<LoginTenant />} />
+    <RefreshProvider>
+      <BrowserRouter>
+        <Routes>
+          {/* ===== RUTAS GLOBALES / HOME ===== */}
+          <Route path="/" element={<Home />} />
           
-          {/* Registro de nuevo usuario en tenant */}
-          <Route path="/:tenantSlug/registro" element={<RegistroTenant />} />
+          {/* Registro de nueva empresa (multi-paso wizard) */}
+          <Route path="/empresas/nueva" element={<RegistrarEmpresa />} />
           
-          {/* Recuperar contraseña */}
-          <Route path="/:tenantSlug/forgot-password" element={<RecuperarPasswordTenant />} />
-          
-          {/* Dashboard tenant (protegido) */}
-          <Route
-            path="/:tenantSlug/app"
-            element={
-              <TenantGuard>
-                <TenantDashboard />
-              </TenantGuard>
-            }
-          />
-        </Route>
-
-        {/* Catch-all - redirige a home */}
-        <Route path="*" element={<Home />} />
-      </Routes>
-    </BrowserRouter>
+          {/* Listado público de empresas */}
+          <Route path="/empresas" element={<ListarEmpresas />} />
+  
+          {/* ===== RUTAS POR TENANT ===== */}
+          {/* Layout que resuelve tenant por slug */}
+          <Route element={<TenantLayout />}>
+            {/* Login por tenant */}
+            <Route path="/:tenantSlug/login" element={<LoginTenant />} />
+            
+            {/* Registro de nuevo usuario en tenant */}
+            <Route path="/:tenantSlug/registro" element={<RegistroTenant />} />
+            
+            {/* Recuperar contraseña */}
+            <Route path="/:tenantSlug/forgot-password" element={<RecuperarPasswordTenant />} />
+            
+            {/* Dashboard tenant (protegido) */}
+            <Route
+              path="/:tenantSlug/app"
+              element={
+                <TenantGuard>
+                  <TenantDashboard />
+                </TenantGuard>
+              }
+            />
+          </Route>
+  
+          {/* Catch-all - redirige a home */}
+          <Route path="*" element={<Home />} />
+        </Routes>
+      </BrowserRouter>
+    </RefreshProvider>
   )
 }
 

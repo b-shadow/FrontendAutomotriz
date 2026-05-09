@@ -68,7 +68,7 @@ function labelAccion(accion) {
 /**
  * Vista principal de bitácora
  */
-export const BitacoraView = ({ tenantSlug }) => {
+export const BitacoraView = ({ tenantSlug, aiPrefill }) => {
   // Estados principales
   const [resumen, setResumen] = useState(null)
   const [eventos, setEventos] = useState([])
@@ -114,6 +114,95 @@ export const BitacoraView = ({ tenantSlug }) => {
       return [...new Set([...prev, ...nuevas])].sort()
     })
   }
+
+  // Ghost User Effect
+  useEffect(() => {
+    if (!aiPrefill) return;
+
+    if (aiPrefill.status === 'EJECUTADA') {
+      if (aiPrefill.type === 'FILTRAR_BITACORA') {
+        const formUpdates = {};
+        const fieldsToSimulate = [];
+        const typingSpeed = 20;
+
+        if (aiPrefill.search && aiPrefill.search !== filtros.search) {
+          fieldsToSimulate.push({ field: 'search', value: aiPrefill.search });
+        }
+        if (aiPrefill.accion && aiPrefill.accion !== filtros.accion) {
+          fieldsToSimulate.push({ field: 'accion', value: aiPrefill.accion });
+        }
+        if (aiPrefill.fecha_desde && aiPrefill.fecha_desde !== filtros.created_at__gte) {
+          fieldsToSimulate.push({ field: 'created_at__gte', value: aiPrefill.fecha_desde });
+        }
+        if (aiPrefill.fecha_hasta && aiPrefill.fecha_hasta !== filtros.created_at__lte) {
+          fieldsToSimulate.push({ field: 'created_at__lte', value: aiPrefill.fecha_hasta });
+        }
+        if (aiPrefill.orden && aiPrefill.orden !== filtros.ordering) {
+          fieldsToSimulate.push({ field: 'ordering', value: aiPrefill.orden });
+        }
+
+        if (fieldsToSimulate.length > 0) {
+          let currentFieldIndex = 0;
+          let currentCharIndex = 0;
+
+          const typeNextChar = () => {
+            if (currentFieldIndex >= fieldsToSimulate.length) return;
+
+            const currentField = fieldsToSimulate[currentFieldIndex];
+            const targetValue = String(currentField.value);
+
+            if (['accion', 'ordering', 'created_at__gte', 'created_at__lte'].includes(currentField.field)) {
+              setFiltros(prev => ({
+                ...prev,
+                [currentField.field]: targetValue
+              }));
+              currentFieldIndex++;
+              setTimeout(typeNextChar, typingSpeed * 5);
+            } else {
+              if (currentCharIndex < targetValue.length) {
+                setFiltros(prev => ({
+                  ...prev,
+                  [currentField.field]: targetValue.substring(0, currentCharIndex + 1)
+                }));
+                currentCharIndex++;
+                setTimeout(typeNextChar, typingSpeed);
+              } else {
+                currentFieldIndex++;
+                currentCharIndex = 0;
+                setTimeout(typeNextChar, typingSpeed * 3);
+              }
+            }
+          };
+
+          typeNextChar();
+          
+          // Calcular el tiempo total aproximado y disparar la búsqueda
+          const delay = fieldsToSimulate.reduce((acc, f) => acc + (f.value.length * typingSpeed) + 100, 0) + 500;
+          setTimeout(() => {
+            const btn = document.getElementById('btn-aplicar-filtros');
+            if (btn && !btn.disabled) btn.click();
+          }, delay);
+        } else {
+          // Si no hay cambios que simular, solo filtrar
+          setTimeout(() => {
+            const btn = document.getElementById('btn-aplicar-filtros');
+            if (btn && !btn.disabled) btn.click();
+          }, 300);
+        }
+      } else if (aiPrefill.type === 'EXPORTAR_BITACORA') {
+        const formato = (aiPrefill.formato || 'excel').toLowerCase();
+        setTimeout(() => {
+          if (formato.includes('csv')) {
+            document.getElementById('btn-exportar-csv')?.click();
+          } else if (formato.includes('html')) {
+            document.getElementById('btn-exportar-html')?.click();
+          } else {
+            document.getElementById('btn-exportar-excel')?.click();
+          }
+        }, 800);
+      }
+    }
+  }, [aiPrefill?._ts]);
 
   useEffect(() => {
     cargarDatos()
@@ -655,6 +744,7 @@ export const BitacoraView = ({ tenantSlug }) => {
           {/* Botones de acción */}
           <div className="flex flex-wrap gap-2 pt-2">
             <button
+              id="btn-aplicar-filtros"
               onClick={aplicarFiltros}
               disabled={cargandoListado}
               className="px-6 py-2 bg-primary-600 dark:bg-primary-600 text-white rounded-lg hover:bg-primary-700 dark:hover:bg-primary-700 transition-colors disabled:opacity-50 font-medium text-sm"
@@ -679,6 +769,7 @@ export const BitacoraView = ({ tenantSlug }) => {
 
               <div className="flex gap-2">
                 <button
+                  id="btn-exportar-csv"
                   onClick={() => { setFormatoExportar('csv'); setModalExportarAbierto(true); }}
                   className="px-4 py-2 flex items-center gap-2 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors font-medium text-sm"
                   title="Exportar a CSV"
@@ -686,6 +777,7 @@ export const BitacoraView = ({ tenantSlug }) => {
                   CSV
                 </button>
                 <button
+                  id="btn-exportar-excel"
                   onClick={() => { setFormatoExportar('excel'); setModalExportarAbierto(true); }}
                   className="px-4 py-2 flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors font-medium text-sm"
                   title="Exportar a Excel"
@@ -693,6 +785,7 @@ export const BitacoraView = ({ tenantSlug }) => {
                   Excel
                 </button>
                 <button
+                  id="btn-exportar-html"
                   onClick={() => { setFormatoExportar('html'); setModalExportarAbierto(true); }}
                   className="px-4 py-2 flex items-center gap-2 bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 border border-orange-200 dark:border-orange-800 rounded-lg hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-colors font-medium text-sm"
                   title="Exportar a HTML"

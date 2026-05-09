@@ -1,4 +1,4 @@
-﻿import { Users, BarChart, Pencil, Building2, Briefcase, CreditCard, Car, ClipboardList, Settings, Clock, Calendar, Mailbox, Save, LogOut, Sparkles, Bot, NotebookTabs, ClipboardCheck, Wrench } from 'lucide-react'
+import { Users, BarChart, Pencil, Building2, Briefcase, CreditCard, Car, ClipboardList, Settings, Clock, Calendar, Mailbox, Save, LogOut, Sparkles, Bot, NotebookTabs, ClipboardCheck } from 'lucide-react';
 import { useState } from 'react'
 import {
   canViewBitacora,
@@ -10,10 +10,9 @@ import {
   canViewEspaciosTrabajo,
   canViewPlanVehiculo,
   canViewCitas,
-  canViewTallerInterno,
-  canViewInventario,
 } from '../utils/roleHelper'
 
+// Icono Chevron
 const ChevronDownIcon = ({ className }) => (
   <svg
     className={className}
@@ -41,12 +40,10 @@ export const TenantSidebar = ({
   onLogout = () => {},
 }) => {
   const [expandedModules, setExpandedModules] = useState({
-    gestionUsuarios: true,
-    modulo2: false,
-    atencionTecnica: false,
-    inventarioGestionAdministrativa: false,
-    reportesEstadisticas: false,
-    inteligenciaArtificial: false,
+    gestionUsuarios: true, reportesEstadisticas : false,
+    modulo2: false, inteligenciaArtificial : false,
+    // modulo3: false, // Deshabilitado
+    // modulo4: false, // Deshabilitado
   })
 
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
@@ -62,8 +59,7 @@ export const TenantSidebar = ({
 
   const toggleModule = (moduleName) => {
     setExpandedModules((prev) => ({
-      ...prev,
-      [moduleName]: !prev[moduleName],
+      ...prev, [moduleName] : !prev[moduleName],
     }))
   }
 
@@ -76,117 +72,83 @@ export const TenantSidebar = ({
 
   const menuItems = {
     gestionUsuarios: {
-      label: 'Gestión de Usuarios', icon: <Users className="inline-block mx-1 text-current" size={20} strokeWidth={2} />,
+      label: 'Gestión de Usuarios', icon : <Users className="inline-block mx-1 text-current" size={20} strokeWidth={2} />,
       items: [
         { id: 'dashboard', label: <><BarChart className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Dashboard</>, visible: true },
         { id: 'editarPerfil', label: <><Pencil className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Editar Perfil de Usuario</>, visible: true },
         {
-          id: 'gestionEmpresa', label: <><Building2 className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Gestionar Empresa</>,
+          id: 'gestionEmpresa', label : <><Building2 className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Gestionar Empresa</>,
           visible: canManageCompany(user),
         },
         {
-          id: 'gestionUsuariosRoles', label: <><Briefcase className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Gestionar Usuarios y Roles</>,
+          id: 'gestionUsuariosRoles', label : <><Briefcase className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Gestionar Usuarios y Roles</>,
           visible: canManageUsers(user),
         },
         {
-          id: 'gestionSuscripciones', label: <><CreditCard className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Gestionar Suscripción</>,
+          id: 'gestionSuscripciones', label : <><CreditCard className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Gestionar Suscripción</>,
           visible: canManageSuscription(user),
         },
       ],
     },
     modulo2: {
-      label: 'Vehículos, Servicios y Citas', icon: <Car className="inline-block mx-1 text-current" size={20} strokeWidth={2} />,
+      label: 'Vehículos, Servicios y Citas', icon : <Car className="inline-block mx-1 text-current" size={20} strokeWidth={2} />,
       items: [
         {
-          id: 'gestionVehiculos', label: <><Car className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Gestionar Vehículos</>,
+          id: 'gestionVehiculos', label : <><Car className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Gestionar Vehículos</>,
           visible: canViewVehiculos(user),
         },
         {
-          id: 'planVehiculo', label: <><ClipboardList className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Plan de Vehículo</>,
+          id: 'planVehiculo', label : <><ClipboardList className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Plan de Vehículo</>,
           visible: canViewPlanVehiculo(user),
         },
         {
-          id: 'catalogoServicios', label: <><Settings className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Catálogo de Servicios</>,
+          id: 'catalogoServicios', label : <><Settings className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Catálogo de Servicios</>,
           visible: canViewServiciosCatalogo(user),
         },
         {
-          id: 'espaciosTrabajo', label: <><Settings className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Espacios de Trabajo</>,
+          id: 'espaciosTrabajo', label : <><Settings className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Espacios de Trabajo</>,
           visible: canViewEspaciosTrabajo(user),
         },
         {
-          id: 'horarios', label: <><Clock className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Horarios</>,
+          id: 'horarios', label : <><Clock className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Horarios</>,
           visible: canViewEspaciosTrabajo(user),
         },
         {
-          id: 'citas', label: <><Calendar className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Gestionar Citas</>,
-          visible: canViewCitas(user),
-        },
-      ],
-    },
-    atencionTecnica: {
-      label: 'Atención Técnica', icon: <Wrench className="inline-block mx-1 text-current" size={20} strokeWidth={2} />,
-      items: [
-        {
-          id: 'recepcionVehiculo', label: <><ClipboardCheck className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Recepción de Vehículos</>,
+          id: 'citas', label : <><Calendar className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Gestionar Citas</>,
           visible: canViewCitas(user),
         },
         {
-          id: 'presupuestos', label: <><CreditCard className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Gestionar Presupuesto</>,
+          id: 'recepcionVehiculo', label : <><ClipboardCheck className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Recepción de Vehículos</>,
           visible: canViewCitas(user),
-        },
-        {
-          id: 'ordenesTrabajo', label: <><ClipboardList className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Órdenes de Trabajo</>,
-          visible: canViewCitas(user),
-        },
-        {
-          id: 'tallerInterno', label: <><ClipboardCheck className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Taller Interno</>,
-          visible: canViewTallerInterno(user),
-        },
-        {
-          id: 'avanceVehiculo', label: <><Calendar className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Avance Vehículo</>,
-          visible: true,
-        },
-      ],
-    },
-    inventarioGestionAdministrativa: {
-      label: 'Inventario y Gestión Administrativa', icon: <Settings className="inline-block mx-1 text-current" size={20} strokeWidth={2} />,
-      items: [
-        {
-          id: 'inventario', label: <><Settings className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Inventario</>,
-          visible: canViewInventario(user),
-        },
-        {
-          id: 'solicitudesRepuesto', label: <><ClipboardList className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Solicitudes Repuesto</>,
-          visible: canViewInventario(user),
         },
       ],
     },
     reportesEstadisticas: {
-      label: 'Reportes y Estadísticas', icon: <BarChart className="inline-block mx-1 text-current" size={20} strokeWidth={2} />,
+      label: 'Reportes y Estadísticas', icon : <BarChart className="inline-block mx-1 text-current" size={20} strokeWidth={2} />,
       items: [
         {
-          id: 'generarReportes', label: <><NotebookTabs className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Generar Reportes</>,
+          id: 'generarReportes', label : <><NotebookTabs className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Generar Reportes</>,
           visible: true,
         },
         {
-          id: 'bitacora', label: <><ClipboardList className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Visualizar Bitácora</>,
+          id: 'bitacora', label : <><ClipboardList className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Visualizar Bitácora</>,
           visible: canViewBitacora(user),
         },
         {
-          id: 'historialNotificaciones', label: <><Mailbox className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Historial de Notificaciones</>,
+          id: 'notificaciones', label : <><Mailbox className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Historial de Notificaciones</>,
           visible: true,
         },
         {
-          id: 'gestionarBackup', label: <><Save className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Gestionar Backup</>,
+          id: 'gestionarBackup', label : <><Save className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Gestionar Backup</>,
           visible: true,
         },
       ],
     },
     inteligenciaArtificial: {
-      label: 'Inteligencia Artificial', icon: <Sparkles className="inline-block mx-1 text-current" size={20} strokeWidth={2} />,
+      label: 'Inteligencia Artificial', icon : <Sparkles className="inline-block mx-1 text-current" size={20} strokeWidth={2} />,
       items: [
         {
-          id: 'asistenteIA', label: <><Bot className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Asistente IA</>,
+          id: 'asistenteIA', label : <><Bot className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Asistente IA</>,
           visible: true,
         },
       ],
@@ -196,8 +158,8 @@ export const TenantSidebar = ({
   const modules = [
     'gestionUsuarios',
     'modulo2',
-    'atencionTecnica',
-    'inventarioGestionAdministrativa',
+    // 'modulo3', // Deshabilitado por el momento
+    // 'modulo4', // Deshabilitado por el momento
     'reportesEstadisticas',
     'inteligenciaArtificial',
   ]
@@ -219,6 +181,7 @@ export const TenantSidebar = ({
             : 'hidden md:fixed md:left-0 md:top-0 md:z-30 md:flex'
         }`}
       >
+        {/* Botón cerrar móvil */}
         <div className="absolute right-4 top-4 z-20 md:hidden">
           <button
             onClick={onMobileClose}
@@ -231,6 +194,7 @@ export const TenantSidebar = ({
           </button>
         </div>
 
+        {/* Header */}
         <div className="sticky top-0 z-10 border-b border-neutral-200/70 bg-white px-4 py-5 dark:border-white/[0.06] dark:bg-carbon-950">
           <div className="rounded-2xl border border-primary-200/60 bg-gradient-to-br from-primary-600 via-burgundy-600 to-carbon-900 p-4 text-white shadow-lg shadow-primary-900/20 dark:border-primary-800/40 dark:from-primary-700 dark:via-burgundy-700 dark:to-carbon-950">
             <div className="flex items-center gap-3">
@@ -247,13 +211,17 @@ export const TenantSidebar = ({
             </div>
           </div>
         </div>
+
+        {/* Navegación */}
         <nav className="flex-1 overflow-y-auto px-3 py-4">
           <div className="space-y-2">
             {modules.map((moduleName) => {
               const module = menuItems[moduleName]
               const isExpanded = expandedModules[moduleName]
               const visibleItems = module.items.filter((item) => item.visible)
+
               if (visibleItems.length === 0) return null
+
               const hasActiveChild = visibleItems.some((item) => item.id === activeView)
 
               return (
@@ -261,6 +229,7 @@ export const TenantSidebar = ({
                   key={moduleName}
                   className="overflow-hidden rounded-xl border border-neutral-200/70 bg-neutral-50/70 dark:border-white/[0.04] dark:bg-white/[0.02]"
                 >
+                  {/* Módulo */}
                   <button
                     onClick={() => toggleModule(moduleName)}
                     className={`w-full flex items-center justify-between px-4 py-3 text-left transition duration-200 ${
@@ -285,6 +254,7 @@ export const TenantSidebar = ({
                     />
                   </button>
 
+                  {/* Items */}
                   {isExpanded && (
                     <div className="px-2 pb-2">
                       <div className="space-y-1 rounded-xl bg-white/80 p-2 dark:bg-black/20">
@@ -322,6 +292,7 @@ export const TenantSidebar = ({
           </div>
         </nav>
 
+        {/* Footer */}
         <div className="border-t border-neutral-200/70 px-4 py-4 dark:border-white/[0.06]">
           <button
             onClick={handleLogoutClick}
@@ -332,14 +303,15 @@ export const TenantSidebar = ({
         </div>
       </aside>
 
+      {/* Modal de confirmación */}
       {showLogoutConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="w-full max-w-sm rounded-2xl border border-neutral-200 bg-white p-6 shadow-2xl dark:border-white/[0.08] dark:bg-carbon-900">
             <h2 className="text-xl font-bold text-carbon-900 dark:text-white mb-2 tracking-tight">
-              Cerrar Sesión
+              ¿Cerrar sesión
             </h2>
             <p className="text-carbon-600 dark:text-neutral-400 mb-6">
-              ¿Estás seguro de que deseas cerrar sesión? Tendrás que volver a iniciar sesión para acceder a tu cuenta.
+              ¿Estás seguro de que deseas cerrar sesión Tendrás que volver a iniciar sesión para acceder a tu cuenta.
             </p>
 
             <div className="flex gap-3">

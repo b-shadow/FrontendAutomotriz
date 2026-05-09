@@ -2,15 +2,17 @@ import { XCircle, CheckCircle, Bell, Mail, Check, X, Lightbulb } from 'lucide-re
 import { useState, useEffect } from 'react'
 import { Card, Button } from './ui'
 import usuariosService from '../services/usuariosService'
+import { useRefresh } from '../context/RefreshContext'
 
-export const NotificationPreferencesSection = ({ tenantSlug, userId }) => {
+export const NotificationPreferencesSection = ({ tenantSlug, userId, aiPrefill, onSuccess }) => {
+  const { refreshTick } = useRefresh()
   // ESTADO: Carga de preferencias
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingInitial, setIsLoadingInitial] = useState(true)
 
   // ESTADO: Preferencias
   const [preferencias, setPreferencias] = useState({
-    noti_email: true, noti_push : true,
+    noti_email: true, noti_push: true,
   })
 
   // ESTADO: Feedback
@@ -30,7 +32,7 @@ export const NotificationPreferencesSection = ({ tenantSlug, userId }) => {
         setIsLoadingInitial(true)
         const data = await usuariosService.obtenerPreferenciasNotificacion(tenantSlug)
         setPreferencias(data.preferencias || {
-          noti_email: true, noti_push : true,
+          noti_email: true, noti_push: true,
         })
         setErrorMessage('')
       } catch (error) {
@@ -47,7 +49,7 @@ export const NotificationPreferencesSection = ({ tenantSlug, userId }) => {
     }
 
     cargarPreferencias()
-  }, [tenantSlug, userId])
+  }, [tenantSlug, userId, refreshTick])
 
   // Manejar cambio de preferencia
   const handleToggle = async (key) => {
@@ -58,7 +60,7 @@ export const NotificationPreferencesSection = ({ tenantSlug, userId }) => {
 
     const nuevoValor = !preferencias[key]
     const datosActualizados = {
-      ...preferencias, [key] : nuevoValor,
+      ...preferencias, [key]: nuevoValor,
     }
 
     // Actualizar UI inmediatamente (optimistic update)
@@ -100,6 +102,49 @@ export const NotificationPreferencesSection = ({ tenantSlug, userId }) => {
       setIsLoading(false)
     }
   }
+
+  // EFECTO: Automatización de la IA (Ghost Click)
+  useEffect(() => {
+    if (!aiPrefill) return;
+
+    const processPrefill = async () => {
+      console.log("Notificaciones: Iniciando simulación para", aiPrefill);
+
+      // Si la IA sugiere cambiar email
+      if (aiPrefill.noti_email !== undefined && aiPrefill.noti_email !== preferencias.noti_email) {
+        console.log(`Notificaciones: Cambiando email a ${aiPrefill.noti_email}`);
+        await new Promise(resolve => setTimeout(resolve, 800)); // Delay para WOW
+        setPreferencias(prev => ({ ...prev, noti_email: aiPrefill.noti_email }));
+      }
+
+      // Si la IA sugiere cambiar push
+      if (aiPrefill.noti_push !== undefined && aiPrefill.noti_push !== preferencias.noti_push) {
+        console.log(`Notificaciones: Cambiando push a ${aiPrefill.noti_push}`);
+        await new Promise(resolve => setTimeout(resolve, 600));
+        setPreferencias(prev => ({ ...prev, noti_push: aiPrefill.noti_push }));
+      }
+
+      if (aiPrefill.status === 'EJECUTADA' || aiPrefill.estado === 'EJECUTADA') {
+        try {
+          const payload = {};
+          if (aiPrefill.noti_email !== undefined) payload.noti_email = aiPrefill.noti_email;
+          if (aiPrefill.noti_push !== undefined) payload.noti_push = aiPrefill.noti_push;
+          
+          if (Object.keys(payload).length > 0) {
+            await usuariosService.actualizarPreferenciasNotificacion(tenantSlug, payload);
+            setSuccessMessage(<><CheckCircle className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Preferencias guardadas por IA</>);
+            setTimeout(() => setSuccessMessage(''), 3000);
+          }
+        } catch (error) {
+          console.error('Error guardando preferencias IA:', error);
+        } finally {
+          if (onSuccess) onSuccess();
+        }
+      }
+    };
+
+    processPrefill();
+  }, [aiPrefill?._ts]); // Usar el timestamp para asegurar que se ejecute en cada nueva propuesta
 
   // Mientras carga inicial
   if (isLoadingInitial) {
@@ -166,20 +211,17 @@ export const NotificationPreferencesSection = ({ tenantSlug, userId }) => {
           {/* TOGGLE - MUCHO MÁS GRANDE */}
           <div className="flex-shrink-0 ml-4">
             <div
-              className={`w-16 h-9 rounded-full flex items-center transition-all ${
-                preferencias.noti_email ?
-                   'bg-blue-600'
+              className={`w-16 h-9 rounded-full flex items-center transition-all ${preferencias.noti_email ?
+                  'bg-blue-600'
                   : 'bg-neutral-300 dark:bg-neutral-600'
-              }`}
+                }`}
             >
               <div
-                className={`w-8 h-8 bg-white rounded-full shadow-md transform transition-transform flex items-center justify-center ${
-                  preferencias.noti_email ? 'translate-x-7' : 'translate-x-0.5'
-                }`}
+                className={`w-8 h-8 bg-white rounded-full shadow-md transform transition-transform flex items-center justify-center ${preferencias.noti_email ? 'translate-x-7' : 'translate-x-0.5'
+                  }`}
               >
-                <span className={`text-lg font-bold ${
-                  preferencias.noti_email ? 'text-blue-600' : 'text-neutral-400'
-                }`}>
+                <span className={`text-lg font-bold ${preferencias.noti_email ? 'text-blue-600' : 'text-neutral-400'
+                  }`}>
                   {preferencias.noti_email ? <><Check className="inline-block mx-1 text-current" size={20} strokeWidth={2} /></> : <><X className="inline-block mx-1 text-current" size={20} strokeWidth={2} /></>}
                 </span>
               </div>
@@ -209,20 +251,17 @@ export const NotificationPreferencesSection = ({ tenantSlug, userId }) => {
           {/* TOGGLE - MUCHO MÁS GRANDE */}
           <div className="flex-shrink-0 ml-4">
             <div
-              className={`w-16 h-9 rounded-full flex items-center transition-all ${
-                preferencias.noti_push ?
-                   'bg-blue-600'
+              className={`w-16 h-9 rounded-full flex items-center transition-all ${preferencias.noti_push ?
+                  'bg-blue-600'
                   : 'bg-neutral-300 dark:bg-neutral-600'
-              }`}
+                }`}
             >
               <div
-                className={`w-8 h-8 bg-white rounded-full shadow-md transform transition-transform flex items-center justify-center ${
-                  preferencias.noti_push ? 'translate-x-7' : 'translate-x-0.5'
-                }`}
+                className={`w-8 h-8 bg-white rounded-full shadow-md transform transition-transform flex items-center justify-center ${preferencias.noti_push ? 'translate-x-7' : 'translate-x-0.5'
+                  }`}
               >
-                <span className={`text-lg font-bold ${
-                  preferencias.noti_push ? 'text-blue-600' : 'text-neutral-400'
-                }`}>
+                <span className={`text-lg font-bold ${preferencias.noti_push ? 'text-blue-600' : 'text-neutral-400'
+                  }`}>
                   {preferencias.noti_push ? <><Check className="inline-block mx-1 text-current" size={20} strokeWidth={2} /></> : <><X className="inline-block mx-1 text-current" size={20} strokeWidth={2} /></>}
                 </span>
               </div>

@@ -1,20 +1,25 @@
-import { CheckCircle, Car, AlertTriangle, Pencil, Pause, Play } from 'lucide-react';
+import { CheckCircle, Car, AlertTriangle, Pencil, Pause, Play, Sparkles } from 'lucide-react';
 import { useState, useEffect } from 'react'
 import vehiculosService from '../../services/vehiculosService'
 import usuariosService from '../../services/usuariosService'
 import { canCreateVehiculos, canChangeVehiculoStatus, canSelectPropietarioVehiculo } from '../../utils/roleHelper'
 import VehiculoModal from '../../components/vehiculos/VehiculoModal'
+import { useRefresh } from '../../context/RefreshContext'
 
-const GestionVehiculosView = ({ user, tenantSlug }) => {
+const GestionVehiculosView = ({ user, tenantSlug, aiPrefill, onSuccess }) => {
   // Estados para lista
   const [vehiculos, setVehiculos] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [totalEntries, setTotalEntries] = useState(0)
+  const { refreshTick } = useRefresh()
+  const [isSimulating, setIsSimulating] = useState(false)
+  const [isAiClickingCreate, setIsAiClickingCreate] = useState(false)
+  const [isAiClickingSearch, setIsAiClickingSearch] = useState(false)
 
   // Filtros y paginación
   const [filtros, setFiltros] = useState({
-    search: '', ordering : '-created_at',
+    search: '', ordering: '-created_at',
     page: 1,
   })
 
@@ -44,8 +49,12 @@ const GestionVehiculosView = ({ user, tenantSlug }) => {
         ...filtrosActuales,
         page,
       })
-      setVehiculos(response.data || response.results || [])
-      setTotalEntries(response.count || response.data.length || 0)
+      const data = response
+      const listaVehiculos = Array.isArray(data) ? data : (data.data || data.results || [])
+      const conteoTotal = data.count || (Array.isArray(data) ? data.length : (data.data?.length || 0))
+
+      setVehiculos(listaVehiculos)
+      setTotalEntries(conteoTotal)
       setFiltros((prev) => ({ ...prev, page }))
     } catch (err) {
       setError(err.message || 'Error al cargar vehículos')
@@ -55,17 +64,62 @@ const GestionVehiculosView = ({ user, tenantSlug }) => {
     }
   }
 
-  // Cargar vehículos al montar o cuando cambia tenantSlug
   useEffect(() => {
     cargarVehiculos(1)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tenantSlug])
+  }, [tenantSlug, refreshTick])
+
+  // EFECTO: Simulación de IA (Ghost User)
+  useEffect(() => {
+    if (!aiPrefill) return;
+
+    const simulateTyping = async (field, value) => {
+      let current = "";
+      for (let i = 0; i <= value.length; i++) {
+        current = value.substring(0, i);
+        setFiltros(prev => ({ ...prev, [field]: current }));
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+    };
+
+    const processPrefill = async () => {
+      setIsSimulating(true);
+
+      // 1. Acción: BUSCAR_VEHICULO
+      if (aiPrefill.type === 'BUSCAR_VEHICULO' || aiPrefill.search) {
+        if (aiPrefill.search) {
+          await simulateTyping('search', aiPrefill.search);
+        }
+        if (aiPrefill.ordering) {
+          setFiltros(prev => ({ ...prev, ordering: aiPrefill.ordering }));
+          await new Promise(resolve => setTimeout(resolve, 600));
+        }
+
+        setIsAiClickingSearch(true);
+        await new Promise(resolve => setTimeout(resolve, 800));
+        await cargarVehiculos(1);
+        setIsAiClickingSearch(false);
+      }
+
+      // 2. Acción: REGISTRAR_VEHICULO (Solo abrir modal)
+      if (aiPrefill.type === 'REGISTRAR_VEHICULO' || (aiPrefill.placa && !isModalOpen)) {
+        setIsAiClickingCreate(true);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        handleOpenCreateModal();
+        setIsAiClickingCreate(false);
+      }
+
+      setIsSimulating(false);
+    };
+
+    processPrefill();
+  }, [aiPrefill]);
 
   // Manejar cambio de filtros - búsqueda en tiempo real
   const handleFilterChange = async (e) => {
     const { name, value } = e.target
     const nuevosFiltros = {
-      ...filtros, [name] : value,
+      ...filtros, [name]: value,
       page: 1, // Volver a página 1 al cambiar filtros
     }
     setFiltros(nuevosFiltros)
@@ -77,7 +131,8 @@ const GestionVehiculosView = ({ user, tenantSlug }) => {
   const cargarUsuarios = async () => {
     try {
       const response = await usuariosService.listarUsuarios(tenantSlug, { page_size: 100 })
-      setUsuarios(response.data || response.results || [])
+      const data = response
+      setUsuarios(Array.isArray(data) ? data : (data.data || data.results || []))
     } catch (err) {
       console.error('Error cargando usuarios:', err)
       setUsuarios([])
@@ -122,6 +177,7 @@ const GestionVehiculosView = ({ user, tenantSlug }) => {
       handleCloseModal()
       cargarVehiculos(filtros.page)
       setTimeout(() => setSuccessMessage(null), 3000)
+      if (onSuccess) onSuccess()
     } catch (err) {
       setError(err.message || 'Error al guardar vehículo')
     } finally {
@@ -151,7 +207,7 @@ const GestionVehiculosView = ({ user, tenantSlug }) => {
     try {
       const nuevoEstado = vehiculoParaEstado.estado === 'ACTIVO' ? 'INACTIVO' : 'ACTIVO'
       await vehiculosService.cambiarEstadoVehiculo(tenantSlug, vehiculoParaEstado.id, {
-        estado: nuevoEstado, motivo : motivoEstado,
+        estado: nuevoEstado, motivo: motivoEstado,
       })
       setSuccessMessage(` Vehículo marcado como ${nuevoEstado}`)
       handleCloseEstadoModal()
@@ -170,6 +226,16 @@ const GestionVehiculosView = ({ user, tenantSlug }) => {
 
   return (
     <div className="space-y-6">
+      {/* INDICADOR DE SIMULACIÓN IA */}
+      {isSimulating && (
+        <div className="fixed top-24 right-8 z-50 animate-bounce">
+          <div className="bg-primary-600 text-white px-4 py-2 rounded-2xl shadow-2xl flex items-center gap-2 border border-primary-400 backdrop-blur-sm bg-opacity-90">
+            <Sparkles className="animate-pulse" size={18} />
+            <span className="text-sm font-bold tracking-tight">IA trabajando...</span>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
@@ -183,7 +249,7 @@ const GestionVehiculosView = ({ user, tenantSlug }) => {
         {canRegisterVehiculos && (
           <button
             onClick={handleOpenCreateModal}
-            className="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg font-medium transition-colors flex items-center gap-2 self-start md:self-auto"
+            className={`px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg font-medium transition-all flex items-center gap-2 self-start md:self-auto ${isAiClickingCreate ? 'ring-4 ring-primary-400 scale-110 shadow-xl shadow-primary-500/50' : ''}`}
           >
             <span>+</span>
             Registrar Vehículo
@@ -217,7 +283,7 @@ const GestionVehiculosView = ({ user, tenantSlug }) => {
               value={filtros.search}
               onChange={handleFilterChange}
               placeholder="Placa, marca, modelo, propietario..."
-              className="w-full px-3 py-2 border border-neutral-300 dark:border-white/[0.08] rounded-lg bg-white dark:bg-carbon-700 text-carbon-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-carbon-700 text-carbon-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all ${aiPrefill?.search ? 'ring-2 ring-primary-500 shadow-lg' : 'border-neutral-300 dark:border-white/[0.08]'}`}
             />
           </div>
 
@@ -230,12 +296,19 @@ const GestionVehiculosView = ({ user, tenantSlug }) => {
               name="ordering"
               value={filtros.ordering}
               onChange={handleFilterChange}
-              className="w-full px-3 py-2 border border-neutral-300 dark:border-white/[0.08] rounded-lg bg-white dark:bg-carbon-700 text-carbon-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-carbon-700 text-carbon-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all ${aiPrefill?.ordering ? 'ring-2 ring-primary-500 shadow-lg' : 'border-neutral-300 dark:border-white/[0.08]'}`}
             >
               <option value="-fecha_registro">Más recientes primero</option>
               <option value="fecha_registro">Más antiguos primero</option>
             </select>
           </div>
+
+          <button
+            onClick={() => cargarVehiculos(1)}
+            className={`px-4 py-2 bg-neutral-100 dark:bg-carbon-700 hover:bg-neutral-200 dark:hover:bg-carbon-600 text-carbon-900 dark:text-white rounded-lg font-medium transition-all h-[42px] ${isAiClickingSearch ? 'ring-4 ring-primary-400 scale-105 bg-primary-50 dark:bg-primary-900/20' : ''}`}
+          >
+            Buscar
+          </button>
         </div>
       </div>
 
@@ -247,7 +320,7 @@ const GestionVehiculosView = ({ user, tenantSlug }) => {
             <p className="text-carbon-600 dark:text-neutral-400">Cargando vehículos...</p>
           </div>
         </div>
-          ) : vehiculos.length === 0 ? (
+      ) : vehiculos.length === 0 ? (
         <div className="bg-white dark:bg-carbon-800 rounded-lg shadow p-8 text-center">
           <div className="text-4xl mb-3"><Car className="inline-block mx-1 text-current" size={20} strokeWidth={2} /></div>
           <h3 className="text-lg font-semibold text-carbon-900 dark:text-white mb-2">
@@ -257,7 +330,7 @@ const GestionVehiculosView = ({ user, tenantSlug }) => {
             {filtros.search ? 'Intenta cambiar la búsqueda' : 'Comienza registrando el primer vehículo'}
           </p>
         </div>
-              ) : (
+      ) : (
         <div className="bg-white dark:bg-carbon-800 rounded-lg shadow overflow-hidden">
           <table className="w-full">
             <thead className="border-b border-neutral-200 dark:border-white/[0.08]">
@@ -275,9 +348,8 @@ const GestionVehiculosView = ({ user, tenantSlug }) => {
               {vehiculos.map((vehiculo, idx) => (
                 <tr
                   key={vehiculo.id}
-                  className={`border-b border-neutral-200 dark:border-white/[0.08] hover:bg-neutral-50 dark:hover:bg-carbon-700/50 transition-colors ${
-                    idx % 2 === 0 ? 'bg-white dark:bg-carbon-800' : 'bg-neutral-50/50 dark:bg-carbon-800/50'
-                  }`}
+                  className={`border-b border-neutral-200 dark:border-white/[0.08] hover:bg-neutral-50 dark:hover:bg-carbon-700/50 transition-colors ${idx % 2 === 0 ? 'bg-white dark:bg-carbon-800' : 'bg-neutral-50/50 dark:bg-carbon-800/50'
+                    }`}
                 >
                   <td className="px-6 py-4">
                     <span className="font-semibold text-carbon-900 dark:text-white">{vehiculo.placa}</span>
@@ -288,18 +360,17 @@ const GestionVehiculosView = ({ user, tenantSlug }) => {
                     {vehiculo.propietario ? (
                       <span className="text-carbon-700 dark:text-neutral-300">
                         {typeof vehiculo.propietario === 'object' ? `${vehiculo.propietario.nombres || ''} ${vehiculo.propietario.apellidos || ''}` : vehiculo.propietario}
-                      </span> ) : (
+                      </span>) : (
                       <span className="text-carbon-500 dark:text-neutral-400 italic">Sin asignar</span>
                     )}
                   </td>
                   <td className="px-6 py-4 text-carbon-700 dark:text-neutral-300">{vehiculo.color || '-'}</td>
                   <td className="px-6 py-4">
                     <span
-                      className={`px-3 py-1 text-xs font-semibold rounded-full ${
-                        vehiculo.estado === 'ACTIVO' ?
-                           'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200'
+                      className={`px-3 py-1 text-xs font-semibold rounded-full ${vehiculo.estado === 'ACTIVO' ?
+                          'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200'
                           : 'bg-neutral-100 dark:bg-neutral-700 text-carbon-800 dark:text-neutral-300'
-                      }`}
+                        }`}
                     >
                       {vehiculo.estado}
                     </span>
@@ -317,11 +388,10 @@ const GestionVehiculosView = ({ user, tenantSlug }) => {
                           {canChangeStatus && (
                             <button
                               onClick={() => handleOpenEstadoModal(vehiculo)}
-                              className={`py-1 px-3 rounded text-xs font-medium transition-colors ${
-                                vehiculo.estado === 'ACTIVO' ?
-                                   'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 hover:bg-orange-200 dark:hover:bg-orange-900/50'
+                              className={`py-1 px-3 rounded text-xs font-medium transition-colors ${vehiculo.estado === 'ACTIVO' ?
+                                  'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 hover:bg-orange-200 dark:hover:bg-orange-900/50'
                                   : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/50'
-                              }`}
+                                }`}
                             >
                               {vehiculo.estado === 'ACTIVO' ? <><Pause className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Desactivar</> : <><Play className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Activar</>}
                             </button>
@@ -348,6 +418,7 @@ const GestionVehiculosView = ({ user, tenantSlug }) => {
         usuarios={usuarios}
         canSelectPropietario={canSelectPropietario && !vehiculoEnEdicion}
         currentUser={user}
+        aiPrefill={aiPrefill}
       />
 
       {/* Modal de cambiar estado */}
@@ -367,7 +438,7 @@ const GestionVehiculosView = ({ user, tenantSlug }) => {
                 <strong className="text-carbon-900 dark:text-white">
                   {vehiculoParaEstado.estado === 'ACTIVO' ? 'INACTIVO' : 'ACTIVO'}
                 </strong>
-                
+
               </p>
 
               <div>

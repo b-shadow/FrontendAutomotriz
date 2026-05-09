@@ -1,9 +1,10 @@
-﻿/** TenantDashboard: Dashboard principal para usuarios logueados en un tenant
+/** TenantDashboard: Dashboard principal para usuarios logueados en un tenant
  * Ruta: /:tenantSlug/app (protegida por TenantGuard)
  */
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTenant } from '../hooks/useTenant'
+import { useRefresh } from '../context/RefreshContext'
 import authService from '../services/authService'
 import TenantSidebar from '../components/TenantSidebar'
 import ThemeToggle from '../components/ThemeToggle'
@@ -23,26 +24,39 @@ import { HorariosGeneralesView } from './dashboard/HorariosGeneralesView'
 import PlanVehiculoView from './dashboard/PlanVehiculoView'
 import GestionCitasView from './dashboard/GestionCitasView'
 import RecepcionVehiculoView from './dashboard/RecepcionVehiculoView'
-import GestionPresupuestosView from './dashboard/GestionPresupuestosView'
-import GestionOrdenesTrabajoView from './dashboard/GestionOrdenesTrabajoView'
-import GestionTallerInternoView from './dashboard/GestionTallerInternoView'
-import GestionAvanceVehiculoView from './dashboard/GestionAvanceVehiculoView'
-import GestionInventarioView from './dashboard/GestionInventarioView'
-import GestionSolicitudesRepuestoView from './dashboard/GestionSolicitudesRepuestoView'
 import AsistenteIAView from './dashboard/AsistenteIAView'
 import { GenerarReportesView } from './dashboard/GenerarReportesView'
-import GestionBackupView from './dashboard/GestionBackupView'
 import { FloatingAIAvatar } from '../components/FloatingAIAvatar'
+import ChatAssistant from '../components/assistant/ChatAssistant'
 
 export const TenantDashboard = () => {
   const { tenantSlug } = useParams()
-  const { user, tenant } = useTenant()
+  const { user, tenant, refreshUser } = useTenant()
+  const { refreshTick, triggerRefresh } = useRefresh()
   const navigate = useNavigate()
 
   // Estado de la vista activa - por defecto muestra "dashboard"
   const [activeView, setActiveView] = useState('dashboard')
-  // Estado del menÃº mÃ³vil
+  // Estado del menú móvil
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  // Estado del asistente IA flotante
+  const [isAssistantOpen, setIsAssistantOpen] = useState(false)
+  // Estado para la acción propuesta por la IA (para pre-llenado visual)
+  const [pendingAction, setPendingAction] = useState(null)
+
+  // EFECTO: Refrescar datos cuando cambia el refreshTick
+  useEffect(() => {
+    if (refreshTick > 0) {
+      console.log("Detectado cambio en refreshTick:", refreshTick);
+      refreshUser(); // <--- LLAMADA CLAVE PARA EL WOW DE SINCRONIZACIÓN
+    }
+  }, [refreshTick, refreshUser])
+
+  // Función para refrescar datos globales del usuario sin recargar
+  const refreshUserData = async () => {
+    setPendingAction(null); // Limpiar acción pendiente tras éxito
+    triggerRefresh();
+  }
 
   // Redireccionar si no hay usuario o tenant
   if (!user || !tenant) {
@@ -57,9 +71,7 @@ export const TenantDashboard = () => {
   }
 
   const handleLogout = async () => {
-    // logout ahora es async: llama backend para revocar sesiÃ³n
     await authService.logoutTenant(tenantSlug)
-    // Redirigir al login
     navigate(`/${tenantSlug}/login`)
   }
 
@@ -73,51 +85,112 @@ export const TenantDashboard = () => {
       case 'dashboard':
         return <DashboardHome user={user} tenant={tenant} tenantSlug={tenantSlug} onNavigate={handleNavigate} />
       case 'editarPerfil':
-        return <PerfilUsuarioView user={user} tenant={tenant} tenantSlug={tenantSlug} />
-      case 'gestionEmpresa':
-        return <GestionEmpresaView user={user} tenant={tenant} tenantSlug={tenantSlug} onNavigate={handleNavigate} />
-      case 'gestionUsuariosRoles':
         return (
-          <GestionUsuariosRolesView user={user} tenant={tenant} tenantSlug={tenantSlug} />
+          <PerfilUsuarioView
+            user={user}
+            tenant={tenant}
+            tenantSlug={tenantSlug}
+            onSuccess={refreshUserData}
+            aiPrefill={(['PENDIENTE', 'EJECUTADA'].includes(pendingAction?.estado)) && (
+              pendingAction?.accion === 'CAMBIAR_USUARIO' ||
+              pendingAction?.accion === 'CAMBIAR_TELEFONO' ||
+              pendingAction?.accion === 'CAMBIAR_CONTRASENA' ||
+              pendingAction?.accion === 'ACTUALIZAR_PREFERENCIAS'
+            ) ? { ...pendingAction.parametros, type: pendingAction.accion, status: pendingAction.estado, _ts: pendingAction._ts } : null}
+          />
         )
+      case 'gestionEmpresa':
+        return (
+          <GestionEmpresaView
+            user={user}
+            tenant={tenant}
+            tenantSlug={tenantSlug}
+            onNavigate={handleNavigate}
+            onSuccess={refreshUserData}
+            aiPrefill={(['PENDIENTE', 'EJECUTADA'].includes(pendingAction?.estado)) && pendingAction?.accion === 'CAMBIAR_NOMBRE_EMPRESA' ? { ...pendingAction.parametros, type: pendingAction.accion, status: pendingAction.estado, _ts: pendingAction._ts } : null}
+          />
+        )
+      case 'gestionUsuariosRoles':
+        return <GestionUsuariosRolesView user={user} tenant={tenant} tenantSlug={tenantSlug} />
       case 'gestionSuscripciones':
-        return <GestionSuscripcionView user={user} tenant={tenant} tenantSlug={tenantSlug} />
+        return (
+          <GestionSuscripcionView
+            user={user}
+            tenant={tenant}
+            tenantSlug={tenantSlug}
+            onSuccess={refreshUserData}
+            aiPrefill={(['PENDIENTE', 'EJECUTADA'].includes(pendingAction?.estado)) && (pendingAction?.accion === 'COMPRAR_PLAN' || pendingAction?.accion === 'RELLENAR_PAGO' || pendingAction?.accion === 'CANCELAR_CAMBIO') ? { ...pendingAction.parametros, _ts: pendingAction._ts, accion: pendingAction.accion, estado: pendingAction.estado } : null}
+          />
+        )
       case 'notificaciones':
         return <NotificacionesView user={user} tenant={tenant} tenantSlug={tenantSlug} />
       case 'bitacora':
-        return <BitacoraView tenantSlug={tenantSlug} />
+        return (
+          <BitacoraView 
+            tenantSlug={tenantSlug} 
+            aiPrefill={(['PENDIENTE', 'EJECUTADA'].includes(pendingAction?.estado)) && ['FILTRAR_BITACORA', 'EXPORTAR_BITACORA'].includes(pendingAction?.accion) ? { ...pendingAction.parametros, type: pendingAction.accion, status: pendingAction.estado, _ts: pendingAction._ts } : null}
+          />
+        )
       case 'gestionVehiculos':
-        return <GestionVehiculosView user={user} tenantSlug={tenantSlug} onNavigate={handleNavigate} />
+        return (
+          <GestionVehiculosView
+            user={user}
+            tenantSlug={tenantSlug}
+            onNavigate={handleNavigate}
+            onSuccess={refreshUserData}
+            aiPrefill={(['PENDIENTE', 'EJECUTADA'].includes(pendingAction?.estado)) && (pendingAction?.accion === 'BUSCAR_VEHICULO' || pendingAction?.accion === 'REGISTRAR_VEHICULO') ? { ...pendingAction.parametros, type: pendingAction.accion, status: pendingAction.estado, _ts: pendingAction._ts } : null}
+          />
+        )
       case 'catalogoServicios':
-        return <CatalogoServiciosView user={user} tenantSlug={tenantSlug} onNavigate={handleNavigate} />
+        return (
+          <CatalogoServiciosView 
+            user={user} 
+            tenantSlug={tenantSlug} 
+            onNavigate={handleNavigate}
+            onSuccess={refreshUserData}
+            aiPrefill={(['PENDIENTE', 'EJECUTADA'].includes(pendingAction?.estado)) && pendingAction?.accion === 'AGREGAR_SERVICIO' ? { ...pendingAction.parametros, type: pendingAction.accion, status: pendingAction.estado, _ts: pendingAction._ts } : null}
+          />
+        )
       case 'espaciosTrabajo':
-        return <EspaciosTrabajoView user={user} tenantSlug={tenantSlug} />
+        return (
+          <EspaciosTrabajoView 
+            user={user} 
+            tenantSlug={tenantSlug} 
+            onSuccess={refreshUserData}
+            aiPrefill={(['PENDIENTE', 'EJECUTADA'].includes(pendingAction?.estado)) && ['REGISTRAR_ESPACIO', 'EDITAR_ESPACIO', 'VER_HORARIOS_ESPACIO', 'AGREGAR_HORARIO_ESPACIO', 'EDITAR_HORARIO_ESPACIO'].includes(pendingAction?.accion) ? { ...pendingAction.parametros, type: pendingAction.accion, status: pendingAction.estado, _ts: pendingAction._ts } : null}
+          />
+        )
       case 'horarios':
-        return <HorariosGeneralesView user={user} tenantSlug={tenantSlug} />
+        return (
+          <HorariosGeneralesView 
+            user={user} 
+            tenantSlug={tenantSlug}
+            onSuccess={refreshUserData}
+            aiPrefill={(['PENDIENTE', 'EJECUTADA'].includes(pendingAction?.estado)) && ['VER_HORARIOS_ESPACIO', 'AGREGAR_HORARIO_ESPACIO', 'EDITAR_HORARIO_ESPACIO'].includes(pendingAction?.accion) ? { ...pendingAction.parametros, type: pendingAction.accion, status: pendingAction.estado, _ts: pendingAction._ts } : null}
+          />
+        )
       case 'planVehiculo':
-        return <PlanVehiculoView user={user} tenantSlug={tenantSlug} />
+        return (
+          <PlanVehiculoView 
+            user={user} 
+            tenantSlug={tenantSlug} 
+            onSuccess={refreshUserData}
+            aiPrefill={(['PENDIENTE', 'EJECUTADA'].includes(pendingAction?.estado)) && ['BUSCAR_PLAN', 'VER_PLAN', 'EDITAR_PLAN', 'CAMBIAR_ESTADO_PLAN', 'AGREGAR_DETALLE_PLAN'].includes(pendingAction?.accion) ? { ...pendingAction.parametros, type: pendingAction.accion, status: pendingAction.estado, _ts: pendingAction._ts } : null}
+          />
+        )
       case 'citas':
         return <GestionCitasView user={user} tenantSlug={tenantSlug} onNavigate={handleNavigate} />
       case 'recepcionVehiculo':
         return <RecepcionVehiculoView tenantSlug={tenantSlug} />
-      case 'presupuestos':
-        return <GestionPresupuestosView tenantSlug={tenantSlug} />
-      case 'ordenesTrabajo':
-        return <GestionOrdenesTrabajoView tenantSlug={tenantSlug} />
-      case 'tallerInterno':
-        return <GestionTallerInternoView tenantSlug={tenantSlug} />
-      case 'avanceVehiculo':
-        return <GestionAvanceVehiculoView tenantSlug={tenantSlug} />
-      case 'inventario':
-        return <GestionInventarioView tenantSlug={tenantSlug} />
-      case 'solicitudesRepuesto':
-        return <GestionSolicitudesRepuestoView tenantSlug={tenantSlug} />
       case 'asistenteIA':
         return <AsistenteIAView />
       case 'generarReportes':
-        return <GenerarReportesView />
-      case 'gestionarBackup':
-        return <GestionBackupView />
+        return (
+          <GenerarReportesView 
+            tenantSlug={tenantSlug}
+            aiPrefill={(['PENDIENTE', 'EJECUTADA'].includes(pendingAction?.estado)) && ['VER_REPORTE_GLOBAL', 'VER_REPORTE_VEHICULO', 'VER_REPORTE_PRESUPUESTO', 'VER_REPORTE_INVENTARIO', 'EXPORTAR_REPORTE'].includes(pendingAction?.accion) ? { ...pendingAction.parametros, type: pendingAction.accion, status: pendingAction.estado, _ts: pendingAction._ts } : null}
+          />
+        )
       default:
         return <DashboardHome user={user} tenant={tenant} tenantSlug={tenantSlug} onNavigate={handleNavigate} />
     }
@@ -125,7 +198,6 @@ export const TenantDashboard = () => {
 
   return (
     <div className="min-h-screen bg-neutral-100 dark:bg-carbon-950 flex flex-col md:flex-row transition-colors duration-300">
-      {/* OVERLAY PARA MÃ“VIL */}
       {isMobileMenuOpen && (
         <div
           className="fixed inset-0 bg-black/60 z-40 md:hidden"
@@ -134,7 +206,6 @@ export const TenantDashboard = () => {
         />
       )}
 
-      {/* SIDEBAR */}
       <TenantSidebar
         user={user}
         tenant={tenant}
@@ -146,16 +217,13 @@ export const TenantDashboard = () => {
         onLogout={handleLogout}
       />
 
-      {/* MAIN CONTENT */}
       <div className="flex-1 flex flex-col md:ml-64">
-        {/* TOPBAR */}
         <header className="sticky top-0 z-40 bg-white dark:bg-carbon-900 shadow-sm border-b border-neutral-200 dark:border-white/[0.06] transition-colors duration-300">
           <div className="px-4 md:px-8 py-4 flex justify-between items-center">
-            {/* BotÃ³n hamburguesa en mÃ³vil */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className="md:hidden p-2 text-carbon-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/[0.05] rounded-lg transition-colors"
-              aria-label="Abrir menÃº"
+              aria-label="Abrir menú"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -163,14 +231,12 @@ export const TenantDashboard = () => {
             </button>
 
             <div>
-              <h2 className="text-sm font-semibold text-carbon-500 dark:text-neutral-400 tracking-wide uppercase">Main Property â€¢</h2>
+              <h2 className="text-sm font-semibold text-carbon-500 dark:text-neutral-400 tracking-wide uppercase">Main Property •</h2>
               <h1 className="text-xl font-bold text-carbon-900 dark:text-white tracking-tight">{tenant.nombre}</h1>
             </div>
 
             <div className="flex items-center gap-4">
-              {/* Theme Toggle */}
               <ThemeToggle />
-
               <div className="hidden md:flex items-center gap-3">
                 <div className="h-10 w-px bg-neutral-200 dark:bg-white/[0.06]"></div>
                 <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-500 to-burgundy-600 flex items-center justify-center text-white font-semibold text-sm shadow-md shadow-primary-900/20">
@@ -187,7 +253,6 @@ export const TenantDashboard = () => {
           </div>
         </header>
 
-        {/* CONTENT AREA */}
         <main className="flex-1 overflow-y-auto px-4 md:px-8 py-6 md:py-8 relative">
           <div className="max-w-7xl mx-auto">
             {renderView()}
@@ -195,14 +260,21 @@ export const TenantDashboard = () => {
         </main>
       </div>
 
-      {/* FLOATING AI AVATAR */}
-      {activeView !== 'asistenteIA' && (
-        <FloatingAIAvatar onClick={() => handleNavigate('asistenteIA')} />
-      )}
+      <FloatingAIAvatar onClick={() => setIsAssistantOpen(!isAssistantOpen)} />
+
+      <ChatAssistant
+        isOpen={isAssistantOpen}
+        onClose={() => setIsAssistantOpen(false)}
+        onNavigate={handleNavigate}
+        onActionProposed={(action) => {
+          console.log("TenantDashboard recibió acción:", action.accion);
+          setPendingAction(action);
+        }}
+        onActionSuccess={refreshUserData}
+        tenantSlug={tenantSlug}
+      />
     </div>
   )
 }
 
 export default TenantDashboard
-
-

@@ -4,7 +4,7 @@ import serviciosCatalogoService from '../../services/serviciosCatalogoService'
 import { canCreateServiciosCatalogo, canEditServiciosCatalogo, canChangeServicioCatalogoStatus } from '../../utils/roleHelper'
 import ServicioCatalogoModal from '../../components/servicios/ServicioCatalogoModal'
 
-const CatalogoServiciosView = ({ user, tenantSlug }) => {
+const CatalogoServiciosView = ({ user, tenantSlug, onSuccess, aiPrefill }) => {
   // Estados para lista
   const [servicios, setServicios] = useState([])
   const [loading, setLoading] = useState(false)
@@ -35,8 +35,12 @@ const CatalogoServiciosView = ({ user, tenantSlug }) => {
         ...filtrosActuales,
         page,
       })
-      setServicios(response.data || response.results || [])
-      setTotalEntries(response.count || response.data.length || 0)
+      const data = response
+      const listaServicios = Array.isArray(data) ? data : (data.data || data.results || [])
+      const conteoTotal = data.count || (Array.isArray(data) ? data.length : (data.data?.length || 0))
+      
+      setServicios(listaServicios)
+      setTotalEntries(conteoTotal)
       setFiltros((prev) => ({ ...prev, page }))
     } catch (err) {
       setError(err.message || 'Error al cargar servicios')
@@ -58,6 +62,15 @@ const CatalogoServiciosView = ({ user, tenantSlug }) => {
       page: 1,
     }))
   }
+
+  // Lógica de IA Ghost User
+  useEffect(() => {
+    if (aiPrefill && aiPrefill.status === 'PENDIENTE') {
+      setIsModalOpen(true)
+      setServicioEnEdicion(null) // Para que sea crear
+    }
+  }, [aiPrefill?._ts])
+
   // Aplicar filtros
   const handleApplyFilters = () => {
     cargarServicios(1)
@@ -339,6 +352,8 @@ const CatalogoServiciosView = ({ user, tenantSlug }) => {
         servicio={servicioEnEdicion}
         isLoading={isSubmittingModal}
         currentUser={user}
+        aiPrefill={aiPrefill}
+        onSuccess={onSuccess}
       />
       {/* Modal de cambiar estado */}
       {isEstadoModalOpen && servicioParaEstado && (

@@ -95,14 +95,27 @@ export const FloatingAIAvatar = ({ onClick }) => {
       ref={dragRef}
       onPointerDown={handlePointerDown}
       style={{
-        position: 'fixed', left : `${position.x}px`,
-        top: `${position.y}px`, touchAction : 'none', // Evitar scroll al arrastrar en móviles
+        position: 'fixed',
+        left: `${position.x}px`,
+        top: `${position.y}px`,
+        touchAction: 'none',
       }}
-      className={`z-50 w-14 h-14 rounded-full bg-gradient-to-br from-primary-600 to-burgundy-700 flex items-center justify-center text-white shadow-xl shadow-primary-900/30 cursor-grab active:cursor-grabbing transition-transform ${isDragging ? 'scale-110' : 'hover:scale-110'}`}
+      className={`z-[70] w-14 h-14 rounded-2xl bg-gradient-to-br from-carbon-900 to-carbon-700 dark:from-primary-600 dark:to-burgundy-700 flex items-center justify-center text-white shadow-2xl shadow-black/30 cursor-grab active:cursor-grabbing transition-all duration-300 ${isDragging ? 'scale-110 rotate-12' : 'hover:scale-110 hover:-rotate-6'}`}
       title="Asistente de IA"
     >
-      <div className="absolute inset-0 rounded-full bg-white opacity-0 hover:opacity-10 transition-opacity pointer-events-none"></div>
-      <Bot size={24} strokeWidth={2.5} className={!isDragging ? "animate-pulse" : ""} />
+      {/* Glow Effect */}
+      <div className="absolute inset-0 rounded-2xl bg-primary-500/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+      
+      {/* Icon and Pulse */}
+      <div className="relative flex items-center justify-center">
+        {!isDragging && (
+          <div className="absolute inset-0 rounded-full bg-white/20 animate-ping scale-150"></div>
+        )}
+        <Bot size={24} strokeWidth={2.5} className="relative z-10" />
+      </div>
+
+      {/* Badge or indicator */}
+      <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white dark:border-carbon-900 rounded-full shadow-sm"></div>
     </div>
   )
 }

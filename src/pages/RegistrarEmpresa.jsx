@@ -19,10 +19,13 @@ function RegistrarEmpresa() {
   // Step 2: Empresa + Usuario data
   const [formData, setFormData] = useState({
     nombre: '',
-    slug: '', nit : '',
+    slug: '',
+    nit: '',
     nombres: '',
-    apellidos: '', email : '',
-    password: '', confirmPassword : '',
+    apellidos: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
   })
   // Step 3: Payment
   const [cardData, setCardData] = useState({

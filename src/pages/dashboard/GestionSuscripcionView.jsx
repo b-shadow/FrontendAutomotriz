@@ -1,11 +1,13 @@
-import { CreditCard, AlertTriangle, Check, ClipboardList, Clock, X, RefreshCcw, RefreshCw, Package, Hourglass, Info, Lock, ScrollText, Lightbulb } from 'lucide-react';
-import { useState, useEffect, useCallback } from 'react'
+import { CreditCard, AlertTriangle, Check, ClipboardList, Clock, X, RefreshCcw, RefreshCw, Package, Hourglass, Info, Lock, ScrollText, Lightbulb, Sparkles } from 'lucide-react';
+import { useState, useEffect, useCallback, useContext } from 'react'
+import { useRefresh } from '../../context/RefreshContext'
 import { useTenant } from '../../hooks/useTenant'
 import { Card, Button } from '../../components/ui'
 import suscripcionService from '../../services/suscripcionService'
 
-export const GestionSuscripcionView = () => {
+export const GestionSuscripcionView = ({ aiPrefill, onSuccess }) => {
   const { tenantSlug } = useTenant()
+  const { refreshTick, triggerRefresh } = useRefresh()
 
   // Función para detectar si el pago es simulado (entorno local/debug)
   const isSimulatedPayment = (intent) => {
@@ -20,6 +22,8 @@ export const GestionSuscripcionView = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
+  const [isSimulating, setIsSimulating] = useState(false)
+  const [isAiClickingConfirm, setIsAiClickingConfirm] = useState(false) // Efecto visual para botón confirmar
 
   // Datos de suscripción
   const [planes, setPlanes] = useState([])
@@ -44,6 +48,7 @@ export const GestionSuscripcionView = () => {
   const cargarDatos = useCallback(async () => {
     setLoading(true)
     setError(null)
+    console.log("GestionSuscripcion: Cargando datos (refreshTick:", refreshTick, ")");
     try {
       const [planesData, suscData] = await Promise.all([
         suscripcionService.obtenerPlanes(),
@@ -51,38 +56,63 @@ export const GestionSuscripcionView = () => {
       ])
       setPlanes(planesData)
       setSuscripcionActual(suscData)
+      console.log("GestionSuscripcion: Datos cargados exitosamente");
+
+      // Limpieza de estados si ya se procesó el cambio
+      if (suscData) {
+        if (suscData.tiene_cambio_pendiente && modoAccion === 'seleccionar-cambio') {
+          console.log("GestionSuscripcion: Detectado cambio pendiente, cerrando selector");
+          setModoAccion(null);
+          setPlanSeleccionado(null);
+        }
+        // Si no hay cambio pendiente y estábamos en modo pago/cancelar, es que terminó
+        if (!suscData.tiene_cambio_pendiente && (modoAccion === 'cambiar' || modoAccion === 'cancelar')) {
+          console.log("GestionSuscripcion: Proceso finalizado, limpiando estados");
+          setModoAccion(null);
+          setPlanSeleccionado(null);
+        }
+      }
     } catch (err) {
       setError('Error al cargar los datos de suscripción')
       console.error(err)
     } finally {
       setLoading(false)
     }
-  }, [tenantSlug])
+  }, [tenantSlug, refreshTick])
 
   useEffect(() => {
     if (tenantSlug) {
       cargarDatos()
     }
-  }, [cargarDatos, tenantSlug])
+  }, [cargarDatos, tenantSlug, refreshTick])
 
   const currentPlanId = suscripcionActual?.plan?.id || null
   const selectedPlanId = planSeleccionado?.id || null
 
   // Confirmar pago en modo simulado
-  const handleConfirmarPagoSimulado = useCallback(async () => {
+  const handleConfirmarPagoSimulado = useCallback(async (explicitCardData = null, explicitPlan = null, explicitIntent = null) => {
+    const data = explicitCardData || cardData;
+    const plan = explicitPlan || planSeleccionado;
+    const intent = explicitIntent || paymentIntent;
+    
     // Validar datos de tarjeta
-    const validateCardData = () => {
-      const cardNumber = cardData.cardNumber.replace(/\s/g, '')
+    const validateData = (d) => {
+      const cardNumber = (d.cardNumber || '').replace(/\s/g, '')
       if (!cardNumber || cardNumber.length !== 16) return 'Número de tarjeta inválido'
-      if (!cardData.expiryDate.match(/^\d{2}\/\d{2}$/)) return 'Fecha de expiración inválida (MM/YY)'
-      if (!cardData.cvc || cardData.cvc.length < 3) return 'CVC inválido'
-      if (!cardData.cardholderName.trim()) return 'Nombre del titular requerido'
+      if (!(d.expiryDate || '').match(/^\d{2}\/\d{2}$/)) return 'Fecha de expiración inválida (MM/YY)'
+      if (!d.cvc || d.cvc.length < 3) return 'CVC inválido'
+      if (!d.cardholderName?.trim()) return 'Nombre del titular requerido'
       return null
     }
 
-    const cardError = validateCardData()
+    const cardError = validateData(data)
     if (cardError) {
       setError(cardError)
+      return
+    }
+
+    if (!plan || !intent) {
+      setError('Faltan datos del plan o del pago')
       return
     }
 
@@ -93,7 +123,7 @@ export const GestionSuscripcionView = () => {
       const confirmacion = await suscripcionService.confirmarPago(
         tenantSlug,
         {
-          paymentIntentId: paymentIntent.id, planId : planSeleccionado.id,
+          paymentIntentId: intent.id, planId : plan.id,
           accion: modoAccion
         }
       )
@@ -109,8 +139,9 @@ export const GestionSuscripcionView = () => {
         setCardData({ cardNumber: '', expiryDate: '', cvc: '', cardholderName: '' })
         window.stripeData = null
 
-        // Recargar datos
+        // Recargar datos y notificar éxito global
         await cargarDatos()
+        if (onSuccess) onSuccess()
       }
     } catch (err) {
       setError(err.message || 'Error al procesar el pago')
@@ -118,17 +149,20 @@ export const GestionSuscripcionView = () => {
     } finally {
       setProcesandoPago(false)
     }
-  }, [tenantSlug, paymentIntent, planSeleccionado, modoAccion, cardData, cargarDatos])
+  }, [tenantSlug, paymentIntent, planSeleccionado, modoAccion, cardData, cargarDatos, onSuccess])
 
   // Procesar pago (crear intent si es renovación, o confirmar en modo simulado)
-  const handleProcesarPago = useCallback(async () => {
-    if (!planSeleccionado) {
+  const handleProcesarPago = useCallback(async (explicitPlan = null, explicitIntent = null, explicitCardData = null) => {
+    const plan = explicitPlan || planSeleccionado
+    const intent = explicitIntent || paymentIntent
+
+    if (!plan) {
       setError('Por favor selecciona un plan')
       return
     }
 
-    // Si no hay paymentIntent aún, crearlo
-    if (!paymentIntent) {
+    // Si no hay intent aún, crearlo
+    if (!intent) {
       setProcesandoPago(true)
       setError(null)
 
@@ -136,12 +170,13 @@ export const GestionSuscripcionView = () => {
         const intentData = await suscripcionService.crearPaymentIntent(
           tenantSlug,
           {
-            planId: planSeleccionado.id, accion : modoAccion
+            planId: plan.id, accion : modoAccion
           }
         )
 
         setPaymentIntent(intentData)
         // El useEffect cargará automáticamente el formulario de Stripe (solo en modo real)
+        return intentData // Retornar para la simulación
       } catch (err) {
         setError(err.message || 'Error al crear el pago')
         console.error(err)
@@ -151,12 +186,12 @@ export const GestionSuscripcionView = () => {
       return
     }
 
-    // Si ya hay paymentIntent, confirmar el pago
-    const isSimulated = isSimulatedPayment(paymentIntent)
+    // Si ya hay intent, confirmar el pago
+    const isSimulated = isSimulatedPayment(intent)
     
     if (isSimulated) {
       // MODO SIMULADO: validar formulario y delegar a función especializada
-      await handleConfirmarPagoSimulado()
+      await handleConfirmarPagoSimulado(explicitCardData, plan, intent)
       return
     }
 
@@ -192,14 +227,14 @@ export const GestionSuscripcionView = () => {
         const confirmacion = await suscripcionService.confirmarPago(
           tenantSlug,
           {
-            paymentIntentId: confirmedIntent.id, planId : planSeleccionado.id,
+            paymentIntentId: confirmedIntent.id, planId : plan.id,
             accion: modoAccion
           }
         )
 
         if (confirmacion.success) {
           setSuccess(
-            modoAccion === 'cambiar' ? `¡Cambio programado! Tu plan cambiará a ${planSeleccionado.nombre} después del período actual` : `¡Renovación exitosa! Tu suscripción se extiende hasta ${new Date(confirmacion.nueva_fecha_fin).toLocaleDateString()}`
+            modoAccion === 'cambiar' ? `¡Cambio programado! Tu plan cambiará a ${plan.nombre} después del período actual` : `¡Renovación exitosa! Tu suscripción se extiende hasta ${new Date(confirmacion.nueva_fecha_fin).toLocaleDateString()}`
           )
           setModoAccion(null)
           setPlanSeleccionado(null)
@@ -207,8 +242,9 @@ export const GestionSuscripcionView = () => {
           setCardData({ cardNumber: '', expiryDate: '', cvc: '', cardholderName: '' })
           window.stripeData = null
 
-          // Recargar datos
+          // Recargar datos y notificar éxito global
           await cargarDatos()
+          if (onSuccess) onSuccess()
         }
       }
     } catch (err) {
@@ -255,13 +291,24 @@ export const GestionSuscripcionView = () => {
   const handleProgramarCambio = async (planId) => {
     setProgramandoCambio(true)
     setError(null)
+    console.log("handleProgramarCambio: Iniciando para plan", planId);
     try {
       await suscripcionService.cambiarPlan(tenantSlug, { planId })
-      // Ahora crear el payment intent
+      console.log("handleProgramarCambio: Plan programado en backend");
+      
+      // CREAR PAYMENT INTENT AUTOMÁTICAMENTE
+      const intentData = await suscripcionService.crearPaymentIntent(
+        tenantSlug,
+        { planId, accion: 'cambiar' }
+      )
+      console.log("handleProgramarCambio: Payment Intent creado", intentData.id);
+      setPaymentIntent(intentData)
+
       const planData = planes.find(p => p.id === planId)
       if (planData) {
         setPlanSeleccionado(planData)
         setModoAccion('cambiar')
+        console.log("handleProgramarCambio: Modo acción cambiado a 'cambiar'");
       }
     } catch (err) {
       console.error('Error al programar cambio:', err)
@@ -307,10 +354,11 @@ export const GestionSuscripcionView = () => {
   }
 
   // Confirmar cambio seleccionado (desde el botón "Siguiente: Ir a Pago")
-  const handleConfirmarSeleccionCambio = () => {
-    if (planSeleccionado.id) {
-      // Programar el cambio en backend
-      handleProgramarCambio(planSeleccionado.id)
+  const handleConfirmarSeleccionCambio = async (explicitPlan = null) => {
+    const targetPlan = explicitPlan || planSeleccionado;
+    if (targetPlan && targetPlan.id) {
+      // Programar el cambio en backend y esperar
+      return await handleProgramarCambio(targetPlan.id)
     }
   }
 
@@ -340,8 +388,9 @@ export const GestionSuscripcionView = () => {
       setSuccess('Cambio de plan cancelado. Tu suscripción actual continúa sin cambios.')
       setMostrarConfirmacionCancelacion(false)
       setCancelacionConfirmada(false)
-      // Recargar datos
+      // Recargar datos y notificar éxito global
       await cargarDatos()
+      if (onSuccess) onSuccess()
     } catch (err) {
       console.error('Error al cancelar cambio:', err)
       setError(err.message || 'Error al cancelar el cambio de plan')
@@ -403,6 +452,181 @@ export const GestionSuscripcionView = () => {
       return () => clearTimeout(timer)
     }
   }, [error])
+  
+  // EFECTO: Automatización de la IA (Ghost Click / Ghost Type)
+  useEffect(() => {
+    if (!aiPrefill || planes.length === 0) return;
+
+    const simulateTyping = async (field, value) => {
+      let current = "";
+      for (let i = 0; i <= value.length; i++) {
+        current = value.substring(0, i);
+        // Formatear según el campo
+        let formatted = current;
+        if (field === 'cardNumber') {
+          formatted = current.replace(/\D/g, '').replace(/(\d{4})/g, '$1 ').trim();
+        } else if (field === 'expiryDate') {
+          formatted = current.replace(/\D/g, '').replace(/(\d{2})(\d{0,2})/, '$1/$2').substring(0, 5);
+        }
+        
+        setCardData(prev => ({ ...prev, [field]: formatted }));
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+    };
+
+    const processPrefill = async () => {
+      console.log("IA Simulation: Iniciando con datos:", aiPrefill);
+      setIsSimulating(true);
+
+      // --- Funciones auxiliares de scroll con reintentos ---
+      const scrollToPayment = async (attempts = 0) => {
+        console.log(`IA Simulation: Buscando formulario de pago (intento ${attempts})...`);
+        const formElement = document.getElementById('formulario-pago');
+        if (formElement) {
+          formElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          return true;
+        }
+        if (attempts < 10) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          return await scrollToPayment(attempts + 1);
+        }
+        return false;
+      };
+
+      const scrollToCancel = async (attempts = 0) => {
+        const cancelSection = document.getElementById('seccion-cambio-pendiente');
+        if (cancelSection) {
+          cancelSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          return true;
+        }
+        if (attempts < 10) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          return await scrollToCancel(attempts + 1);
+        }
+        return false;
+      };
+      
+      // ACCIÓN: COMPRAR_PLAN (O RELLENAR_PAGO con datos de plan)
+      if (aiPrefill.plan_nombre) {
+        console.log("IA Simulation: Procesando COMPRAR_PLAN ->", aiPrefill.plan_nombre);
+        const plan = planes.find(p => p.nombre.toLowerCase().includes(aiPrefill.plan_nombre.toLowerCase()));
+        
+        if (plan) {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          await new Promise(resolve => setTimeout(resolve, 800));
+
+          handleCambiarPlan(plan);
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          
+          const newIntent = await handleConfirmarSeleccionCambio(plan);
+          await new Promise(resolve => setTimeout(resolve, 2000)); // Más tiempo para que el DOM se actualice
+
+          // Si TAMBIÉN vienen datos de tarjeta en esta acción, rellenarlos
+          if (aiPrefill.numero_tarjeta || aiPrefill.nombre_titular) {
+            const found = await scrollToPayment();
+            if (found) {
+              await new Promise(resolve => setTimeout(resolve, 800));
+              
+              // Objeto local para capturar lo que la IA está escribiendo y evitar cierres de estado obsoletos
+              const localCardData = { cardNumber: '', expiryDate: '', cvc: '', cardholderName: '' };
+              
+              if (aiPrefill.nombre_titular) {
+                await simulateTyping('cardholderName', aiPrefill.nombre_titular);
+                localCardData.cardholderName = aiPrefill.nombre_titular;
+              }
+              if (aiPrefill.numero_tarjeta) {
+                await simulateTyping('cardNumber', aiPrefill.numero_tarjeta);
+                localCardData.cardNumber = aiPrefill.numero_tarjeta;
+              }
+              if (aiPrefill.fecha_expiracion) {
+                await simulateTyping('expiryDate', aiPrefill.fecha_expiracion);
+                localCardData.expiryDate = aiPrefill.fecha_expiracion;
+              }
+              if (aiPrefill.cvc) {
+                await simulateTyping('cvc', aiPrefill.cvc);
+                localCardData.cvc = aiPrefill.cvc;
+              }
+              
+              if (aiPrefill.estado === 'EJECUTADA') {
+                console.log("IA Simulation: Auto-confirmando pago...");
+                setIsAiClickingConfirm(true);
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                await handleProcesarPago(plan, newIntent, localCardData);
+                setIsAiClickingConfirm(false);
+              }
+            }
+          }
+        }
+      }
+
+      // ACCIÓN: RELLENAR_PAGO (O datos de tarjeta sin plan_nombre)
+      if ((aiPrefill.numero_tarjeta || aiPrefill.nombre_titular) && !aiPrefill.plan_nombre) {
+        console.log("IA Simulation: Procesando RELLENAR_PAGO aislado");
+        
+        // Determinar qué plan usar para la confirmación si es necesario
+        const targetPlan = planSeleccionado || (aiPrefill.plan_nombre ? planes.find(p => p.nombre.toLowerCase().includes(aiPrefill.plan_nombre.toLowerCase())) : null);
+
+        const found = await scrollToPayment();
+        if (found) {
+          await new Promise(resolve => setTimeout(resolve, 800));
+
+          const localCardData = { cardNumber: '', expiryDate: '', cvc: '', cardholderName: '' };
+
+          if (aiPrefill.nombre_titular) {
+            await simulateTyping('cardholderName', aiPrefill.nombre_titular);
+            localCardData.cardholderName = aiPrefill.nombre_titular;
+          }
+          if (aiPrefill.numero_tarjeta) {
+            await simulateTyping('cardNumber', aiPrefill.numero_tarjeta);
+            localCardData.cardNumber = aiPrefill.numero_tarjeta;
+          }
+          if (aiPrefill.fecha_expiracion) {
+            await simulateTyping('expiryDate', aiPrefill.fecha_expiracion);
+            localCardData.expiryDate = aiPrefill.fecha_expiracion;
+          }
+          if (aiPrefill.cvc) {
+            await simulateTyping('cvc', aiPrefill.cvc);
+            localCardData.cvc = aiPrefill.cvc;
+          }
+          
+          console.log("IA Simulation: Rellenado completado");
+
+          if (aiPrefill.estado === 'EJECUTADA') {
+            console.log("IA Simulation: Auto-confirmando pago...");
+            setIsAiClickingConfirm(true);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            await handleProcesarPago(targetPlan, paymentIntent, localCardData);
+            setIsAiClickingConfirm(false);
+          }
+        } else {
+          console.error("IA Simulation: No se encontró el formulario de pago");
+        }
+      }
+
+      // ACCIÓN: CANCELAR_CAMBIO
+      if (aiPrefill.accion === 'CANCELAR_CAMBIO') {
+        console.log("IA Simulation: Procesando CANCELAR_CAMBIO");
+        await scrollToCancel();
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        mostrarConfirmCancelacion();
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        if (aiPrefill.estado === 'EJECUTADA') {
+          console.log("IA Simulation: Estado EJECUTADA detectado, confirmando cancelación...");
+          setCancelacionConfirmada(true);
+          await new Promise(resolve => setTimeout(resolve, 1200));
+          confirmarCancelacion();
+        } else {
+          setCancelacionConfirmada(true);
+        }
+      }
+
+      setIsSimulating(false);
+    };
+
+    processPrefill();
+  }, [aiPrefill?._ts]); // Se mantiene disparador por timestamp para evitar loops
 
   // Cargar formulario de Stripe cuando se abre el formulario de pago
   useEffect(() => {
@@ -410,7 +634,7 @@ export const GestionSuscripcionView = () => {
       // Crear automáticamente el payment intent cuando abre el formulario de pago
       handleProcesarPago()
     }
-  }, [modoAccion, planSeleccionado, paymentIntent, procesandoPago, handleProcesarPago])
+  }, [modoAccion, planSeleccionado, paymentIntent, procesandoPago]) // Removido handleProcesarPago de deps
 
   useEffect(() => {
     if ((modoAccion === 'cambiar' || modoAccion === 'renovar') && paymentIntent && !isSimulatedPayment(paymentIntent)) {
@@ -428,6 +652,15 @@ export const GestionSuscripcionView = () => {
 
   return (
     <div className="space-y-6">
+      {/* INDICADOR DE SIMULACIÓN IA */}
+      {isSimulating && (
+        <div className="fixed top-24 right-8 z-50 animate-bounce">
+          <div className="bg-primary-600 text-white px-4 py-2 rounded-2xl shadow-2xl flex items-center gap-2 border border-primary-400 backdrop-blur-sm bg-opacity-90">
+            <Sparkles className="animate-pulse" size={18} />
+            <span className="text-sm font-bold tracking-tight">IA trabajando...</span>
+          </div>
+        </div>
+      )}
       {/* HEADER */}
       <div>
         <h1 className="text-3xl font-bold text-carbon-900 dark:text-white"><CreditCard className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Gestionar Suscripción</h1>
@@ -471,9 +704,9 @@ export const GestionSuscripcionView = () => {
             </div>
           </div>
 
-          {/* Cambio programado pendiente */}
-          {suscripcionActual.tiene_cambio_pendiente && (
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
+          {/* CAMBIO PROGRAMADO PENDIENTE */}
+          {suscripcionActual && suscripcionActual.tiene_cambio_pendiente && (
+            <Card id="seccion-cambio-pendiente" className="bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-900/30 overflow-hidden relative">
               <div className="flex justify-between items-start">
                 <div className="flex-1">
                   <p className="text-sm font-bold text-blue-900 dark:text-blue-300"><Clock className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Cambio Programado</p>
@@ -490,7 +723,7 @@ export const GestionSuscripcionView = () => {
                   {loading ? '...' : <><X className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Cancelar</>}
                 </button>
               </div>
-            </div>
+            </Card>
           )}
 
           {!modoAccion && (
@@ -619,7 +852,7 @@ export const GestionSuscripcionView = () => {
         )}
 
         {(modoAccion === 'cambiar' || modoAccion === 'renovar') && (
-          <Card className="border-blue-400 bg-blue-50 dark:bg-carbon-800 dark:border-blue-900">
+          <Card id="formulario-pago" className="border-blue-400 bg-blue-50 dark:bg-carbon-800 dark:border-blue-900">
             <h3 className="text-xl font-bold text-carbon-900 dark:text-white mb-4">
               {modoAccion === 'cambiar' ? <><RefreshCw className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Cambiar a Plan</> : <><RefreshCcw className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Renovar Suscripción</>}
             </h3>
@@ -742,9 +975,10 @@ export const GestionSuscripcionView = () => {
             {/* Botones de acción */}
             <div className="flex gap-3">
               <Button
-                onClick={handleProcesarPago}
+                onClick={() => handleProcesarPago()}
                 disabled={procesandoPago}
-                className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                variant="primary"
+                className={`bg-primary-600 dark:bg-primary-700 hover:bg-primary-700 dark:hover:bg-primary-600 text-white flex-1 transition-all duration-300 ${isAiClickingConfirm ? 'ring-4 ring-primary-400 scale-105 shadow-xl' : ''}`}
               >
                 {procesandoPago ? <><Hourglass className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Procesando...</> : <><Check className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Confirmar Pago</>}
               </Button>

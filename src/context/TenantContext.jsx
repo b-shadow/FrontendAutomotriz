@@ -3,6 +3,7 @@
  */
 import { createContext, useState, useCallback } from 'react'
 import tokenStorage from '../services/tokenStorage'
+import authService from '../services/authService'
 // Crear contexto (no se exporta directamente)
 const TenantContext = createContext(null)
 // Proveedor del contexto
@@ -16,18 +17,31 @@ function TenantProvider({ children, tenant, tenantSlug }) {
     tokenStorage.logoutTenant(tenantSlug)
     setUser(null)
   }, [tenantSlug])
-  // Actualizar usuario
   const setSessionUser = useCallback((newUser) => {
     setUser(newUser)
     if (newUser) {
       tokenStorage.setTenantUser(tenantSlug, newUser)
     }
   }, [tenantSlug])
+
+  // Refrescar datos desde el backend
+  const refreshUser = useCallback(async () => {
+    try {
+      // Re-utilizar la lógica de login o un endpoint de perfil
+      const freshUser = await authService.getCurrentUser(tenantSlug)
+      if (freshUser) {
+        setSessionUser(freshUser)
+      }
+    } catch (error) {
+      console.error("Error al refrescar usuario:", error)
+    }
+  }, [tenantSlug, setSessionUser])
   const value = {
     tenant, // Objeto empresa { id, nombre, slug, estado }
     tenantSlug, // Slug de la URL
     user, // Usuario autenticado en este tenant
     setUser: setSessionUser, // Actualizar usuario
+    refreshUser, // FORZAR REFRESCO DESDE BACKEND
     logout, // Logout del tenant
     isLoggedIn: !!user, // Verificar si hay sesión activa
   }

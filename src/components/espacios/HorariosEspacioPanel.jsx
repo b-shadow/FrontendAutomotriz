@@ -149,7 +149,7 @@ export const HorariosEspacioPanel = ({ espacio, user, tenantSlug }) => {
       {/* Modal */}
       {isModalOpen && (
         <HorarioEspacioModal
-          key={`horario-${selectedHorario.id || 'new'}`}
+          key={`horario-${selectedHorario?.id || 'new'}`}
           isOpen={isModalOpen}
           onClose={handleCloseModal}
           onSave={handleSaveHorario}

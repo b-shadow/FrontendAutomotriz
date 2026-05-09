@@ -61,10 +61,15 @@ const GestionCitasView = () => {
         if (filters.fecha_hasta) params.fecha_hasta = filters.fecha_hasta
 
         const response = await citasService.obtenerCitas(tenantSlug, params)
-        setCitas(response.data || response.results || [])
+        const data = response
+        const listaCitas = Array.isArray(data) ? data : (data.data || data.results || [])
+        const total = data.count || (Array.isArray(data) ? data.length : (data.data?.length || 0))
+
+        setCitas(listaCitas)
         setPagination((prev) => ({
-          ...prev, page : pageNum,
-          total: response.count || 0,
+          ...prev,
+          page: pageNum,
+          total: total,
         }))
       } catch (err) {
         console.error('Error loading citas:', err)

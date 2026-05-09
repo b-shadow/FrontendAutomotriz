@@ -8,7 +8,7 @@
  * - horario: object (null para crear, object para editar)
  * - isLoading: boolean
  */
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 const DIAS_SEMANA = [
   { value: '0', label: 'Lunes' },
@@ -27,6 +27,7 @@ export const HorarioEspacioModal = ({
   onDelete,
   horario = null,
   isLoading = false,
+  aiPrefill = null,
 }) => {
   const getInitialFormData = () => {
     if (isOpen && horario) {
@@ -44,6 +45,89 @@ export const HorarioEspacioModal = ({
   const [formData, setFormData] = useState(getInitialFormData())
   const [errors, setErrors] = useState({})
   const [isDeleting, setIsDeleting] = useState(false)
+
+  // Ghost User Effect
+  useEffect(() => {
+    if (!aiPrefill || !isOpen) return;
+
+    if (aiPrefill.status === 'PENDIENTE') {
+      const formUpdates = {};
+      const fieldsToSimulate = [];
+      const typingSpeed = 10;
+
+      if (aiPrefill.dia) {
+        const diaStr = aiPrefill.dia.toLowerCase();
+        const diaItem = DIAS_SEMANA.find(d => d.label.toLowerCase() === diaStr);
+        if (diaItem && diaItem.value !== formData.dia_semana) {
+          fieldsToSimulate.push({ field: 'dia_semana', value: diaItem.value });
+        }
+      }
+
+      if (aiPrefill.hora_inicio && aiPrefill.hora_inicio !== formData.hora_inicio) {
+        fieldsToSimulate.push({ field: 'hora_inicio', value: aiPrefill.hora_inicio });
+      }
+
+      if (aiPrefill.hora_fin && aiPrefill.hora_fin !== formData.hora_fin) {
+        fieldsToSimulate.push({ field: 'hora_fin', value: aiPrefill.hora_fin });
+      }
+
+      if (fieldsToSimulate.length > 0) {
+        let currentFieldIndex = 0;
+        let currentCharIndex = 0;
+
+        const typeNextChar = () => {
+          if (currentFieldIndex >= fieldsToSimulate.length) return;
+
+          const currentField = fieldsToSimulate[currentFieldIndex];
+          const targetValue = String(currentField.value);
+
+          // Select y checkbox no se tipean
+          if (['dia_semana'].includes(currentField.field)) {
+            setFormData(prev => ({
+              ...prev,
+              [currentField.field]: targetValue
+            }));
+            currentFieldIndex++;
+            setTimeout(typeNextChar, typingSpeed * 3);
+          } else {
+            if (currentCharIndex < targetValue.length) {
+              setFormData(prev => ({
+                ...prev,
+                [currentField.field]: targetValue.substring(0, currentCharIndex + 1)
+              }));
+              currentCharIndex++;
+              setTimeout(typeNextChar, typingSpeed);
+            } else {
+              currentFieldIndex++;
+              currentCharIndex = 0;
+              setTimeout(typeNextChar, typingSpeed * 3);
+            }
+          }
+        };
+        typeNextChar();
+      }
+    } else if (aiPrefill.status === 'EJECUTADA') {
+      // Setear todos los campos de golpe por si vino directo
+      setFormData(prev => {
+        const updates = { ...prev };
+        if (aiPrefill.dia) {
+          const diaStr = aiPrefill.dia.toLowerCase();
+          const diaItem = DIAS_SEMANA.find(d => d.label.toLowerCase() === diaStr);
+          if (diaItem) updates.dia_semana = diaItem.value;
+        }
+        if (aiPrefill.hora_inicio) updates.hora_inicio = aiPrefill.hora_inicio;
+        if (aiPrefill.hora_fin) updates.hora_fin = aiPrefill.hora_fin;
+        return updates;
+      });
+
+      setTimeout(() => {
+        const btn = document.getElementById('horario-submit-btn');
+        if (btn && !btn.disabled) {
+          btn.click();
+        }
+      }, 500);
+    }
+  }, [aiPrefill?._ts, isOpen]);
 
   const validateForm = () => {
     const newErrors = {}
@@ -232,6 +316,7 @@ export const HorarioEspacioModal = ({
               </button>
             )}
             <button
+              id="horario-submit-btn"
               type="submit"
               disabled={isLoading}
               className="flex-1 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg ? disabled : opacity-50 disabled:cursor-not-allowed"

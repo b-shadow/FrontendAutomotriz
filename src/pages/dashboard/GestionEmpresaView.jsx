@@ -1,11 +1,11 @@
-import { Building2, AlertTriangle, Check, Pencil, Hourglass, Save, X, ClipboardList, RefreshCw, RefreshCcw, CreditCard, Info } from 'lucide-react';
+import { Building2, AlertTriangle, Check, Pencil, Hourglass, Save, X, ClipboardList, RefreshCw, RefreshCcw, CreditCard, Info, Sparkles } from 'lucide-react';
 import { useState, useEffect } from 'react'
 import { useTenant } from '../../hooks/useTenant'
 import { Card, Button } from '../../components/ui'
 import empresaService from '../../services/empresaService'
 import suscripcionService from '../../services/suscripcionService'
 
-export const GestionEmpresaView = ({ onNavigate }) => {
+export const GestionEmpresaView = ({ onNavigate, aiPrefill, onSuccess }) => {
   const { tenantSlug } = useTenant()
   const [empresa, setEmpresa] = useState(null)
   const [suscripcion, setSuscripcion] = useState(null)
@@ -13,6 +13,7 @@ export const GestionEmpresaView = ({ onNavigate }) => {
   const [success, setSuccess] = useState(null)
   const [loading, setLoading] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
+  const [isSimulating, setIsSimulating] = useState(false)
   const [saving, setSaving] = useState(false)
   const [formData, setFormData] = useState({
     nombre: ''
@@ -27,7 +28,7 @@ export const GestionEmpresaView = ({ onNavigate }) => {
         // Cargar empresa
         const dataEmpresa = await empresaService.obtenerMiEmpresa()
         setEmpresa(dataEmpresa)
-        
+
         // Cargar suscripción (puede fallar con 404)
         try {
           const dataSuscripcion = await suscripcionService.obtenerSuscripcionActual(tenantSlug)
@@ -45,7 +46,7 @@ export const GestionEmpresaView = ({ onNavigate }) => {
         setLoading(false)
       }
     }
-    
+
     if (tenantSlug) {
       cargarDatos()
     }
@@ -59,6 +60,51 @@ export const GestionEmpresaView = ({ onNavigate }) => {
       })
     }
   }, [isEditing, empresa])
+
+  // EFECTO: Automatización de la IA (Ghost Click)
+  useEffect(() => {
+    if (!aiPrefill) return;
+
+    const simulateTyping = async (field, value) => {
+      console.log(`Simulación: Escribiendo '${value}' en campo '${field}'`);
+      let current = "";
+      for (let i = 0; i <= value.length; i++) {
+        current = value.substring(0, i);
+        setFormData(prev => ({ ...prev, [field]: current }));
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+    };
+
+    const processPrefill = async () => {
+      setIsSimulating(true);
+
+      // 1. Abrir modo edición si no lo está
+      if (!isEditing) {
+        await new Promise(resolve => setTimeout(resolve, 800));
+        setIsEditing(true);
+        await new Promise(resolve => setTimeout(resolve, 600));
+      }
+
+      // 2. Simular escritura del nombre
+      if (aiPrefill.nuevo_nombre) {
+        await simulateTyping('nombre', aiPrefill.nuevo_nombre);
+      }
+
+      setIsSimulating(false);
+
+      if (aiPrefill.status === 'EJECUTADA' || aiPrefill.estado === 'EJECUTADA') {
+        await new Promise(resolve => setTimeout(resolve, 800));
+        const btn = document.getElementById('empresa-submit-btn');
+        if (btn) {
+          btn.click();
+        } else {
+          handleGuardarCambios();
+        }
+      }
+    };
+
+    processPrefill();
+  }, [aiPrefill, isEditing]);
 
   // Limpiar mensajes
   useEffect(() => {
@@ -78,7 +124,7 @@ export const GestionEmpresaView = ({ onNavigate }) => {
   const handleInputChange = (e) => {
     const { name, value } = e.target
     setFormData(prev => ({
-      ...prev, [name] : value
+      ...prev, [name]: value
     }))
   }
 
@@ -89,11 +135,12 @@ export const GestionEmpresaView = ({ onNavigate }) => {
       const datosParciales = {
         nombre: formData.nombre
       }
-      
+
       const empresaActualizada = await empresaService.actualizarEmpresa(datosParciales)
       setEmpresa(empresaActualizada)
       setIsEditing(false)
       setSuccess('Empresa actualizada correctamente')
+      if (onSuccess) onSuccess()
     } catch (err) {
       console.error('Error guardando empresa:', err)
       setError(`Error al guardar: ${err.response.data.detail || 'error desconocido'}`)
@@ -112,6 +159,15 @@ export const GestionEmpresaView = ({ onNavigate }) => {
 
   return (
     <div className="space-y-6">
+      {/* INDICADOR DE SIMULACIÓN IA */}
+      {isSimulating && (
+        <div className="fixed top-24 right-8 z-50 animate-bounce">
+          <div className="bg-primary-600 text-white px-4 py-2 rounded-2xl shadow-2xl flex items-center gap-2 border border-primary-400 backdrop-blur-sm bg-opacity-90">
+            <Sparkles className="animate-pulse" size={18} />
+            <span className="text-sm font-bold tracking-tight">IA escribiendo...</span>
+          </div>
+        </div>
+      )}
       {/* HEADER */}
       <div>
         <h1 className="text-3xl font-bold text-carbon-900 dark:text-white"><Building2 className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Gestionar Empresa</h1>
@@ -140,9 +196,10 @@ export const GestionEmpresaView = ({ onNavigate }) => {
               className="bg-blue-600 hover:bg-blue-700 text-white text-sm"
             >
               <Pencil className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Editar
-            </Button> ) : (
+            </Button>) : (
             <div className="flex gap-2">
               <Button
+                id="empresa-submit-btn"
                 onClick={handleGuardarCambios}
                 disabled={saving}
                 className="bg-green-600 hover:bg-green-700 text-white text-sm"
@@ -172,11 +229,11 @@ export const GestionEmpresaView = ({ onNavigate }) => {
                 onChange={handleInputChange}
                 className="mt-1 w-full px-3 py-2 border border-neutral-300 dark:border-white/[0.08] bg-white dark:bg-carbon-800 text-carbon-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400"
                 placeholder="Nombre de la empresa"
-              /> ) : (
+              />) : (
               <p className="text-lg text-carbon-900 dark:text-white mt-1">{empresa.nombre}</p>
             )}
           </div>
-          
+
           <div>
             <label className="text-sm font-semibold text-carbon-600 dark:text-neutral-400">Slug (URL)</label>
             <p className="text-lg text-carbon-900 dark:text-white mt-1 font-mono">{empresa.slug}</p>
@@ -242,26 +299,26 @@ export const GestionEmpresaView = ({ onNavigate }) => {
             )}
           </div>
           <div className="mt-6 flex gap-2">
-            <Button 
+            <Button
               onClick={() => onNavigate && onNavigate('gestionSuscripciones')}
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               <RefreshCw className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Cambiar Plan
             </Button>
-            <Button 
+            <Button
               onClick={() => onNavigate && onNavigate('gestionSuscripciones')}
               variant="secondary"
             >
               <RefreshCcw className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Renovar Suscripción
             </Button>
           </div>
-        </Card> ) : (
+        </Card>) : (
         <Card className="bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800">
           <h2 className="text-xl font-bold text-yellow-900 dark:text-yellow-400"><AlertTriangle className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Sin Suscripción</h2>
           <p className="text-yellow-800 dark:text-yellow-300 mt-2">
             Tu empresa actualmente no tiene una suscripción activa.
           </p>
-          <Button 
+          <Button
             onClick={() => onNavigate && onNavigate('gestionSuscripciones')}
             className="mt-4 bg-blue-600 hover:bg-blue-700 text-white"
           >

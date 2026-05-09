@@ -9,7 +9,7 @@
  * - isLoading: boolean
  */
 import { Pencil, Plus } from 'lucide-react';
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 const TIPOS_ESPACIO = [
   { value: 'TALLER', label: 'Taller' },
@@ -24,6 +24,8 @@ export const EspacioTrabajoModal = ({
   onSave,
   espacio = null,
   isLoading = false,
+  aiPrefill = null,
+  onSuccess = null,
 }) => {
   const isEditing = !!espacio
 
@@ -44,6 +46,88 @@ export const EspacioTrabajoModal = ({
 
   const [formData, setFormData] = useState(getInitialFormData())
   const [errors, setErrors] = useState({})
+
+  // Ghost User Effect
+  useEffect(() => {
+    if (!aiPrefill || !isOpen) return;
+
+    if (aiPrefill.status === 'PENDIENTE') {
+      const formUpdates = {};
+      const fieldsToSimulate = [];
+      const typingSpeed = 20;
+
+      if (aiPrefill.codigo && aiPrefill.codigo !== formData.codigo) {
+        fieldsToSimulate.push({ field: 'codigo', value: aiPrefill.codigo });
+      }
+      if (aiPrefill.nombre && aiPrefill.nombre !== formData.nombre) {
+        fieldsToSimulate.push({ field: 'nombre', value: aiPrefill.nombre });
+      }
+      if (aiPrefill.tipo && aiPrefill.tipo !== formData.tipo) {
+        fieldsToSimulate.push({ field: 'tipo', value: aiPrefill.tipo });
+      }
+      if (aiPrefill.observaciones && aiPrefill.observaciones !== formData.observaciones) {
+        fieldsToSimulate.push({ field: 'observaciones', value: aiPrefill.observaciones });
+      }
+
+      if (aiPrefill.hasOwnProperty('activo') && aiPrefill.activo !== formData.activo) {
+        fieldsToSimulate.push({ field: 'activo', value: aiPrefill.activo });
+      }
+
+      if (fieldsToSimulate.length > 0) {
+        let currentFieldIndex = 0;
+        let currentCharIndex = 0;
+
+        const typeNextChar = () => {
+          if (currentFieldIndex >= fieldsToSimulate.length) return;
+
+          const currentField = fieldsToSimulate[currentFieldIndex];
+          
+          if (['activo'].includes(currentField.field)) {
+             setFormData(prev => ({
+               ...prev,
+               [currentField.field]: currentField.value
+             }));
+             currentFieldIndex++;
+             setTimeout(typeNextChar, typingSpeed * 3);
+          } else {
+            const targetValue = String(currentField.value);
+
+            if (currentCharIndex < targetValue.length) {
+              setFormData(prev => ({
+                ...prev,
+                [currentField.field]: targetValue.substring(0, currentCharIndex + 1)
+              }));
+              currentCharIndex++;
+              setTimeout(typeNextChar, typingSpeed);
+            } else {
+              currentFieldIndex++;
+              currentCharIndex = 0;
+              setTimeout(typeNextChar, typingSpeed * 3);
+            }
+          }
+        };
+
+        typeNextChar();
+      }
+    } else if (aiPrefill.status === 'EJECUTADA') {
+      setFormData(prev => {
+        const updates = { ...prev };
+        if (aiPrefill.codigo) updates.codigo = aiPrefill.codigo;
+        if (aiPrefill.nombre) updates.nombre = aiPrefill.nombre;
+        if (aiPrefill.tipo) updates.tipo = aiPrefill.tipo;
+        if (aiPrefill.observaciones) updates.observaciones = aiPrefill.observaciones;
+        if (aiPrefill.hasOwnProperty('activo')) updates.activo = aiPrefill.activo;
+        return updates;
+      });
+
+      setTimeout(() => {
+        const btn = document.getElementById('espacio-submit-btn');
+        if (btn && !btn.disabled) {
+          btn.click();
+        }
+      }, 500);
+    }
+  }, [aiPrefill?._ts, isOpen]);
 
   const validateForm = () => {
     const newErrors = {}
@@ -70,6 +154,9 @@ export const EspacioTrabajoModal = ({
     }
 
     onSave(formData)
+    if (aiPrefill?.status === 'EJECUTADA' && onSuccess) {
+      setTimeout(onSuccess, 1000);
+    }
   }
 
   const handleChange = (e) => {
@@ -202,6 +289,7 @@ export const EspacioTrabajoModal = ({
               Cancelar
             </button>
             <button
+              id="espacio-submit-btn"
               type="submit"
               disabled={isLoading}
               className="flex-1 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg ? disabled : opacity-50 disabled:cursor-not-allowed"

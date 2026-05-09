@@ -123,25 +123,6 @@ export const TenantSidebar = ({
         },
       ],
     },
-    /* TODO: Habilitar en futuras versiones ? modulo3 : {
-      label: '📈 Módulo', icon : '📈',
-      items: [
-        {
-          id: 'modulo3placeholder', label : '⏳ Próximamente',
-          visible: true,
-        },
-      ],
-    },
-    modulo4: {
-      label: '⚙️ Módulo', icon : '⚙️',
-      items: [
-        {
-          id: 'modulo4placeholder', label : '⏳ Próximamente',
-          visible: true,
-        },
-      ],
-    },
-    */
     reportesEstadisticas: {
       label: 'Reportes y Estadísticas', icon : <BarChart className="inline-block mx-1 text-current" size={20} strokeWidth={2} />,
       items: [
@@ -154,7 +135,7 @@ export const TenantSidebar = ({
           visible: canViewBitacora(user),
         },
         {
-          id: 'historialNotificaciones', label : <><Mailbox className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Historial de Notificaciones</>,
+          id: 'notificaciones', label : <><Mailbox className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Historial de Notificaciones</>,
           visible: true,
         },
         {

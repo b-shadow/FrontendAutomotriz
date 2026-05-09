@@ -34,7 +34,7 @@ const ESTADOS = [
   { value: 'TIEMPO_EXTENDIDO', label: 'Tiempo Extendido' },
 ]
 
-export const EspaciosTrabajoView = ({ user, tenantSlug }) => {
+export const EspaciosTrabajoView = ({ user, tenantSlug, onSuccess, aiPrefill }) => {
   const [espacios, setEspacios] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -69,6 +69,35 @@ export const EspaciosTrabajoView = ({ user, tenantSlug }) => {
     loadEspacios()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filtros])
+
+  // Lógica de IA Ghost User
+  useEffect(() => {
+    if (!aiPrefill) return;
+
+    if (aiPrefill.type === 'REGISTRAR_ESPACIO' && aiPrefill.status === 'PENDIENTE') {
+      setIsEspacioModalOpen(true)
+      setSelectedEspacio(null) // Para que sea crear
+      return;
+    }
+
+    if (aiPrefill.type === 'EDITAR_ESPACIO') {
+      if (espacios.length === 0 || loading) return;
+
+      const identificador = (aiPrefill.espacio_identificador || '').toLowerCase();
+      const espacioEncontrado = espacios.find(e => 
+        e.codigo.toLowerCase() === identificador || e.nombre.toLowerCase() === identificador || e.nombre.toLowerCase().includes(identificador)
+      );
+
+      if (!espacioEncontrado) {
+        console.warn('Ghost User: No se encontró espacio para editar', identificador);
+        return;
+      }
+
+      if (!isEspacioModalOpen) {
+        handleOpenEspacioModal(espacioEncontrado);
+      }
+    }
+  }, [aiPrefill?._ts, espacios, loading, isEspacioModalOpen]);
 
   const loadEspacios = async () => {
     try {
@@ -479,12 +508,14 @@ export const EspaciosTrabajoView = ({ user, tenantSlug }) => {
       {/* Modal de Espacio */}
       {isEspacioModalOpen && (
         <EspacioTrabajoModal
-          key={`espacio-${selectedEspacio.id || 'new'}`}
+          key={`espacio-${selectedEspacio?.id || 'new'}`}
           isOpen={isEspacioModalOpen}
           onClose={handleCloseEspacioModal}
           onSave={handleSaveEspacio}
           espacio={selectedEspacio}
           isLoading={isSaving}
+          aiPrefill={aiPrefill && ['REGISTRAR_ESPACIO', 'EDITAR_ESPACIO'].includes(aiPrefill.type) ? aiPrefill : null}
+          onSuccess={onSuccess}
         />
       )}
 

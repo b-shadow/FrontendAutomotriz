@@ -11,6 +11,7 @@ export const PlanVehiculoModal = ({
   vehiculos,
   onClose,
   onSuccess,
+  aiPrefill = null,
 }) => {
   const [descripcion, setDescripcion] = useState('')
   const [vehiculoId, setVehiculoId] = useState('')
@@ -27,6 +28,37 @@ export const PlanVehiculoModal = ({
       }
     }
   }, [plan])
+
+  // Ghost User Effect
+  useEffect(() => {
+    if (!aiPrefill) return;
+
+    if (aiPrefill.status === 'PENDIENTE') {
+      const typingSpeed = 10;
+      const targetDesc = String(aiPrefill.descripcion || '');
+      
+      if (targetDesc && targetDesc !== descripcion) {
+        let currentCharIndex = 0;
+        const typeNextChar = () => {
+          if (currentCharIndex < targetDesc.length) {
+            setDescripcion(targetDesc.substring(0, currentCharIndex + 1));
+            currentCharIndex++;
+            setTimeout(typeNextChar, typingSpeed);
+          }
+        };
+        typeNextChar();
+      }
+    } else if (aiPrefill.status === 'EJECUTADA') {
+      if (aiPrefill.descripcion) setDescripcion(aiPrefill.descripcion);
+
+      setTimeout(() => {
+        const btn = document.getElementById('plan-submit-btn');
+        if (btn && !btn.disabled) {
+          btn.click();
+        }
+      }, 500);
+    }
+  }, [aiPrefill]);
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -141,6 +173,7 @@ export const PlanVehiculoModal = ({
             Cancelar
           </button>
           <button
+            id="plan-submit-btn"
             onClick={handleSubmit}
             disabled={loading}
             className="px-4 py-2 bg-primary-600 hover:bg-primary-700 dark:bg-primary-700 dark:hover:bg-primary-600 text-white rounded-lg font-medium transition-colors disabled:opacity-50"

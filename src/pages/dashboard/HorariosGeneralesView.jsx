@@ -13,7 +13,7 @@ import { canManageHorariosEspacio } from '../../utils/roleHelper'
 
 const DIAS_SEMANA = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 
-export const HorariosGeneralesView = ({ user, tenantSlug }) => {
+export const HorariosGeneralesView = ({ user, tenantSlug, aiPrefill, onSuccess }) => {
   // Estados principales
   const [espacios, setEspacios] = useState([])
   const [horarios, setHorarios] = useState([])
@@ -42,6 +42,49 @@ export const HorariosGeneralesView = ({ user, tenantSlug }) => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedEspacioId])
+
+  // Lógica de IA Ghost User
+  useEffect(() => {
+    if (!aiPrefill) return;
+
+    if (espacios.length === 0 || loadingEspacios) return;
+
+    const identificador = (aiPrefill.espacio_identificador || '').toLowerCase();
+    const espacioEncontrado = espacios.find(e => 
+      e.codigo.toLowerCase() === identificador || e.nombre.toLowerCase() === identificador || e.nombre.toLowerCase().includes(identificador)
+    );
+
+    if (!espacioEncontrado) {
+      console.warn('Ghost User: No se encontró espacio', identificador);
+      return;
+    }
+
+    if (selectedEspacioId !== espacioEncontrado.id) {
+      setSelectedEspacioId(espacioEncontrado.id);
+    }
+
+    if (aiPrefill.type === 'VER_HORARIOS_ESPACIO') {
+      // Ya se seleccionó el espacio y se mostraron los horarios
+      if (onSuccess && aiPrefill.status === 'EJECUTADA') onSuccess();
+    } else if (aiPrefill.type === 'AGREGAR_HORARIO_ESPACIO') {
+      if (!isModalOpen) {
+        handleOpenModal(null);
+      }
+    } else if (aiPrefill.type === 'EDITAR_HORARIO_ESPACIO') {
+      if (loadingHorarios) return;
+
+      if (!aiPrefill.dia) return;
+      const diaStr = aiPrefill.dia.toLowerCase();
+      const diaIndex = DIAS_SEMANA.findIndex(d => d.toLowerCase() === diaStr);
+      
+      if (diaIndex !== -1) {
+        const horarioEncontrado = horarios.find(h => h.dia_semana === diaIndex);
+        if (horarioEncontrado && !isModalOpen) {
+          handleOpenModal(horarioEncontrado);
+        }
+      }
+    }
+  }, [aiPrefill, espacios, loadingEspacios, loadingHorarios, horarios, isModalOpen]);
 
   const loadEspacios = async () => {
     try {
@@ -117,6 +160,7 @@ export const HorariosGeneralesView = ({ user, tenantSlug }) => {
 
       await loadHorarios()
       handleCloseModal()
+      if (onSuccess) onSuccess()
     } catch (err) {
       console.error('Error al guardar horario:', err)
       setError('No se pudo guardar el horario')
@@ -359,6 +403,7 @@ export const HorariosGeneralesView = ({ user, tenantSlug }) => {
           onClose={handleCloseModal}
           onSave={handleSaveHorario}
           isLoading={isSaving}
+          aiPrefill={aiPrefill && ['AGREGAR_HORARIO_ESPACIO', 'EDITAR_HORARIO_ESPACIO'].includes(aiPrefill.type) ? aiPrefill : null}
         />
       )}
     </div>

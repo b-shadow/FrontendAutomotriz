@@ -22,7 +22,7 @@ import PlanVehiculoDetalleFormModal from '../../components/planVehiculo/PlanVehi
  * - Vista de detalles de un plan
  * - Gestión de detalles dentro del plan (crear, editar, cambiar estado)
  */
-export const PlanVehiculoView = ({ user, tenantSlug }) => {
+export const PlanVehiculoView = ({ user, tenantSlug, aiPrefill = null, onSuccess }) => {
   // Estados de datos
   const [planes, setPlanes] = useState([])
   const [vehiculos, setVehiculos] = useState([])
@@ -92,6 +92,46 @@ export const PlanVehiculoView = ({ user, tenantSlug }) => {
     cargarPlanes()
   }, [cargarPlanes])
 
+  // Lógica de Ghost User
+  useEffect(() => {
+    if (!aiPrefill) return;
+
+    if (aiPrefill.type === 'BUSCAR_PLAN') {
+      if (aiPrefill.busqueda) {
+        setSearch(aiPrefill.busqueda);
+      }
+      if (aiPrefill.estado) {
+        setEstadoFiltro(aiPrefill.estado === 'Todos' ? '' : aiPrefill.estado);
+      }
+      return;
+    }
+
+    if (planes.length === 0 || loadingPlanes) return;
+
+    // Buscar plan por placa
+    const placaBuscada = (aiPrefill.placa || '').toLowerCase();
+    const planEncontrado = planes.find(p => {
+      const info = obtenerInfoVehiculo(p);
+      if (typeof info === 'string') return false;
+      return info.placa && String(info.placa).toLowerCase().includes(placaBuscada);
+    });
+
+    if (!planEncontrado) {
+      console.warn('Ghost User: No se encontró plan para placa', placaBuscada);
+      return;
+    }
+
+    if (aiPrefill.type === 'VER_PLAN') {
+      handleVerDetalle(planEncontrado);
+    } else if (aiPrefill.type === 'EDITAR_PLAN') {
+      handleEditarPlan(planEncontrado);
+    } else if (aiPrefill.type === 'CAMBIAR_ESTADO_PLAN') {
+      handleCambiarEstado(planEncontrado);
+    } else if (aiPrefill.type === 'AGREGAR_DETALLE_PLAN') {
+      handleAgregarDetalle(planEncontrado);
+    }
+  }, [aiPrefill, planes, loadingPlanes]);
+
   const handleEditarPlan = (plan) => {
     setPlanEditando(plan)
     setShowPlanModal(true)
@@ -135,18 +175,21 @@ export const PlanVehiculoView = ({ user, tenantSlug }) => {
   const handlePlanCreatedOrUpdated = async () => {
     setShowPlanModal(false)
     await cargarPlanes()
+    if (onSuccess) onSuccess()
   }
 
   const handleDetalleCreatedOrUpdated = async () => {
     setShowFormDetalleModal(false)
     setPlanSeleccionado(null)
     await cargarPlanes()
+    if (onSuccess) onSuccess()
   }
 
   const handleEstadoChanged = async () => {
     setShowEstadoModal(false)
     setPlanSeleccionado(null)
     await cargarPlanes()
+    if (onSuccess) onSuccess()
   }
 
   const handleEstadoDetalleChanged = async () => {
@@ -154,6 +197,7 @@ export const PlanVehiculoView = ({ user, tenantSlug }) => {
     setDetalleSeleccionado(null)
     setPlanSeleccionado(null)
     await cargarPlanes()
+    if (onSuccess) onSuccess()
   }
 
   const handleEliminarDetalle = async (detalle) => {
@@ -166,6 +210,7 @@ export const PlanVehiculoView = ({ user, tenantSlug }) => {
       // Refrescar datos
       setPlanSeleccionado(null)
       await cargarPlanes()
+      if (onSuccess) onSuccess()
     } catch (err) {
       console.error('Error al eliminar detalle:', err)
       const errorMsg = err.response.data.error || 'No se pudo eliminar el detalle'
@@ -358,6 +403,7 @@ export const PlanVehiculoView = ({ user, tenantSlug }) => {
           vehiculos={vehiculos}
           onClose={() => setShowPlanModal(false)}
           onSuccess={handlePlanCreatedOrUpdated}
+          aiPrefill={aiPrefill?.type === 'EDITAR_PLAN' ? aiPrefill : null}
         />
       )}
 
@@ -378,6 +424,7 @@ export const PlanVehiculoView = ({ user, tenantSlug }) => {
           plan={planSeleccionado}
           onClose={() => setShowEstadoModal(false)}
           onSuccess={handleEstadoChanged}
+          aiPrefill={aiPrefill?.type === 'CAMBIAR_ESTADO_PLAN' ? aiPrefill : null}
         />
       )}
 
@@ -398,6 +445,7 @@ export const PlanVehiculoView = ({ user, tenantSlug }) => {
           detalle={detalleEditando}
           onClose={() => setShowFormDetalleModal(false)}
           onSuccess={handleDetalleCreatedOrUpdated}
+          aiPrefill={aiPrefill?.type === 'AGREGAR_DETALLE_PLAN' ? aiPrefill : null}
         />
       )}
     </div>

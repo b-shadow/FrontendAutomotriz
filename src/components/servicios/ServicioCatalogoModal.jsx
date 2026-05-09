@@ -7,6 +7,8 @@ export const ServicioCatalogoModal = ({
   onSubmit,
   servicio = null,
   isLoading = false,
+  aiPrefill = null,
+  onSuccess = null,
 }) => {
   const [formData, setFormData] = useState({
     codigo: '',
@@ -41,6 +43,66 @@ export const ServicioCatalogoModal = ({
     setErrors({})
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [servicio?.id, isOpen])
+
+  // Ghost User Effect
+  useEffect(() => {
+    if (!aiPrefill || !isOpen) return;
+
+    if (aiPrefill.status === 'PENDIENTE') {
+      const formUpdates = {};
+      const fieldsToSimulate = [];
+      const typingSpeed = 10;
+
+      const aiCodigo = aiPrefill.codigo || (aiPrefill.nombre_servicio ? aiPrefill.nombre_servicio.toUpperCase().replace(/\s+/g, '_') : '');
+      if (aiCodigo && aiCodigo !== formData.codigo) {
+        fieldsToSimulate.push({ field: 'codigo', value: aiCodigo });
+      }
+      if (aiPrefill.nombre_servicio && aiPrefill.nombre_servicio !== formData.nombre) {
+        fieldsToSimulate.push({ field: 'nombre', value: aiPrefill.nombre_servicio });
+      }
+      if (aiPrefill.descripcion && aiPrefill.descripcion !== formData.descripcion) {
+        fieldsToSimulate.push({ field: 'descripcion', value: aiPrefill.descripcion });
+      }
+      if (aiPrefill.tiempo_estandar_min && aiPrefill.tiempo_estandar_min !== formData.tiempo_estandar_min) {
+        fieldsToSimulate.push({ field: 'tiempo_estandar_min', value: aiPrefill.tiempo_estandar_min });
+      }
+      if (aiPrefill.precio_base && aiPrefill.precio_base !== formData.precio_base) {
+        fieldsToSimulate.push({ field: 'precio_base', value: aiPrefill.precio_base });
+      }
+
+      if (fieldsToSimulate.length > 0) {
+        let currentFieldIndex = 0;
+        let currentCharIndex = 0;
+
+        const typeNextChar = () => {
+          if (currentFieldIndex >= fieldsToSimulate.length) return;
+
+          const currentField = fieldsToSimulate[currentFieldIndex];
+          const targetValue = String(currentField.value);
+
+          if (currentCharIndex < targetValue.length) {
+            setFormData(prev => ({
+              ...prev,
+              [currentField.field]: targetValue.substring(0, currentCharIndex + 1)
+            }));
+            currentCharIndex++;
+            setTimeout(typeNextChar, typingSpeed);
+          } else {
+            currentFieldIndex++;
+            currentCharIndex = 0;
+            setTimeout(typeNextChar, typingSpeed * 3);
+          }
+        };
+
+        typeNextChar();
+      }
+    } else if (aiPrefill.status === 'EJECUTADA') {
+      setTimeout(() => {
+        const btn = document.getElementById('servicio-submit-btn');
+        if (btn) btn.click();
+      }, 500);
+    }
+  }, [aiPrefill?._ts, isOpen]);
 
   const handleInputChange = (e) => {
     const { name, value, type } = e.target
@@ -96,6 +158,9 @@ export const ServicioCatalogoModal = ({
     }
 
     onSubmit(dataToSubmit)
+    if (aiPrefill?.status === 'EJECUTADA' && onSuccess) {
+      setTimeout(onSuccess, 1000);
+    }
   }
 
   if (!isOpen) return null
@@ -233,6 +298,7 @@ export const ServicioCatalogoModal = ({
               Cancelar
             </button>
             <button
+              id="servicio-submit-btn"
               type="submit"
               disabled={isLoading}
               className="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"

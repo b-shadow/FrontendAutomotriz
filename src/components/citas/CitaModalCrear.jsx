@@ -339,10 +339,17 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
                 Servicios a realizar
               </label>
               <div className="space-y-2 max-h-48 overflow-y-auto border rounded-lg p-3 bg-white dark:bg-carbon-900 border-neutral-200 dark:border-white/[0.08]">
-                {serviciosDelPlan.map((servicio) => {
-                  // Verificar si el servicio tiene estado PROGRAMADO
-                  const enUso = servicio.estado === 'PROGRAMADO'
-                  return (
+                {serviciosDelPlan.length === 0 ? (
+                  <div className="text-center py-4 text-carbon-500 dark:text-neutral-400 text-sm">
+                    {formData.vehiculo_id && vehiculos.find(v => v.id === formData.vehiculo_id)?.plan_servicio_id 
+                      ? "El plan asociado a este vehículo no tiene servicios." 
+                      : "Este vehículo no cuenta con un plan de servicios asignado. Debes asignarle un plan primero para agendar una cita."}
+                  </div>
+                ) : (
+                  serviciosDelPlan.map((servicio) => {
+                    // Verificar si el servicio tiene estado PROGRAMADO
+                    const enUso = servicio.estado === 'PROGRAMADO'
+                    return (
                     <label key={servicio.id} className="flex items-center gap-2">
                       <input
                         type="checkbox"
@@ -365,7 +372,8 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
                       </span>
                     </label>
                   )
-                })}
+                  })
+                )}
               </div>
             </div>
 
@@ -402,11 +410,11 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
               <label className="block text-sm font-medium mb-2">Fecha deseada</label>
               <input
                 type="date"
-                value={formData.fecha_hora_inicio_programada.split('T')[0] || ''}
+                value={formData.fecha_hora_inicio_programada?.split('T')[0] || ''}
                 onChange={(e) =>
                   setFormData((prev) => ({
                     ...prev, fecha_hora_inicio_programada : `${e.target.value}T${
-                      formData.fecha_hora_inicio_programada.split('T')[1] || '09:00:00'
+                      prev.fecha_hora_inicio_programada?.split('T')[1] || '09:00:00'
                     }`,
                   }))
                 }
@@ -418,11 +426,11 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
               <label className="block text-sm font-medium mb-2">Hora deseada</label>
               <input
                 type="time"
-                value={formData.fecha_hora_inicio_programada.split('T')[1].slice(0, 5) || '09:00'}
+                value={formData.fecha_hora_inicio_programada?.split('T')[1]?.slice(0, 5) || '09:00'}
                 onChange={(e) =>
                   setFormData((prev) => ({
                     ...prev, fecha_hora_inicio_programada : `${
-                      formData.fecha_hora_inicio_programada.split('T')[0] || '2026-03-25'
+                      prev.fecha_hora_inicio_programada?.split('T')[0] || new Date().toISOString().split('T')[0]
                     }T${e.target.value}:00`,
                   }))
                 }

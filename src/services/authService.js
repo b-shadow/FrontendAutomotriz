@@ -150,6 +150,19 @@ export const authService = {
   getTenantUser(tenantSlug) {
     return tokenStorage.getTenantUser(tenantSlug)
   },
+  // Obtener perfil completo del usuario actual desde el backend
+  async getCurrentUser(tenantSlug) {
+    try {
+      const user = tokenStorage.getTenantUser(tenantSlug)
+      if (!user || !user.id) return null
+      
+      const response = await apiClient.get(`/api/${tenantSlug}/usuarios/${user.id}/`)
+      return response.data
+    } catch (error) {
+      console.error('Error al obtener usuario actual:', error)
+      return null
+    }
+  },
   // Verificar si está logueado en el tenant
   isTenantLoggedIn(tenantSlug) {
     return tokenStorage.isTenantLoggedIn(tenantSlug)
@@ -206,7 +219,9 @@ export const authService = {
         payment_intent_id: paymentIntentId,
       })
       return {
-        success: true, empresa : response.data.empresa || response.data,
+        success: true,
+        empresa: response.data.empresa || response.data,
+        usuario: response.data.usuario,
       }
     } catch (err) {
       const errorData = err.response.data || {}

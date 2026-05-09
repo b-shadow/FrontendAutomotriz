@@ -1,4 +1,4 @@
-import { Pencil, Car } from 'lucide-react';
+import { Pencil, Car, Sparkles } from 'lucide-react';
 import { useState, useEffect } from 'react'
 
 export const VehiculoModal = ({
@@ -10,7 +10,10 @@ export const VehiculoModal = ({
   usuarios = [],
   canSelectPropietario = false,
   currentUser = null,
+  aiPrefill = null,
 }) => {
+  const [isSimulating, setIsSimulating] = useState(false)
+  const [isAiClickingSubmit, setIsAiClickingSubmit] = useState(false)
   const [formData, setFormData] = useState({
     placa: '',
     marca: '',
@@ -30,35 +33,99 @@ export const VehiculoModal = ({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!isOpen) return
-    
+
     const newFormData = vehiculo
       ? {
-          placa: vehiculo.placa || '',
-          marca: vehiculo.marca || '',
-          modelo: vehiculo.modelo || '',
-          anio: vehiculo.anio || new Date().getFullYear(),
-          color: vehiculo.color || '',
-          kilometraje_actual: vehiculo.kilometraje_actual || 0,
-          vin_chasis: vehiculo.vin_chasis || '',
-          motor: vehiculo.motor || '',
-          observaciones: vehiculo.observaciones || '',
-          propietario_id: vehiculo.propietario || '',
-        }
+        placa: vehiculo.placa || '',
+        marca: vehiculo.marca || '',
+        modelo: vehiculo.modelo || '',
+        anio: vehiculo.anio || new Date().getFullYear(),
+        color: vehiculo.color || '',
+        kilometraje_actual: vehiculo.kilometraje_actual || 0,
+        vin_chasis: vehiculo.vin_chasis || '',
+        motor: vehiculo.motor || '',
+        observaciones: vehiculo.observaciones || '',
+        propietario_id: vehiculo.propietario || '',
+      }
       : {
-          placa: '',
-          marca: '',
-          modelo: '',
-          anio: new Date().getFullYear(),
-          color: '',
-          kilometraje_actual: 0,
-          vin_chasis: '',
-          motor: '',
-          observaciones: '',
-          propietario_id: '',
-        }
+        placa: '',
+        marca: '',
+        modelo: '',
+        anio: new Date().getFullYear(),
+        color: '',
+        kilometraje_actual: 0,
+        vin_chasis: '',
+        motor: '',
+        observaciones: '',
+        propietario_id: '',
+      }
     setFormData(newFormData)
     setErrors({})
   }, [vehiculo, isOpen])
+
+  // EFECTO: Simulación de IA (Ghost Typing)
+  useEffect(() => {
+    if (!aiPrefill || !isOpen) return;
+
+    const simulateTyping = async (field, value) => {
+      let current = "";
+      const stringValue = String(value);
+      for (let i = 0; i <= stringValue.length; i++) {
+        current = stringValue.substring(0, i);
+        setFormData(prev => ({
+          ...prev,
+          [field]: (field === 'anio' || field === 'kilometraje_actual') ? (parseInt(current, 10) || 0) : current
+        }));
+        await new Promise(resolve => setTimeout(resolve, 40));
+      }
+    };
+
+    const processPrefill = async () => {
+      setIsSimulating(true);
+      await new Promise(resolve => setTimeout(resolve, 600)); // Esperar que el modal se asiente
+
+      if (aiPrefill.propietario_id && canSelectPropietario) {
+        setFormData(prev => ({ ...prev, propietario_id: aiPrefill.propietario_id }));
+        await new Promise(resolve => setTimeout(resolve, 600));
+      }
+
+      if (aiPrefill.placa) await simulateTyping('placa', aiPrefill.placa);
+      if (aiPrefill.marca) await simulateTyping('marca', aiPrefill.marca);
+      if (aiPrefill.modelo) await simulateTyping('modelo', aiPrefill.modelo);
+      if (aiPrefill.anio) await simulateTyping('anio', aiPrefill.anio);
+      if (aiPrefill.color) await simulateTyping('color', aiPrefill.color);
+      if (aiPrefill.kilometraje_actual) await simulateTyping('kilometraje_actual', aiPrefill.kilometraje_actual);
+      if (aiPrefill.vin_chasis) await simulateTyping('vin_chasis', aiPrefill.vin_chasis);
+      if (aiPrefill.motor) await simulateTyping('motor', aiPrefill.motor);
+      if (aiPrefill.observaciones) await simulateTyping('observaciones', aiPrefill.observaciones);
+
+      setIsSimulating(false);
+
+      // Si la acción ya está ejecutada (el usuario ya confirmó en el chat o mandó todos los datos)
+      // enviamos el formulario automáticamente después de rellenar los datos.
+      if (aiPrefill.status === 'EJECUTADA' || aiPrefill.estado === 'EJECUTADA') {
+        setIsAiClickingSubmit(true);
+        await new Promise(resolve => setTimeout(resolve, 800));
+        // Nota: para cuando esto se ejecute, formData puede que no tenga el valor más actual en el closure,
+        // así que usaremos un hack o dependemos de que React haya actualizado el estado.
+        // Pero dado que los await allow react to flush state, formData debería estar actualizado
+        // al momento de llamar handleSubmit si lo extraemos o el componente se renderiza de nuevo.
+        // En lugar de depender de formData en el closure, lo mejor es despachar un evento de submit real, 
+        // o podemos confiar en que form reference lo maneje.
+        const submitEvent = { preventDefault: () => { } };
+        // Para estar seguros, forzamos un submit invocando al botón
+        const submitBtn = document.getElementById('vehiculo-submit-btn');
+        if (submitBtn) {
+           submitBtn.click();
+        } else {
+           handleSubmit(submitEvent);
+        }
+        setIsAiClickingSubmit(false);
+      }
+    };
+
+    processPrefill();
+  }, [aiPrefill, isOpen]);
 
   const handleInputChange = (e) => {
     const { name, value, type } = e.target
@@ -117,9 +184,10 @@ export const VehiculoModal = ({
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
       <div className="bg-white dark:bg-carbon-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="sticky top-0 bg-white dark:bg-carbon-800 px-6 py-4 border-b border-neutral-200 dark:border-white/[0.08] flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-carbon-900 dark:text-white">
-            {vehiculo ? <><Pencil className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Editar Vehículo</> : <><Car className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Registrar Nuevo Vehículo</>}
+        <div className="sticky top-0 bg-white dark:bg-carbon-800 px-6 py-4 border-b border-neutral-200 dark:border-white/[0.08] flex items-center justify-between z-10">
+          <h2 className="text-xl font-semibold text-carbon-900 dark:text-white flex items-center gap-2">
+            {vehiculo ? <><Pencil size={20} /> Editar Vehículo</> : <><Car size={20} /> Registrar Nuevo Vehículo</>}
+            {isSimulating && <Sparkles className="text-primary-500 animate-pulse" size={18} />}
           </h2>
           <button
             onClick={onClose}
@@ -144,7 +212,7 @@ export const VehiculoModal = ({
                 name="propietario_id"
                 value={formData.propietario_id}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-neutral-300 dark:border-white/[0.08] rounded-lg bg-white dark:bg-carbon-700 text-carbon-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-carbon-700 text-carbon-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all ${aiPrefill?.propietario_id ? 'ring-2 ring-primary-500 shadow-lg' : 'border-neutral-300 dark:border-white/[0.08]'}`}
               >
                 <option value="">Seleccionar propietario...</option>
                 {usuarios.map((user) => (
@@ -177,9 +245,8 @@ export const VehiculoModal = ({
               onChange={handleInputChange}
               placeholder="Ej: ABC123"
               maxLength="50"
-              className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-carbon-700 text-carbon-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                errors.placa ? 'border-red-500' : 'border-neutral-300 dark:border-white/[0.08]'
-              }`}
+              className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-carbon-700 text-carbon-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all ${errors.placa ? 'border-red-500' : aiPrefill?.placa ? 'ring-2 ring-primary-500 shadow-lg' : 'border-neutral-300 dark:border-white/[0.08]'
+                }`}
               disabled={isLoading || !!vehiculo} // No permitir editar placa
             />
             {errors.placa && <p className="text-red-500 text-xs mt-1">{errors.placa}</p>}
@@ -197,9 +264,8 @@ export const VehiculoModal = ({
               onChange={handleInputChange}
               placeholder="Ej: Toyota"
               maxLength="100"
-              className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-carbon-700 text-carbon-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                errors.marca ? 'border-red-500' : 'border-neutral-300 dark:border-white/[0.08]'
-              }`}
+              className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-carbon-700 text-carbon-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all ${errors.marca ? 'border-red-500' : aiPrefill?.marca ? 'ring-2 ring-primary-500 shadow-lg' : 'border-neutral-300 dark:border-white/[0.08]'
+                }`}
             />
             {errors.marca && <p className="text-red-500 text-xs mt-1">{errors.marca}</p>}
           </div>
@@ -216,9 +282,8 @@ export const VehiculoModal = ({
               onChange={handleInputChange}
               placeholder="Ej: Corolla"
               maxLength="100"
-              className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-carbon-700 text-carbon-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                errors.modelo ? 'border-red-500' : 'border-neutral-300 dark:border-white/[0.08]'
-              }`}
+              className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-carbon-700 text-carbon-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all ${errors.modelo ? 'border-red-500' : aiPrefill?.modelo ? 'ring-2 ring-primary-500 shadow-lg' : 'border-neutral-300 dark:border-white/[0.08]'
+                }`}
             />
             {errors.modelo && <p className="text-red-500 text-xs mt-1">{errors.modelo}</p>}
           </div>
@@ -237,9 +302,8 @@ export const VehiculoModal = ({
                 onChange={handleInputChange}
                 min="1900"
                 max={new Date().getFullYear() + 1}
-                className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-carbon-700 text-carbon-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                  errors.anio ? 'border-red-500' : 'border-neutral-300 dark:border-white/[0.08]'
-                }`}
+                className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-carbon-700 text-carbon-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all ${errors.anio ? 'border-red-500' : aiPrefill?.anio ? 'ring-2 ring-primary-500 shadow-lg' : 'border-neutral-300 dark:border-white/[0.08]'
+                  }`}
               />
               {errors.anio && <p className="text-red-500 text-xs mt-1">{errors.anio}</p>}
             </div>
@@ -256,7 +320,7 @@ export const VehiculoModal = ({
                 onChange={handleInputChange}
                 placeholder="Ej: Blanco"
                 maxLength="100"
-                className="w-full px-3 py-2 border border-neutral-300 dark:border-white/[0.08] rounded-lg bg-white dark:bg-carbon-700 text-carbon-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-carbon-700 text-carbon-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all ${aiPrefill?.color ? 'ring-2 ring-primary-500 shadow-lg' : 'border-neutral-300 dark:border-white/[0.08]'}`}
               />
             </div>
           </div>
@@ -272,9 +336,8 @@ export const VehiculoModal = ({
               value={formData.kilometraje_actual}
               onChange={handleInputChange}
               min="0"
-              className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-carbon-700 text-carbon-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                errors.kilometraje_actual ? 'border-red-500' : 'border-neutral-300 dark:border-white/[0.08]'
-              }`}
+              className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-carbon-700 text-carbon-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all ${errors.kilometraje_actual ? 'border-red-500' : aiPrefill?.kilometraje_actual ? 'ring-2 ring-primary-500 shadow-lg' : 'border-neutral-300 dark:border-white/[0.08]'
+                }`}
             />
             {errors.kilometraje_actual && <p className="text-red-500 text-xs mt-1">{errors.kilometraje_actual}</p>}
           </div>
@@ -293,7 +356,7 @@ export const VehiculoModal = ({
                 onChange={handleInputChange}
                 placeholder="Número VIN"
                 maxLength="100"
-                className="w-full px-3 py-2 border border-neutral-300 dark:border-white/[0.08] rounded-lg bg-white dark:bg-carbon-700 text-carbon-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-carbon-700 text-carbon-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all ${aiPrefill?.vin_chasis ? 'ring-2 ring-primary-500 shadow-lg' : 'border-neutral-300 dark:border-white/[0.08]'}`}
               />
             </div>
 
@@ -309,7 +372,7 @@ export const VehiculoModal = ({
                 onChange={handleInputChange}
                 placeholder="Ej: 1.8L Gasolina"
                 maxLength="100"
-                className="w-full px-3 py-2 border border-neutral-300 dark:border-white/[0.08] rounded-lg bg-white dark:bg-carbon-700 text-carbon-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-carbon-700 text-carbon-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all ${aiPrefill?.motor ? 'ring-2 ring-primary-500 shadow-lg' : 'border-neutral-300 dark:border-white/[0.08]'}`}
               />
             </div>
           </div>
@@ -326,7 +389,7 @@ export const VehiculoModal = ({
               placeholder="Notas adicionalesobre el vehículo..."
               maxLength="500"
               rows="3"
-              className="w-full px-3 py-2 border border-neutral-300 dark:border-white/[0.08] rounded-lg bg-white dark:bg-carbon-700 text-carbon-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+              className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-carbon-700 text-carbon-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none transition-all ${aiPrefill?.observaciones ? 'ring-2 ring-primary-500 shadow-lg' : 'border-neutral-300 dark:border-white/[0.08]'}`}
             />
           </div>
 
@@ -341,11 +404,12 @@ export const VehiculoModal = ({
               Cancelar
             </button>
             <button
+              id="vehiculo-submit-btn"
               type="submit"
               disabled={isLoading}
-              className="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+              className={`px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-all disabled:opacity-50 flex items-center gap-2 ${isAiClickingSubmit ? 'ring-4 ring-primary-400 scale-105 shadow-xl' : ''}`}
             >
-              {isLoading && <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>}
+              {(isLoading || isAiClickingSubmit) && <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>}
               {vehiculo ? 'Guardar Cambios' : 'Registrar Vehículo'}
             </button>
           </div>

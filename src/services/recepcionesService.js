@@ -28,7 +28,8 @@ export const listarRecepciones = async (tenantSlug, filtros = {}) => {
     }
 
     const queryString = params.toString();
-    const url = `/api/${tenantSlug}/recepciones-vehiculo/${queryString ? '' + queryString  : ''}`;
+    const baseUrl = `/api/${tenantSlug}/recepciones-vehiculo/`;
+    const url = queryString ? `${baseUrl}?${queryString}` : baseUrl;
     
     const response = await apiClient.get(url);
     return response.data;
@@ -157,6 +158,40 @@ export const obtenerEstadisticas = async (tenantSlug) => {
     return response.data;
   } catch (error) {
     console.error('Error obteniendo estadísticas:', error);
+    throw error;
+  }
+};
+
+/**
+ * Obtener pendientes operativos:
+ * - pendientes_recepcion
+ * - pendientes_recogida
+ * GET /api/{slug}/recepciones-vehiculo/pendientes-operacion/
+ */
+export const obtenerPendientesOperacion = async (tenantSlug) => {
+  try {
+    const response = await apiClient.get(
+      `/api/${tenantSlug}/recepciones-vehiculo/pendientes-operacion/`
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error obteniendo pendientes de operacion:', error);
+    throw error;
+  }
+};
+
+/**
+ * Marcar una recepción como recogida
+ * POST /api/{slug}/recepciones-vehiculo/{id}/marcar-recogida/
+ */
+export const marcarRecogida = async (tenantSlug, recepcionId) => {
+  try {
+    const response = await apiClient.post(
+      `/api/${tenantSlug}/recepciones-vehiculo/${recepcionId}/marcar-recogida/`
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error marcando recogida:', error);
     throw error;
   }
 };

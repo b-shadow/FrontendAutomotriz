@@ -62,6 +62,14 @@ const LEGACY_MODULE_MAP = {
   servicios: 'vehiculos-servicios', espacios : 'vehiculos-servicios',
   'planes-vehiculo': 'vehiculos-servicios', citas : 'vehiculos-servicios',
   'recepciones-vehiculo': 'atencion-tecnica',
+  'presupuestos-cita': 'atencion-tecnica',
+  'ordenes-trabajo': 'atencion-tecnica',
+  'taller-interno': 'atencion-tecnica',
+  'avances-vehiculo': 'atencion-tecnica',
+  'categorias-inventario': 'gestion-administrativa',
+  'items-inventario': 'gestion-administrativa',
+  'movimientos-inventario': 'gestion-administrativa',
+  'solicitudes-repuesto': 'gestion-administrativa',
 }
 
 const remapLegacyTenantUrl = (url) => {
@@ -101,6 +109,15 @@ const fixMojibakeString = (value) => {
 }
 
 const normalizeResponseData = (value) => {
+  if (typeof Blob !== 'undefined' && value instanceof Blob) {
+    return value
+  }
+  if (typeof File !== 'undefined' && value instanceof File) {
+    return value
+  }
+  if (typeof ArrayBuffer !== 'undefined' && value instanceof ArrayBuffer) {
+    return value
+  }
   if (typeof value === 'string') {
     return fixMojibakeString(value)
   }
@@ -184,3 +201,4 @@ publicApiClient.interceptors.response.use(
 
 export { apiClient, publicApiClient }
 export default apiClient
+

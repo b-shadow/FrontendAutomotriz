@@ -282,6 +282,27 @@ const espaciosTrabajoService = {
       throw error
     }
   },
+
+  /**
+   * Reemplazar horarios de un día por bloques de 30 min
+   * PUT /api/{slug}/espacios/{espacio_id}/horarios-bloques/
+   *
+   * @param {string} tenantSlug
+   * @param {string} espacioId
+   * @param {object} payload { dia_semana, bloques_inicio_min: number[] }
+   */
+  reemplazarHorariosPorBloques: async (tenantSlug, espacioId, payload) => {
+    try {
+      const response = await apiClient.put(
+        `/api/${tenantSlug}/espacios/${espacioId}/horarios-bloques/`,
+        payload
+      )
+      return response.data
+    } catch (error) {
+      console.error('Error al reemplazar horarios por bloques:', error)
+      throw error
+    }
+  },
 }
 
 export default espaciosTrabajoService

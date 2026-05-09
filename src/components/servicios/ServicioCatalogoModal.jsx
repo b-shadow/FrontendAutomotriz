@@ -1,5 +1,27 @@
-import { Pencil, Settings } from 'lucide-react';
+﻿import { Pencil, Settings } from 'lucide-react';
 import { useState, useEffect } from 'react'
+
+const BLOQUE_MINUTOS = 30
+const DURACION_MAX_MIN = 12 * 60
+
+const DURACIONES_SERVICIO = Array.from(
+  { length: DURACION_MAX_MIN / BLOQUE_MINUTOS },
+  (_, i) => {
+    const value = (i + 1) * BLOQUE_MINUTOS
+    const horas = Math.floor(value / 60)
+    const minutos = value % 60
+
+    let label = ''
+    if (horas > 0) {
+      label = `${horas} hora${horas > 1 ? 's' : ''}`
+      if (minutos > 0) label += ` ${minutos} minutos`
+    } else {
+      label = `${minutos} minutos`
+    }
+
+    return { value, label }
+  }
+)
 
 export const ServicioCatalogoModal = ({
   isOpen,
@@ -22,7 +44,7 @@ export const ServicioCatalogoModal = ({
 
   useEffect(() => {
     if (!isOpen) return
-    
+
     const newFormData = servicio
       ? {
           codigo: servicio.codigo || '',
@@ -38,7 +60,7 @@ export const ServicioCatalogoModal = ({
           tiempo_estandar_min: '',
           precio_base: '',
         }
-    
+
     setFormData(newFormData)
     setErrors({})
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -110,7 +132,7 @@ export const ServicioCatalogoModal = ({
       ...prev,
       [name]: type === 'number' ? parseFloat(value) || '' : value,
     }))
-    // Limpiar error para este campo
+
     if (errors[name]) {
       setErrors((prev) => ({
         ...prev,
@@ -131,9 +153,12 @@ export const ServicioCatalogoModal = ({
     if (!formData.descripcion.trim()) {
       newErrors.descripcion = 'La descripción es obligatoria'
     }
-    if (!formData.tiempo_estandar_min || parseInt(formData.tiempo_estandar_min) <= 0) {
-      newErrors.tiempo_estandar_min = 'El tiempo debe ser mayor a 0 minutos'
+
+    const tiempo = parseInt(formData.tiempo_estandar_min, 10)
+    if (!tiempo || tiempo < BLOQUE_MINUTOS || tiempo % BLOQUE_MINUTOS !== 0) {
+      newErrors.tiempo_estandar_min = 'Selecciona una duración válida en bloques de 30 minutos'
     }
+
     if (!formData.precio_base || parseFloat(formData.precio_base) < 0) {
       newErrors.precio_base = 'El precio base es obligatorio y debe ser >= 0'
     }
@@ -148,12 +173,11 @@ export const ServicioCatalogoModal = ({
       return
     }
 
-    // Preparar datos para enviar
     const dataToSubmit = {
       codigo: formData.codigo.trim(),
       nombre: formData.nombre.trim(),
       descripcion: formData.descripcion.trim(),
-      tiempo_estandar_min: parseInt(formData.tiempo_estandar_min),
+      tiempo_estandar_min: parseInt(formData.tiempo_estandar_min, 10),
       precio_base: parseFloat(formData.precio_base),
     }
 
@@ -168,7 +192,6 @@ export const ServicioCatalogoModal = ({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
       <div className="bg-white dark:bg-carbon-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        {/* Header */}
         <div className="sticky top-0 bg-white dark:bg-carbon-800 px-6 py-4 border-b border-neutral-200 dark:border-white/[0.08] flex items-center justify-between">
           <h2 className="text-xl font-semibold text-carbon-900 dark:text-white">
             {servicio ? <><Pencil className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Editar Servicio</> : <><Settings className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Agregar Nuevo Servicio</>}
@@ -184,9 +207,7 @@ export const ServicioCatalogoModal = ({
           </button>
         </div>
 
-        {/* Contenido */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {/* Código */}
           <div>
             <label className="block text-sm font-medium text-carbon-700 dark:text-neutral-300 mb-2">
               Código del Servicio *
@@ -206,7 +227,6 @@ export const ServicioCatalogoModal = ({
             {errors.codigo && <p className="text-red-500 text-xs mt-1">{errors.codigo}</p>}
           </div>
 
-          {/* Nombre */}
           <div>
             <label className="block text-sm font-medium text-carbon-700 dark:text-neutral-300 mb-2">
               Nombre del Servicio *
@@ -225,7 +245,6 @@ export const ServicioCatalogoModal = ({
             {errors.nombre && <p className="text-red-500 text-xs mt-1">{errors.nombre}</p>}
           </div>
 
-          {/* Descripción */}
           <div>
             <label className="block text-sm font-medium text-carbon-700 dark:text-neutral-300 mb-2">
               Descripción *
@@ -244,29 +263,30 @@ export const ServicioCatalogoModal = ({
             {errors.descripcion && <p className="text-red-500 text-xs mt-1">{errors.descripcion}</p>}
           </div>
 
-          {/* Tiempo estándar y Precio base en una fila */}
           <div className="grid grid-cols-2 gap-4">
-            {/* Tiempo Estándar */}
             <div>
               <label className="block text-sm font-medium text-carbon-700 dark:text-neutral-300 mb-2">
-                Tiempo Estándar (minutos) *
+                Tiempo Estándar *
               </label>
-              <input
-                type="number"
+              <select
                 name="tiempo_estandar_min"
                 value={formData.tiempo_estandar_min}
                 onChange={handleInputChange}
-                placeholder="Ej: 30"
-                min="1"
                 className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-carbon-700 text-carbon-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
                   errors.tiempo_estandar_min ? 'border-red-500' : 'border-neutral-300 dark:border-white/[0.08]'
                 }`}
-              />
+              >
+                <option value="">Selecciona duración</option>
+                {DURACIONES_SERVICIO.map((d) => (
+                  <option key={d.value} value={d.value}>
+                    {d.label}
+                  </option>
+                ))}
+              </select>
               {errors.tiempo_estandar_min && <p className="text-red-500 text-xs mt-1">{errors.tiempo_estandar_min}</p>}
-              <p className="text-xs text-carbon-500 dark:text-neutral-400 mt-1">Se usará para planificación y reservas</p>
+              <p className="text-xs text-carbon-500 dark:text-neutral-400 mt-1">Solo bloques de 30 minutos</p>
             </div>
 
-            {/* Precio Base */}
             <div>
               <label className="block text-sm font-medium text-carbon-700 dark:text-neutral-300 mb-2">
                 Precio Base (Bs.) *
@@ -287,7 +307,6 @@ export const ServicioCatalogoModal = ({
             </div>
           </div>
 
-          {/* Botones */}
           <div className="flex gap-3 justify-end pt-6 border-t border-neutral-200 dark:border-white/[0.08]">
             <button
               type="button"

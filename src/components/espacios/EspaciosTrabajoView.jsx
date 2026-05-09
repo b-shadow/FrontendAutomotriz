@@ -522,7 +522,7 @@ export const EspaciosTrabajoView = ({ user, tenantSlug, onSuccess, aiPrefill }) 
       {/* Modal de Estado */}
       {isEstadoModalOpen && (
         <CambiarEstadoEspacioModal
-          key={`estado-${selectedEspacio.id}`}
+          key={`estado-${selectedEspacio?.id || 'current'}`}
           isOpen={isEstadoModalOpen}
           onClose={handleCloseEstadoModal}
           onSave={handleSaveEstado}

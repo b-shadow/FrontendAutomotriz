@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { CarFront, ClipboardList, RefreshCw } from 'lucide-react'
 import {
-  citasPendientes,
+  obtenerPendientesOperacion,
   listarRecepciones,
   crearRecepcion,
+  marcarRecogida,
 } from '@/services/recepcionesService'
 import RecepcionModalCrear from '@/components/recepciones/RecepcionModalCrear'
 import RecepcionLista from '@/components/recepciones/RecepcionLista'
@@ -13,6 +14,7 @@ export default function RecepcionVehiculoView({ tenantSlug }) {
   const [activeTab, setActiveTab] = useState('pendientes')
 
   const [citasPend, setCitasPend] = useState([])
+  const [recepcionesPendRecogida, setRecepcionesPendRecogida] = useState([])
   const [loadingCitas, setLoadingCitas] = useState(false)
   const [errorCitas, setErrorCitas] = useState(null)
 
@@ -41,8 +43,9 @@ export default function RecepcionVehiculoView({ tenantSlug }) {
     setLoadingCitas(true)
     setErrorCitas(null)
     try {
-      const data = await citasPendientes(tenantSlug)
-      setCitasPend(data.results || data)
+      const data = await obtenerPendientesOperacion(tenantSlug)
+      setCitasPend(data.pendientes_recepcion || [])
+      setRecepcionesPendRecogida(data.pendientes_recogida || [])
     } catch (error) {
       setErrorCitas(error.message || 'Error cargando citas pendientes')
     } finally {
@@ -88,9 +91,35 @@ export default function RecepcionVehiculoView({ tenantSlug }) {
       setTimeout(() => setShowSuccessModal(false), 3000)
     } catch (error) {
       console.error('Error creando recepcion:', error)
-      alert('Error: ' + (error.response.data.cita_id[0] || error.message))
+      const backendData = error?.response?.data || {}
+      const firstFieldError = Object.values(backendData).find((v) => Array.isArray(v) && v.length > 0)
+      const message =
+        (typeof backendData.error === 'string' && backendData.error) ||
+        (typeof backendData.detail === 'string' && backendData.detail) ||
+        (Array.isArray(firstFieldError) ? firstFieldError[0] : null) ||
+        error.message ||
+        'No se pudo registrar la recepción'
+      alert(`Error: ${message}`)
     } finally {
       setCreando(false)
+    }
+  }
+
+  const handleMarcarRecogida = async (recepcionId) => {
+    try {
+      await marcarRecogida(tenantSlug, recepcionId)
+      await cargarCitasPendientes()
+      if (activeTab === 'historial') {
+        await cargarRecepciones()
+      }
+    } catch (error) {
+      const backendData = error?.response?.data || {}
+      const message =
+        (typeof backendData.error === 'string' && backendData.error) ||
+        (typeof backendData.detail === 'string' && backendData.detail) ||
+        error.message ||
+        'No se pudo marcar la recogida'
+      alert(`Error: ${message}`)
     }
   }
 
@@ -115,7 +144,7 @@ export default function RecepcionVehiculoView({ tenantSlug }) {
                 : 'border-transparent text-carbon-600 dark:text-neutral-400 hover:text-carbon-900 dark:hover:text-neutral-300'
             }`}
           >
-            Citas Pendientes ({citasPend.length})
+            Citas Pendientes ({citasPend.length + recepcionesPendRecogida.length})
           </button>
           <button
             onClick={() => setActiveTab('historial')}
@@ -140,14 +169,64 @@ export default function RecepcionVehiculoView({ tenantSlug }) {
             <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800/30 rounded-lg p-4 text-red-700 dark:text-red-300">
               {errorCitas}
             </div>
-          ) : citasPend.length === 0 ? (
-            <div className="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800/30 rounded-lg p-6 text-center">
-              <p className="text-green-700 dark:text-green-300 font-medium">
-                No hay citas pendientes de recibir
-              </p>
-            </div>
+          ) : (
+            <div className="space-y-4">
+              {citasPend.length > 0 ? (
+                <CitasPendientesLista citas={citasPend} onRegistrarRecepcion={abrirModalRecepcion} />
               ) : (
-            <CitasPendientesLista citas={citasPend} onRegistrarRecepcion={abrirModalRecepcion} />
+                <div className="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800/30 rounded-lg p-6 text-center">
+                  <p className="text-green-700 dark:text-green-300 font-medium">
+                    No hay citas pendientes de recibir
+                  </p>
+                </div>
+              )}
+              {recepcionesPendRecogida.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold text-carbon-800 dark:text-neutral-200 mb-2">
+                    Pendientes de recogida ({recepcionesPendRecogida.length})
+                  </h3>
+                  <div className="overflow-x-auto border border-neutral-200/60 dark:border-white/[0.06] rounded-lg">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-neutral-200/60 dark:border-white/[0.06] bg-neutral-50 dark:bg-carbon-800">
+                          <th className="px-4 py-3 text-left font-semibold text-carbon-700 dark:text-neutral-300">Vehiculo</th>
+                          <th className="px-4 py-3 text-left font-semibold text-carbon-700 dark:text-neutral-300">Cliente</th>
+                          <th className="px-4 py-3 text-left font-semibold text-carbon-700 dark:text-neutral-300">Recepcion</th>
+                          <th className="px-4 py-3 text-center font-semibold text-carbon-700 dark:text-neutral-300">Accion</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {recepcionesPendRecogida.map((r) => (
+                          <tr key={r.id} className="border-b border-neutral-200/60 dark:border-white/[0.06] hover:bg-neutral-50 dark:hover:bg-carbon-800/50 transition">
+                            <td className="px-4 py-3 font-semibold text-carbon-900 dark:text-white">{r.vehiculo_placa || '-'}</td>
+                            <td className="px-4 py-3 text-carbon-900 dark:text-white">{r.cliente_nombre || '-'}</td>
+                            <td className="px-4 py-3 text-carbon-700 dark:text-neutral-300">
+                              {r.fecha_recepcion ? new Date(r.fecha_recepcion).toLocaleString('es-ES') : '-'}
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              <button
+                                onClick={() => handleMarcarRecogida(r.id)}
+                                className="btn btn-primary btn-small"
+                              >
+                                Marcar recogida
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <p className="text-xs text-carbon-500 dark:text-neutral-400 mt-2">
+                    Solo se permite recoger cuando el presupuesto de la cita está pagado al 100%.
+                  </p>
+                </div>
+              )}
+              {citasPend.length === 0 && recepcionesPendRecogida.length === 0 && (
+                <div className="bg-neutral-100 dark:bg-carbon-800 rounded-lg p-6 text-center text-carbon-600 dark:text-neutral-300">
+                  No hay pendientes de recepción ni de recogida.
+                </div>
+              )}
+            </div>
           )}
         </div>
       )}

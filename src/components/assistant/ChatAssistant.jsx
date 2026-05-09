@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   X, Send, Mic, Sparkles, Bot, User,
   Loader2, CheckCircle2, ChevronRight,
-  MoreHorizontal, Volume2, VolumeX,
+  MoreHorizontal, Volume2, VolumeX, Trash2,
   Calendar, Car, Wrench, FileText, UserPlus, Package, AlertTriangle
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -29,6 +29,7 @@ const ChatAssistant = ({
   const [suggestedActions, setSuggestedActions] = useState([]);
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
 
   const messagesEndRef = useRef(null);
   const mediaRecorderRef = useRef(null);
@@ -96,31 +97,61 @@ const ChatAssistant = ({
   const initConversation = async () => {
     try {
       const data = await assistantService.getConversations(tenantSlug);
+      console.log("[ChatAssistant] Conversaciones encontradas:", data.length);
       if (data.length > 0) {
-        setCurrentConversationId(data[0].id);
-        // Podríamos cargar mensajes previos aquí
-        setMessages([
-          {
-            id: 'welcome',
-            sender: 'ai',
-            text: `¡Hola ${user.nombres}! Soy tu asistente de AutoTaller Pro. ¿En qué puedo ayudarte hoy?`,
+        const convId = data[0].id;
+        setCurrentConversationId(convId);
+        // Cargar mensajes previos de la BD
+        try {
+          const convDetail = await assistantService.getConversationMessages(tenantSlug, convId);
+          console.log("[ChatAssistant] Mensajes cargados:", convDetail.mensajes?.length || 0);
+          if (convDetail.mensajes && convDetail.mensajes.length > 0) {
+            setMessages(convDetail.mensajes);
+            setSuggestedActions([]);
+            return;
           }
-        ]);
+        } catch (err) {
+          console.error("[ChatAssistant] Error cargando mensajes:", err);
+        }
+        // Fallback: sin mensajes previos
+        setMessages([{
+          id: 'welcome',
+          sender: 'ai',
+          text: `¡Hola ${user.nombres}! Soy tu asistente de AutoTaller Pro. ¿En qué puedo ayudarte hoy?`,
+        }]);
         setSuggestedActions(["Agendar Cita", "Ver Vehículos", "Estado de Taller"]);
       } else {
         const newConv = await assistantService.createConversation(tenantSlug);
         setCurrentConversationId(newConv.id);
-        setMessages([
-          {
-            id: 'welcome',
-            sender: 'ai',
-            text: `¡Hola ${user.nombres}! Bienvenido al asistente de AutoTaller Pro. Estoy listo para ayudarte con tus tareas diarias.`,
-          }
-        ]);
+        setMessages([{
+          id: 'welcome',
+          sender: 'ai',
+          text: `¡Hola ${user.nombres}! Bienvenido al asistente de AutoTaller Pro. Estoy listo para ayudarte con tus tareas diarias.`,
+        }]);
         setSuggestedActions(["¿Qué puedes hacer?", "Registrar Vehículo"]);
       }
     } catch (error) {
       console.error("Error al iniciar conversación:", error);
+    }
+  };
+
+  const handleClearChat = async () => {
+    setShowMenu(false);
+    if (!currentConversationId) return;
+    try {
+      // Archivar la conversación actual en la BD
+      await assistantService.archiveConversation(tenantSlug, currentConversationId);
+      // Crear nueva conversación
+      const newConv = await assistantService.createConversation(tenantSlug);
+      setCurrentConversationId(newConv.id);
+      setMessages([{
+        id: 'welcome-new',
+        sender: 'ai',
+        text: `¡Chat limpio! Conversación anterior archivada. ¿En qué puedo ayudarte ahora, ${user.nombres}?`,
+      }]);
+      setSuggestedActions(["¿Qué puedes hacer?", "Registrar Vehículo"]);
+    } catch (error) {
+      console.error("Error al limpiar chat:", error);
     }
   };
 
@@ -312,6 +343,24 @@ const ChatAssistant = ({
           >
             {isVoiceEnabled ? <Volume2 size={18} className={isSpeaking ? 'animate-pulse text-green-400' : ''} /> : <VolumeX size={18} />}
           </button>
+          <div className="relative">
+            <button
+              onClick={() => setShowMenu(!showMenu)}
+              className="p-2 text-carbon-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors"
+            >
+              <MoreHorizontal size={18} />
+            </button>
+            {showMenu && (
+              <div className="absolute right-0 top-full mt-1 w-44 bg-carbon-800 border border-white/[0.08] rounded-xl shadow-xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200">
+                <button
+                  onClick={handleClearChat}
+                  className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-red-400 hover:bg-white/[0.05] transition-colors text-left"
+                >
+                  <Trash2 size={15} /> Limpiar Chat
+                </button>
+              </div>
+            )}
+          </div>
           <button
             onClick={onClose}
             className="p-2 text-carbon-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors"

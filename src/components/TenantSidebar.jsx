@@ -121,7 +121,7 @@ export const TenantSidebar = ({
         },
         {
           id: 'citas', label: <><Calendar className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Gestionar Citas</>,
-          visible: canViewRecepcionVehiculo(user),
+          visible: canViewCitas(user),
         },
       ],
     },
@@ -129,16 +129,16 @@ export const TenantSidebar = ({
       label: 'Atención Técnica', icon: <Wrench className="inline-block mx-1 text-current" size={20} strokeWidth={2} />,
       items: [
         {
-          id: 'recepcionVehiculo', label: <><ClipboardCheck className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Recepción de Vehículos</>,
-          visible: canViewCitas(user),
+          id: 'recepcionVehiculo', label: <><ClipboardCheck className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> RecepciÃ³n de VehÃ­culos</>,
+          visible: canViewRecepcionVehiculo(user),
         },
         {
           id: 'presupuestos', label: <><CreditCard className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Gestionar Presupuesto</>,
           visible: canViewCitas(user),
         },
         {
-          id: 'ordenesTrabajo', label: <><ClipboardList className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Órdenes de Trabajo</>,
-          visible: canViewCitas(user),
+          id: 'ordenesTrabajo', label: <><ClipboardList className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Ã“rdenes de Trabajo</>,
+          visible: canViewRecepcionVehiculo(user),
         },
         {
           id: 'tallerInterno', label: <><ClipboardCheck className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Taller Interno</>,
@@ -176,11 +176,11 @@ export const TenantSidebar = ({
         },
         {
           id: 'notificaciones', label: <><Mailbox className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Historial de Notificaciones</>,
-          visible: canManageBackups(user),
+          visible: true,
         },
         {
           id: 'gestionarBackup', label: <><Save className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Gestionar Backup</>,
-          visible: true,
+          visible: canManageBackups(user),
         },
       ],
     },
@@ -365,3 +365,5 @@ export const TenantSidebar = ({
   )
 }
 export default TenantSidebar
+
+

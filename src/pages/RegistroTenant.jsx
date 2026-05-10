@@ -5,6 +5,7 @@ import { useTenant } from '../hooks/useTenant'
 import authService from '../services/authService'
 import { Button, Input } from '../components/ui'
 import ThemeToggle from '../components/ThemeToggle'
+import { PASSWORD_POLICY_MESSAGE, validateStrongPassword } from '../utils/passwordValidation'
 
 export const RegistroTenant = () => {
   const { tenantSlug } = useParams()
@@ -30,7 +31,8 @@ export const RegistroTenant = () => {
     if (!formData.apellidos.trim()) return 'Los apellidos son requeridos'
     if (!formData.email.trim()) return 'El email es requerido'
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) return 'Email inválido'
-    if (formData.password.length < 8) return 'La contraseña debe tener al menos 8 caracteres'
+    const passwordError = validateStrongPassword(formData.password)
+    if (passwordError) return passwordError
     if (formData.password !== formData.confirmPassword) return 'Las contraseñas no coinciden'
     return null
   }
@@ -198,6 +200,9 @@ export const RegistroTenant = () => {
                     minLength={8}
                     disabled={loading}
                   />
+                  <p className="text-xs text-carbon-500 dark:text-neutral-400 -mt-3">
+                    {PASSWORD_POLICY_MESSAGE}
+                  </p>
 
                   <Input
                     label="Confirmar Contraseña"

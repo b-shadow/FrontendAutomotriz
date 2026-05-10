@@ -12,6 +12,8 @@ import {
   canViewCitas,
   canViewTallerInterno,
   canViewInventario,
+  canViewRecepcionVehiculo,
+  canManageBackups,
 } from '../utils/roleHelper'
 
 const ChevronDownIcon = ({ className }) => (
@@ -119,7 +121,7 @@ export const TenantSidebar = ({
         },
         {
           id: 'citas', label: <><Calendar className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Gestionar Citas</>,
-          visible: canViewCitas(user),
+          visible: canViewRecepcionVehiculo(user),
         },
       ],
     },
@@ -174,7 +176,7 @@ export const TenantSidebar = ({
         },
         {
           id: 'notificaciones', label: <><Mailbox className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Historial de Notificaciones</>,
-          visible: true,
+          visible: canManageBackups(user),
         },
         {
           id: 'gestionarBackup', label: <><Save className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Gestionar Backup</>,

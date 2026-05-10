@@ -196,6 +196,7 @@ export const authService = {
       })
       return {
         success: true, paymentIntentId : response.data.paymentIntentId,
+        clientSecret: response.data.clientSecret,
         paymentIntent: response.data,
       }
     } catch (err) {

@@ -1,8 +1,9 @@
 import { Wrench, CreditCard, CheckCircle } from 'lucide-react';
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import authService from '../services/authService'
 import ThemeToggle from '../components/ThemeToggle'
+import { PASSWORD_POLICY_MESSAGE, validateStrongPassword } from '../utils/passwordValidation'
 
 /**
  * RegistrarEmpresa: Multi-step wizard para registrar una nueva empresa.
@@ -29,12 +30,13 @@ function RegistrarEmpresa() {
   })
   // Step 3: Payment
   const [cardData, setCardData] = useState({
-    cardNumber: '', expiryDate : '',
-    cvc: '', cardholderName : '',
+    cardholderName: '',
   })
   const [paymentIntentId, setPaymentIntentId] = useState(null)
   // Step 4: Success
   const [successData, setSuccessData] = useState(null)
+  const [confirmAttempted, setConfirmAttempted] = useState(false)
+  const stripeRuntimeRef = useRef(null)
 
   const getPlanPrice = (plan) => {
     if (!plan) return 0
@@ -78,7 +80,8 @@ function RegistrarEmpresa() {
     if (!formData.apellidos.trim()) return 'Los apellidos son requeridos'
     if (!formData.email.trim()) return 'El email es requerido'
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) return 'Email inválido'
-    if (formData.password.length < 8) return 'La contraseña debe tener al menos 8 caracteres'
+    const passwordError = validateStrongPassword(formData.password)
+    if (passwordError) return passwordError
     if (formData.password !== formData.confirmPassword) return 'Las contraseñas no coinciden'
     return null
   }
@@ -86,6 +89,7 @@ function RegistrarEmpresa() {
     // Llamar a confirmarPagoEmpresa para finalizar el registro
     setLoading(true)
     setError('')
+    setConfirmAttempted(true)
     try {
       const result = await authService.confirmarPagoEmpresa(paymentIntentId)
       if (result.success && result.empresa && result.empresa.slug) {
@@ -112,41 +116,60 @@ function RegistrarEmpresa() {
   }, [paymentIntentId, navigate])
   // Cuando llegamos al step 4 con un paymentIntentId, confirmar el pago automáticamente
   useEffect(() => {
-    if (step === 4 && paymentIntentId && !successData && !loading) {
+    if (step === 4 && paymentIntentId && !successData && !loading && !confirmAttempted) {
       handleConfirmPayment()
     }
-  }, [step, paymentIntentId, successData, loading, handleConfirmPayment])
-  const handleCardChange = (e) => {
-    const { name, value } = e.target
-    // Formatear número de tarjeta (espacios cada 4 dígitos)
-    if (name === 'cardNumber') {
-      const cleaned = value.replace(/\s/g, '')
-      const formatted = cleaned.replace(/(\d{4})/g, '$1 ').trim()
-      setCardData(prev => ({ ...prev, [name]: formatted }))
-    }
-    // Formatear fecha de expiración (MM/YY)
-    else if (name === 'expiryDate') {
-      const cleaned = value.replace(/\D/g, '')
-      if (cleaned.length <= 4) {
-        const formatted = cleaned.length >= 2 ? `${cleaned.slice(0, 2)}/${cleaned.slice(2)}` : cleaned
-        setCardData(prev => ({ ...prev, [name]: formatted }))
+  }, [step, paymentIntentId, successData, loading, confirmAttempted, handleConfirmPayment])
+
+  useEffect(() => {
+    let mounted = true
+
+    const mountStripeCard = async () => {
+      if (step !== 3) return
+      if (stripeRuntimeRef.current?.cardElement) return
+      try {
+        const { loadStripe } = await import('@stripe/stripe-js')
+        const stripe = await loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY)
+        if (!stripe || !mounted) return
+        const elements = stripe.elements()
+        const cardElement = elements.create('card', {
+          hidePostalCode: true,
+          style: {
+            base: {
+              fontSize: '16px',
+              color: '#e5e7eb',
+              '::placeholder': { color: '#9ca3af' },
+            },
+            invalid: { color: '#ef4444' },
+          },
+        })
+        const container = document.getElementById('card-element')
+        if (container && mounted) {
+          cardElement.mount('#card-element')
+          stripeRuntimeRef.current = { stripe, cardElement }
+        }
+      } catch {
+        setError('No se pudo cargar Stripe. Intenta recargar la página.')
       }
     }
-    // CVC solo números
-    else if (name === 'cvc') {
-      const cleaned = value.replace(/\D/g, '').slice(0, 4)
-      setCardData(prev => ({ ...prev, [name]: cleaned }))
+
+    mountStripeCard()
+
+    return () => {
+      mounted = false
+      if (step !== 3 && stripeRuntimeRef.current?.cardElement) {
+        stripeRuntimeRef.current.cardElement.unmount()
+        stripeRuntimeRef.current = null
+      }
     }
-    else {
-      setCardData(prev => ({ ...prev, [name]: value }))
-    }
+  }, [step])
+  const handleCardChange = (e) => {
+    const { name, value } = e.target
+    setCardData(prev => ({ ...prev, [name]: value }))
   }
   const validateCardData = () => {
-    const cardNumber = cardData.cardNumber.replace(/\s/g, '')
-    if (!cardNumber || cardNumber.length !== 16) return 'Número de tarjeta inválido'
-    if (!cardData.expiryDate.match(/^\d{2}\/\d{2}$/)) return 'Fecha de expiración inválida (MM/YY)'
-    if (!cardData.cvc || cardData.cvc.length < 3) return 'CVC inválido'
     if (!cardData.cardholderName.trim()) return 'Nombre del titular requerido'
+    if (!stripeRuntimeRef.current?.cardElement) return 'Formulario de tarjeta no cargado. Recarga la página.'
     return null
   }
   const handlePaymentSubmit = async () => {
@@ -175,7 +198,32 @@ function RegistrarEmpresa() {
       )
 
       if (result.success) {
-        setPaymentIntentId(result.paymentIntentId)
+        const stripeRuntime = stripeRuntimeRef.current
+        if (!stripeRuntime?.stripe || !stripeRuntime?.cardElement || !result.clientSecret) {
+          setError('No se pudo inicializar el pago con Stripe.')
+          return
+        }
+
+        const { error: stripeError, paymentIntent: confirmedIntent } =
+          await stripeRuntime.stripe.confirmCardPayment(result.clientSecret, {
+            payment_method: {
+              card: stripeRuntime.cardElement,
+              billing_details: { name: cardData.cardholderName.trim() },
+            },
+          })
+
+        if (stripeError) {
+          setError(stripeError.message || 'Error al confirmar el pago con Stripe')
+          return
+        }
+
+        if (!confirmedIntent || confirmedIntent.status !== 'succeeded') {
+          setError(`El pago no se completó en Stripe. Estado: ${confirmedIntent?.status || 'desconocido'}`)
+          return
+        }
+
+        setPaymentIntentId(confirmedIntent.id)
+        setConfirmAttempted(false)
         setStep(4)
       } else {
         setError(result.error || 'Error al procesar el pago')
@@ -429,6 +477,9 @@ function RegistrarEmpresa() {
                         className="w-full px-4 py-2 rounded-xl border border-neutral-300 dark:border-white/[0.08] bg-white dark:bg-carbon-800/60 text-carbon-900 dark:text-white placeholder-carbon-400 dark:placeholder-neutral-500 transition focus:outline-none focus:border-primary-500 dark:focus:border-primary-400"
                         required
                       />
+                      <p className="text-xs text-carbon-500 dark:text-neutral-400 mt-1">
+                        {PASSWORD_POLICY_MESSAGE}
+                      </p>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-carbon-900 dark:text-white mb-2">Confirmar Contraseña</label>
@@ -529,41 +580,10 @@ function RegistrarEmpresa() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-carbon-900 dark:text-white mb-2">Número de tarjeta</label>
-                  <input
-                    type="text"
-                    name="cardNumber"
-                    placeholder="0000 0000 0000 0000"
-                    value={cardData.cardNumber}
-                    onChange={handleCardChange}
-                    maxLength="19"
-                    className="w-full px-4 py-2 rounded-xl border border-neutral-300 dark:border-white/[0.08] bg-white dark:bg-carbon-800/60 text-carbon-900 dark:text-white font-mono placeholder-carbon-400 dark:placeholder-neutral-500 transition focus:outline-none focus:border-primary-500 dark:focus:border-primary-400"
+                  <div
+                    id="card-element"
+                    className="w-full px-4 py-3 rounded-xl border border-neutral-300 dark:border-white/[0.08] bg-white dark:bg-carbon-800/60 text-carbon-900 dark:text-white transition focus-within:border-primary-500 dark:focus-within:border-primary-400"
                   />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-carbon-900 dark:text-white mb-2">Vencimiento</label>
-                    <input
-                      type="text"
-                      name="expiryDate"
-                      placeholder="MM/YY"
-                      value={cardData.expiryDate}
-                      onChange={handleCardChange}
-                      maxLength="5"
-                      className="w-full px-4 py-2 rounded-xl border border-neutral-300 dark:border-white/[0.08] bg-white dark:bg-carbon-800/60 text-carbon-900 dark:text-white font-mono placeholder-carbon-400 dark:placeholder-neutral-500 transition focus:outline-none focus:border-primary-500 dark:focus:border-primary-400"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-carbon-900 dark:text-white mb-2">CVC</label>
-                    <input
-                      type="text"
-                      name="cvc"
-                      placeholder="000"
-                      value={cardData.cvc}
-                      onChange={handleCardChange}
-                      maxLength="4"
-                      className="w-full px-4 py-2 rounded-xl border border-neutral-300 dark:border-white/[0.08] bg-white dark:bg-carbon-800/60 text-carbon-900 dark:text-white font-mono placeholder-carbon-400 dark:placeholder-neutral-500 transition focus:outline-none focus:border-primary-500 dark:focus:border-primary-400"
-                    />
-                  </div>
                 </div>
               </div>
 
@@ -674,6 +694,24 @@ function RegistrarEmpresa() {
               <p className="text-carbon-600 dark:text-neutral-300">
                 Por favor espera mientras procesamos tu registro.
               </p>
+              {error && (
+                <div className="mt-6 p-4 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-600 dark:border-red-400 text-red-700 dark:text-red-200 rounded text-left">
+                  {error}
+                </div>
+              )}
+              {error && !loading && (
+                <div className="mt-6">
+                  <button
+                    onClick={() => {
+                      setConfirmAttempted(false)
+                      handleConfirmPayment()
+                    }}
+                    className="rounded-xl bg-gradient-to-r from-primary-600 via-primary-500 to-burgundy-600 px-6 py-3 text-base font-bold uppercase tracking-wider text-white shadow-2xl shadow-primary-900/20 transition hover:-translate-y-1 hover:brightness-110"
+                  >
+                    Reintentar confirmación
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

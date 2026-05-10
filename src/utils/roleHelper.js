@@ -609,6 +609,28 @@ export const canReprogramarCita = (user) => {
   return isAdminTenant(user) || isAsesorServicio(user)
 }
 
+/**
+ * Verifica si un usuario puede ver el módulo de Recepción de Vehículos.
+ * Solo: ADMIN, ASESOR DE SERVICIO
+ * @param {Object} user - Objeto del usuario
+ * @returns {boolean}
+ */
+export const canViewRecepcionVehiculo = (user) => {
+  if (!user) return false
+  return isAdminTenant(user) || isAsesorServicio(user)
+}
+
+/**
+ * Verifica si un usuario puede gestionar backups.
+ * Solo: ADMIN
+ * @param {Object} user - Objeto del usuario
+ * @returns {boolean}
+ */
+export const canManageBackups = (user) => {
+  if (!user) return false
+  return isAdminTenant(user)
+}
+
 export const canViewTallerInterno = (user) => {
   if (!user) return false
   return isAdminTenant(user) || isAsesorServicio(user) || isMecanico(user)

@@ -4,6 +4,7 @@
 import { Plus, Check } from 'lucide-react';
 import { useState } from 'react'
 import { Card, Button, Input } from '../../components/ui'
+import { PASSWORD_POLICY_MESSAGE, validateStrongPassword } from '../../utils/passwordValidation'
 
 export const UserModal = ({ isOpen, onClose, onSubmit, isLoading = false }) => {
   const [formData, setFormData] = useState({
@@ -44,8 +45,11 @@ export const UserModal = ({ isOpen, onClose, onSubmit, isLoading = false }) => {
     // Validar password
     if (!formData.password) {
       newErrors.password = 'La contraseña es requerida'
-    } else if (formData.password.length < 8) {
-      newErrors.password = 'La contraseña debe tener al menos 8 caracteres'
+    } else {
+      const passwordError = validateStrongPassword(formData.password)
+      if (passwordError) {
+        newErrors.password = passwordError
+      }
     }
 
     // Validar confirmación de password
@@ -186,9 +190,9 @@ export const UserModal = ({ isOpen, onClose, onSubmit, isLoading = false }) => {
             {errors.password && (
               <p className="text-red-500 text-sm mt-1">{errors.password}</p>
             )}
-            {!errors.password && formData.password && (
+            {errors.password ? null : (
               <p className="text-xs text-carbon-500 mt-1">
-                <Check className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Contraseña segura
+                {!formData.password ? PASSWORD_POLICY_MESSAGE : <><Check className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Contraseña válida</>}
               </p>
             )}
           </div>

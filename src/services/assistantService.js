@@ -78,6 +78,16 @@ const assistantService = {
     );
     return response.data;
   },
+
+  /**
+   * Archiva una conversación (la mueve a estado ARCHIVADA).
+   */
+  archiveConversation: async (tenantSlug, conversationId) => {
+    const response = await apiClient.post(
+      `/api/${tenantSlug}/comunicacion-control/ia/${conversationId}/archivar/`
+    );
+    return response.data;
+  },
 };
 
 export default assistantService;

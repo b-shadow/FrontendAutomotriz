@@ -1,106 +1,144 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { Bot, Send, User, Sparkles, Loader2, Wrench, Mic, Volume2, VolumeX, MessageSquare, Plus, Trash2 } from 'lucide-react'
 import { useTenant } from '../../hooks/useTenant'
+import assistantService from '../../services/assistantService'
 
 const AsistenteIAView = () => {
-  const { user, tenant } = useTenant()
+  const { user, tenant, tenantSlug } = useTenant()
   
-  const storageKey = `ia_chat_sessions_${tenant.slug || 'tenant'}_${user.email || 'user'}`
-
-  // Estado para los historiales de chat
-  const [sessions, setSessions] = useState(() => {
-    const saved = localStorage.getItem(storageKey)
-    if (saved) return JSON.parse(saved)
-    return [
-      {
-        id: 1, title : 'Chat Inicial',
-        messages: [
-          {
-            id: 1, sender : 'ai',
-            text: `¡Hola ${user.nombres || 'de nuevo'}! Soy tu Asistente de IA de AutoTaller Pro. Estoy aquí para ayudarte a analizar datos de ${tenant.nombre || 'tu taller'}, buscar citas o responder dudas mecánicas. ¿En qué puedo ayudarte hoy`,
-          },
-        ]
-      }
-    ]
-  })
-  const [currentSessionId, setCurrentSessionId] = useState(sessions[0].id || 1)
+  const [sessions, setSessions] = useState([])
+  const [currentSessionId, setCurrentSessionId] = useState(null)
 
   const [input, setInput] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const [isListening, setIsListening] = useState(false)
-  const [voiceEnabled, setVoiceEnabled] = useState(true)
+  const [voiceEnabled, setVoiceEnabled] = useState(false)
+  const [initialized, setInitialized] = useState(false)
   const messagesEndRef = useRef(null)
-  const idCounterRef = useRef(2)
+
+  // Cargar conversaciones reales del backend al montar
+  useEffect(() => {
+    if (!tenantSlug || initialized) return
+    const init = async () => {
+      try {
+        const convs = await assistantService.getConversations(tenantSlug)
+        if (convs.length > 0) {
+          // Mapear conversaciones del backend a sesiones locales CON sus mensajes reales
+          const mappedSessions = await Promise.all(convs.map(async (c) => {
+            try {
+              const detail = await assistantService.getConversationMessages(tenantSlug, c.id)
+              const msgs = (detail.mensajes && detail.mensajes.length > 0) 
+                ? detail.mensajes 
+                : [{
+                    id: 'welcome-' + c.id,
+                    sender: 'ai',
+                    text: `¡Hola ${user.nombres || ''}! Soy tu Asistente de AutoTaller Pro. ¿Qué necesitas saber?`,
+                  }]
+              return {
+                id: c.id,
+                title: msgs.length > 1 ? (msgs.find(m => m.sender === 'user')?.text?.slice(0, 25) + '...' || 'Conversación') : 'Conversación',
+                messages: msgs
+              }
+            } catch {
+              return {
+                id: c.id,
+                title: 'Conversación',
+                messages: [{
+                  id: 'welcome-' + c.id,
+                  sender: 'ai',
+                  text: `¡Hola ${user.nombres || ''}! ¿En qué puedo ayudarte?`,
+                }]
+              }
+            }
+          }))
+          setSessions(mappedSessions)
+          setCurrentSessionId(mappedSessions[0].id)
+        } else {
+          // Crear primera conversación
+          const newConv = await assistantService.createConversation(tenantSlug)
+          const firstSession = {
+            id: newConv.id,
+            title: 'Chat Inicial',
+            messages: [
+              {
+                id: 'welcome',
+                sender: 'ai',
+                text: `¡Hola ${user.nombres || ''}! Soy tu Asistente de IA de AutoTaller Pro. Estoy aquí para informarte y guiarte sobre cómo usar el sistema, resolver dudas mecánicas o analizar datos de ${tenant.nombre || 'tu taller'}. ¿En qué puedo ayudarte?`,
+              }
+            ]
+          }
+          setSessions([firstSession])
+          setCurrentSessionId(newConv.id)
+        }
+      } catch (error) {
+        console.error("Error al iniciar conversaciones:", error)
+        // Fallback local
+        const fallback = {
+          id: 'local-1',
+          title: 'Chat Inicial',
+          messages: [{
+            id: 'welcome',
+            sender: 'ai',
+            text: `¡Hola ${user.nombres || ''}! Estoy listo para responder tus preguntas.`,
+          }]
+        }
+        setSessions([fallback])
+        setCurrentSessionId('local-1')
+      }
+      setInitialized(true)
+    }
+    init()
+  }, [tenantSlug])
 
   const currentSession = sessions.find(s => s.id === currentSessionId) || sessions[0]
   const messages = currentSession ? currentSession.messages : []
 
-  // Guardar en LocalStorage cada vez que las sesiones cambian
-  useEffect(() => {
-    localStorage.setItem(storageKey, JSON.stringify(sessions))
-  }, [sessions, storageKey])
-
-  // Función para hablar (Text-to-Speech)
+  // Text-to-Speech
   const speakText = useCallback((text) => {
-    if (!voiceEnabled) return
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel() // Detener habla anterior
-      const utterance = new SpeechSynthesisUtterance(text)
-      utterance.lang = 'es-ES' // Español
-      utterance.rate = 1.05
-      window.speechSynthesis.speak(utterance)
-    }
+    if (!voiceEnabled || !window.speechSynthesis) return
+    window.speechSynthesis.cancel()
+    const cleanText = text.replace(/[*_#`]|[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF]/g, '').trim()
+    if (!cleanText) return
+    const utterance = new SpeechSynthesisUtterance(cleanText)
+    utterance.lang = 'es-ES'
+    utterance.rate = 1.05
+    const voices = window.speechSynthesis.getVoices()
+    const esVoice = voices.find(v => v.lang.startsWith('es-'))
+    if (esVoice) utterance.voice = esVoice
+    window.speechSynthesis.speak(utterance)
   }, [voiceEnabled])
-
-  const getNextId = useCallback(() => {
-    idCounterRef.current += 1
-    return idCounterRef.current
-  }, [])
-
-  // Leer en voz alta el último mensaje de la IA al cambiar de chat
-  useEffect(() => {
-    if (messages && messages.length > 0) {
-      const lastAiMessage = [...messages].reverse().find(m => m.sender === 'ai');
-      if (lastAiMessage) {
-        speakText(lastAiMessage.text);
-      }
-    }
-    
-    return () => {
-      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
-    }
-  }, [messages, currentSessionId, speakText]);
 
   // Scroll al final
   const scrollToBottom = () => {
-    messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
+  useEffect(() => { scrollToBottom() }, [messages, isTyping])
 
-  useEffect(() => {
-    scrollToBottom()
-  }, [messages, isTyping])
-
-  // Crear nueva sesión de chat
-  const createNewSession = () => {
-    const newSession = {
-      id: getNextId(), title : 'Nuevo Chat',
-      messages: [
-        {
-          id: 1, sender : 'ai',
-          text: `¡Hola ${user.nombres || 'de nuevo'}! Soy tu Asistente de IA. ¿En qué te ayudo hoy`,
-        },
-      ],
+  // Crear nueva sesión
+  const createNewSession = async () => {
+    try {
+      const newConv = await assistantService.createConversation(tenantSlug)
+      const newSession = {
+        id: newConv.id,
+        title: 'Nuevo Chat',
+        messages: [{
+          id: 'welcome-' + newConv.id,
+          sender: 'ai',
+          text: `¡Hola ${user.nombres || ''}! Nueva conversación iniciada. ¿Qué necesitas saber?`,
+        }]
+      }
+      setSessions(prev => [newSession, ...prev])
+      setCurrentSessionId(newConv.id)
+    } catch (err) {
+      console.error("Error creando nueva sesión:", err)
     }
-    setSessions(prev => [newSession, ...prev])
-    setCurrentSessionId(newSession.id)
-    if (voiceEnabled) speakText(newSession.messages[0].text)
   }
 
   const deleteSession = (id, e) => {
     e.stopPropagation()
     setSessions(prev => {
       const newSessions = prev.filter(s => s.id !== id)
-      if (newSessions.length === 0) return prev // Evita quedarse sin chats
+      if (newSessions.length === 0) return prev
       if (id === currentSessionId) {
         setCurrentSessionId(newSessions[0].id)
       }
@@ -108,83 +146,72 @@ const AsistenteIAView = () => {
     })
   }
 
-  // Función para escuchar (Speech-to-Text)
+  // Speech-to-Text (nativo del navegador)
   const startListening = () => {
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
       alert('Tu navegador no soporta reconocimiento de voz.')
       return
     }
-    
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
     const recognition = new SpeechRecognition()
-    
     recognition.lang = 'es-ES'
     recognition.continuous = false
     recognition.interimResults = false
-    
     recognition.onstart = () => setIsListening(true)
-    
     recognition.onresult = (event) => {
       const transcript = event.results[0][0].transcript
       setInput((prev) => (prev ? prev + ' ' + transcript : transcript))
     }
-    
-    recognition.onerror = (event) => {
-      console.error('Error de voz:', event.error)
-      setIsListening(false)
-    }
-    
-    recognition.onend = () => {
-      setIsListening(false)
-    }
-    
+    recognition.onerror = () => setIsListening(false)
+    recognition.onend = () => setIsListening(false)
     recognition.start()
   }
 
-  const handleSend = (e) => {
+  // Enviar mensaje REAL a la IA
+  const handleSend = async (e) => {
     e.preventDefault()
-    if (!input.trim()) return
+    if (!input.trim() || isTyping || !currentSessionId) return
 
-    const userMsg = { id: getNextId(), sender: 'user', text: input.trim() }
-    
+    const userMsg = { id: Date.now(), sender: 'user', text: input.trim() }
+
+    // Agregar mensaje del usuario a la sesión
     setSessions(prev => prev.map(s => {
       if (s.id === currentSessionId) {
-        // Auto nombrar el chat en base al primer mensaje
         const newTitle = (s.messages.length <= 1) ? input.trim().slice(0, 25) + '...' : s.title
         return { ...s, title: newTitle, messages: [...s.messages, userMsg] }
       }
       return s
     }))
-    
+
     setInput('')
     setIsTyping(true)
 
-    // Simulador de respuesta de IA
-    setTimeout(() => {
-      const aiResponse = generarRespuestaSimulada(userMsg.text)
+    try {
+      const response = await assistantService.sendMessage(tenantSlug, currentSessionId, userMsg.text)
+      const aiText = response.mensaje_ia || 'No pude procesar tu solicitud. ¿Podrías intentar de nuevo?'
+
+      const aiMsg = { id: Date.now() + 1, sender: 'ai', text: aiText }
+
       setSessions(prev => prev.map(s => {
         if (s.id === currentSessionId) {
-          return { ...s, messages: [...s.messages, { id: getNextId(), sender: 'ai', text: aiResponse }] }
+          return { ...s, messages: [...s.messages, aiMsg] }
         }
         return s
       }))
-      setIsTyping(false)
-      speakText(aiResponse)
-    }, 2000)
-  }
 
-  const generarRespuestaSimulada = (text) => {
-    const lower = text.toLowerCase()
-    if (lower.includes('citas') || lower.includes('cita')) {
-      return 'He revisado la agenda. Tienes 4 citas programadas para hoy, y 2 vehículos en estado "Pendiente de Aprobación". ¿Quieres que te muestre los detalles'
+      if (voiceEnabled) speakText(aiText)
+    } catch (error) {
+      console.error("Error enviando mensaje:", error)
+      const errorMsg = { id: Date.now() + 1, sender: 'ai', text: 'Lo siento, tuve un problema conectando con el cerebro de la IA. ¿Podrías intentar de nuevo?' }
+      setSessions(prev => prev.map(s => {
+        if (s.id === currentSessionId) {
+          return { ...s, messages: [...s.messages, errorMsg] }
+        }
+        return s
+      }))
+    } finally {
+      setIsTyping(false)
     }
-    if (lower.includes('ingresos') || lower.includes('ganancias')) {
-      return 'Según mis estimaciones del mes actual, los ingresos han incrementado un 15% respecto al mes anterior. El servicio de "Cambio de Aceite" ha sido el más rentable.'
-    }
-    if (lower.includes('frenos') || lower.includes('aceite')) {
-      return 'Esa es una excelente pregunta técnica. Para ese procedimiento, te recomiendo revisar el manual del fabricante del vehículo específico, pero generalmente toma alrededor de 45 minutos en un taller estándar.'
-    }
-    return 'Entiendo. Como inteligencia artificial en fase beta para AutoTaller Pro, todavía estoy aprendiendo a interpretar ciertas solicitudes específicas de tu taller. ¿Podrías darme más detalles'
   }
 
   return (
@@ -239,19 +266,18 @@ const AsistenteIAView = () => {
             </div>
             <div>
               <h2 className="text-lg font-bold text-carbon-900 dark:text-white flex items-center gap-2">
-                AutoTaller AI <span className="px-2 py-0.5 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 text-xs font-semibold uppercase tracking-wider">Beta</span>
+                AutoTaller AI <span className="px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-semibold uppercase tracking-wider">En Línea</span>
               </h2>
-              <p className="text-sm text-carbon-500 dark:text-neutral-400 leading-tight">Asistente inteligente integrado</p>
+              <p className="text-sm text-carbon-500 dark:text-neutral-400 leading-tight">Asistente informativo inteligente</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {/* Botón para abrir sidebar en móviles (Opcional, pero útil) */}
             <button
               onClick={() => {
                 setVoiceEnabled(!voiceEnabled)
                 if (voiceEnabled) window.speechSynthesis.cancel()
               }}
-              className="p-2 text-carbon-500 hover:text-carbon-900 dark:text-neutral-400 dark:hover:text-white rounded-lg transition-colors hover:bg-neutral-100 dark:hover:bg-carbon-800"
+              className={`p-2 rounded-lg transition-colors ${voiceEnabled ? 'text-primary-500 bg-primary-50 dark:bg-primary-900/20' : 'text-carbon-500 hover:text-carbon-900 dark:text-neutral-400 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-carbon-800'}`}
               title={voiceEnabled ? 'Desactivar voz' : 'Activar voz'}
             >
               {voiceEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
@@ -356,7 +382,7 @@ const AsistenteIAView = () => {
           </form>
           <div className="text-center mt-2">
             <span className="text-[10px] text-carbon-400 dark:text-neutral-500">
-              La IA puede cometer errores al analizar los datos mecánicos. Verifica siempre la información.
+              Asistente informativo conectado a la IA real de AutoTaller Pro.
             </span>
           </div>
         </div>

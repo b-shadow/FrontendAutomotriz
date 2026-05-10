@@ -24,6 +24,13 @@ import { HorariosGeneralesView } from './dashboard/HorariosGeneralesView'
 import PlanVehiculoView from './dashboard/PlanVehiculoView'
 import GestionCitasView from './dashboard/GestionCitasView'
 import RecepcionVehiculoView from './dashboard/RecepcionVehiculoView'
+import GestionPresupuestosView from './dashboard/GestionPresupuestosView'
+import GestionOrdenesTrabajoView from './dashboard/GestionOrdenesTrabajoView'
+import GestionTallerInternoView from './dashboard/GestionTallerInternoView'
+import GestionAvanceVehiculoView from './dashboard/GestionAvanceVehiculoView'
+import GestionInventarioView from './dashboard/GestionInventarioView'
+import GestionSolicitudesRepuestoView from './dashboard/GestionSolicitudesRepuestoView'
+import GestionBackupView from './dashboard/GestionBackupView'
 import AsistenteIAView from './dashboard/AsistenteIAView'
 import { GenerarReportesView } from './dashboard/GenerarReportesView'
 import { FloatingAIAvatar } from '../components/FloatingAIAvatar'
@@ -182,6 +189,20 @@ export const TenantDashboard = () => {
         return <GestionCitasView user={user} tenantSlug={tenantSlug} onNavigate={handleNavigate} />
       case 'recepcionVehiculo':
         return <RecepcionVehiculoView tenantSlug={tenantSlug} />
+      case 'presupuestos':
+        return <GestionPresupuestosView tenantSlug={tenantSlug} user={user} />
+      case 'ordenesTrabajo':
+        return <GestionOrdenesTrabajoView tenantSlug={tenantSlug} user={user} />
+      case 'tallerInterno':
+        return <GestionTallerInternoView tenantSlug={tenantSlug} user={user} />
+      case 'avanceVehiculo':
+        return <GestionAvanceVehiculoView tenantSlug={tenantSlug} user={user} />
+      case 'inventario':
+        return <GestionInventarioView tenantSlug={tenantSlug} user={user} />
+      case 'solicitudesRepuesto':
+        return <GestionSolicitudesRepuestoView tenantSlug={tenantSlug} user={user} />
+      case 'gestionarBackup':
+        return <GestionBackupView />
       case 'asistenteIA':
         return <AsistenteIAView />
       case 'generarReportes':

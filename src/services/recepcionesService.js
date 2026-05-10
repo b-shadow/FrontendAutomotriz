@@ -28,7 +28,7 @@ export const listarRecepciones = async (tenantSlug, filtros = {}) => {
     }
 
     const queryString = params.toString();
-    const baseUrl = `/api/${tenantSlug}/recepciones-vehiculo/`;
+    const baseUrl = `/api/${tenantSlug}/atencion-tecnica/recepciones-vehiculo/`;
     const url = queryString ? `${baseUrl}?${queryString}` : baseUrl;
     
     const response = await apiClient.get(url);
@@ -46,7 +46,7 @@ export const listarRecepciones = async (tenantSlug, filtros = {}) => {
 export const obtenerRecepcion = async (tenantSlug, recepcionId) => {
   try {
     const response = await apiClient.get(
-      `/api/${tenantSlug}/recepciones-vehiculo/${recepcionId}/`
+      `/api/${tenantSlug}/atencion-tecnica/recepciones-vehiculo/${recepcionId}/`
     );
     return response.data;
   } catch (error) {
@@ -70,7 +70,7 @@ export const obtenerRecepcion = async (tenantSlug, recepcionId) => {
 export const crearRecepcion = async (tenantSlug, datos) => {
   try {
     const response = await apiClient.post(
-      `/api/${tenantSlug}/recepciones-vehiculo/`,
+      `/api/${tenantSlug}/atencion-tecnica/recepciones-vehiculo/`,
       datos
     );
     return response.data;
@@ -87,7 +87,7 @@ export const crearRecepcion = async (tenantSlug, datos) => {
 export const editarRecepcion = async (tenantSlug, recepcionId, datos) => {
   try {
     const response = await apiClient.patch(
-      `/api/${tenantSlug}/recepciones-vehiculo/${recepcionId}/`,
+      `/api/${tenantSlug}/atencion-tecnica/recepciones-vehiculo/${recepcionId}/`,
       datos
     );
     return response.data;
@@ -104,7 +104,7 @@ export const editarRecepcion = async (tenantSlug, recepcionId, datos) => {
 export const citasPendientes = async (tenantSlug) => {
   try {
     const response = await apiClient.get(
-      `/api/${tenantSlug}/recepciones-vehiculo/citas-pendientes/`
+      `/api/${tenantSlug}/atencion-tecnica/recepciones-vehiculo/citas-pendientes/`
     );
     return response.data;
   } catch (error) {
@@ -120,7 +120,7 @@ export const citasPendientes = async (tenantSlug) => {
 export const obtenerCitaInfo = async (tenantSlug, recepcionId) => {
   try {
     const response = await apiClient.get(
-      `/api/${tenantSlug}/recepciones-vehiculo/${recepcionId}/cita-info/`
+      `/api/${tenantSlug}/atencion-tecnica/recepciones-vehiculo/${recepcionId}/cita-info/`
     );
     return response.data;
   } catch (error) {
@@ -136,7 +136,7 @@ export const obtenerCitaInfo = async (tenantSlug, recepcionId) => {
 export const obtenerRecepcionesPorIds = async (tenantSlug, ids) => {
   try {
     const response = await apiClient.post(
-      `/api/${tenantSlug}/recepciones-vehiculo/bulk-list/`,
+      `/api/${tenantSlug}/atencion-tecnica/recepciones-vehiculo/bulk-list/`,
       { ids }
     );
     return response.data;
@@ -153,7 +153,7 @@ export const obtenerRecepcionesPorIds = async (tenantSlug, ids) => {
 export const obtenerEstadisticas = async (tenantSlug) => {
   try {
     const response = await apiClient.get(
-      `/api/${tenantSlug}/recepciones-vehiculo/estadisticas/`
+      `/api/${tenantSlug}/atencion-tecnica/recepciones-vehiculo/estadisticas/`
     );
     return response.data;
   } catch (error) {
@@ -171,7 +171,7 @@ export const obtenerEstadisticas = async (tenantSlug) => {
 export const obtenerPendientesOperacion = async (tenantSlug) => {
   try {
     const response = await apiClient.get(
-      `/api/${tenantSlug}/recepciones-vehiculo/pendientes-operacion/`
+      `/api/${tenantSlug}/atencion-tecnica/recepciones-vehiculo/pendientes-operacion/`
     );
     return response.data;
   } catch (error) {
@@ -187,7 +187,7 @@ export const obtenerPendientesOperacion = async (tenantSlug) => {
 export const marcarRecogida = async (tenantSlug, recepcionId) => {
   try {
     const response = await apiClient.post(
-      `/api/${tenantSlug}/recepciones-vehiculo/${recepcionId}/marcar-recogida/`
+      `/api/${tenantSlug}/atencion-tecnica/recepciones-vehiculo/${recepcionId}/marcar-recogida/`
     );
     return response.data;
   } catch (error) {

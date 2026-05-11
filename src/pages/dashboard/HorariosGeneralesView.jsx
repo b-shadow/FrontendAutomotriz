@@ -1,27 +1,21 @@
 /**
  * HorariosGeneralesView.jsx - Vista centralizada de Horarios
- * Permite gestor de horarios de todos los espacios de un taller desde una sola pantalla
- *
- * Props:
- * - user: object con datos del usuario loguead
- * - tenantSlug: string con el tenant actual
  */
 import { useState, useEffect } from 'react'
 import { HorarioEspacioModal } from '../../components/espacios/HorarioEspacioModal'
+import HorarioBloquesEditor from '../../components/espacios/HorarioBloquesEditor'
 import espaciosTrabajoService from '../../services/espaciosTrabajoService'
 import { canManageHorariosEspacio } from '../../utils/roleHelper'
 
-const DIAS_SEMANA = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
+const DIAS_SEMANA = ['Lunes', 'Martes', 'Mi�rcoles', 'Jueves', 'Viernes', 'S�bado', 'Domingo']
 
 export const HorariosGeneralesView = ({ user, tenantSlug, aiPrefill, onSuccess }) => {
-  // Estados principales
   const [espacios, setEspacios] = useState([])
   const [horarios, setHorarios] = useState([])
   const [loadingEspacios, setLoadingEspacios] = useState(false)
   const [loadingHorarios, setLoadingHorarios] = useState(false)
   const [error, setError] = useState(null)
 
-  // Estados para el modal
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedHorario, setSelectedHorario] = useState(null)
   const [selectedEspacioId, setSelectedEspacioId] = useState(null)
@@ -29,75 +23,61 @@ export const HorariosGeneralesView = ({ user, tenantSlug, aiPrefill, onSuccess }
 
   const canManage = canManageHorariosEspacio(user)
 
-  // Cargar espacios al montarse
   useEffect(() => {
     loadEspacios()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Cargar horarios cuando cambia el espacio seleccionado
   useEffect(() => {
-    if (selectedEspacioId) {
-      loadHorarios()
-    }
+    if (selectedEspacioId) loadHorarios()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedEspacioId])
 
-  // Lógica de IA Ghost User
   useEffect(() => {
-    if (!aiPrefill) return;
+    if (!aiPrefill) return
+    if (espacios.length === 0 || loadingEspacios) return
 
-    if (espacios.length === 0 || loadingEspacios) return;
+    const identificador = (aiPrefill.espacio_identificador || '').toLowerCase()
+    const espacioEncontrado = espacios.find(
+      (e) =>
+        e.codigo.toLowerCase() === identificador ||
+        e.nombre.toLowerCase() === identificador ||
+        e.nombre.toLowerCase().includes(identificador)
+    )
 
-    const identificador = (aiPrefill.espacio_identificador || '').toLowerCase();
-    const espacioEncontrado = espacios.find(e => 
-      e.codigo.toLowerCase() === identificador || e.nombre.toLowerCase() === identificador || e.nombre.toLowerCase().includes(identificador)
-    );
-
-    if (!espacioEncontrado) {
-      console.warn('Ghost User: No se encontró espacio', identificador);
-      return;
-    }
+    if (!espacioEncontrado) return
 
     if (selectedEspacioId !== espacioEncontrado.id) {
-      setSelectedEspacioId(espacioEncontrado.id);
+      setSelectedEspacioId(espacioEncontrado.id)
     }
 
     if (aiPrefill.type === 'VER_HORARIOS_ESPACIO') {
-      // Ya se seleccionó el espacio y se mostraron los horarios
-      if (onSuccess && aiPrefill.status === 'EJECUTADA') onSuccess();
+      if (onSuccess && aiPrefill.status === 'EJECUTADA') onSuccess()
     } else if (aiPrefill.type === 'AGREGAR_HORARIO_ESPACIO') {
-      if (!isModalOpen) {
-        handleOpenModal(null);
-      }
+      if (!isModalOpen) handleOpenModal(null)
     } else if (aiPrefill.type === 'EDITAR_HORARIO_ESPACIO') {
-      if (loadingHorarios) return;
-
-      if (!aiPrefill.dia) return;
-      const diaStr = aiPrefill.dia.toLowerCase();
-      const diaIndex = DIAS_SEMANA.findIndex(d => d.toLowerCase() === diaStr);
-      
+      if (loadingHorarios || !aiPrefill.dia) return
+      const diaStr = aiPrefill.dia.toLowerCase()
+      const diaIndex = DIAS_SEMANA.findIndex((d) => d.toLowerCase() === diaStr)
       if (diaIndex !== -1) {
-        const horarioEncontrado = horarios.find(h => h.dia_semana === diaIndex);
-        if (horarioEncontrado && !isModalOpen) {
-          handleOpenModal(horarioEncontrado);
-        }
+        const horarioEncontrado = horarios.find((h) => h.dia_semana === diaIndex)
+        if (horarioEncontrado && !isModalOpen) handleOpenModal(horarioEncontrado)
       }
     }
-  }, [aiPrefill, espacios, loadingEspacios, loadingHorarios, horarios, isModalOpen]);
+  }, [aiPrefill, espacios, loadingEspacios, loadingHorarios, horarios, isModalOpen, selectedEspacioId, onSuccess])
 
   const loadEspacios = async () => {
     try {
       setLoadingEspacios(true)
       setError(null)
       const data = await espaciosTrabajoService.listarEspacios(tenantSlug, {
-        search: '', ordering : 'nombre',
+        search: '',
+        ordering: 'nombre',
       })
-      
+
       const espaciosList = data.espacios || []
       setEspacios(espaciosList)
 
-      // Seleccionar el primer espacio por defecto
       if (espaciosList.length > 0 && !selectedEspacioId) {
         setSelectedEspacioId(espaciosList[0].id)
       }
@@ -115,10 +95,7 @@ export const HorariosGeneralesView = ({ user, tenantSlug, aiPrefill, onSuccess }
     try {
       setLoadingHorarios(true)
       setError(null)
-      const data = await espaciosTrabajoService.listarHorariosEspacio(
-        tenantSlug,
-        selectedEspacioId
-      )
+      const data = await espaciosTrabajoService.listarHorariosEspacio(tenantSlug, selectedEspacioId)
       setHorarios(data.horarios || [])
     } catch (err) {
       console.error('Error al cargar horarios:', err)
@@ -144,18 +121,9 @@ export const HorariosGeneralesView = ({ user, tenantSlug, aiPrefill, onSuccess }
       const isEditing = selectedHorario !== null
 
       if (isEditing) {
-        await espaciosTrabajoService.editarHorarioEspacio(
-          tenantSlug,
-          selectedEspacioId,
-          selectedHorario.id,
-          payload
-        )
+        await espaciosTrabajoService.editarHorarioEspacio(tenantSlug, selectedEspacioId, selectedHorario.id, payload)
       } else {
-        await espaciosTrabajoService.crearHorarioEspacio(
-          tenantSlug,
-          selectedEspacioId,
-          payload
-        )
+        await espaciosTrabajoService.crearHorarioEspacio(tenantSlug, selectedEspacioId, payload)
       }
 
       await loadHorarios()
@@ -169,40 +137,28 @@ export const HorariosGeneralesView = ({ user, tenantSlug, aiPrefill, onSuccess }
     }
   }
 
-  const handleToggleActivo = async (horario) => {
-    try {
-      setIsSaving(true)
-      await espaciosTrabajoService.cambiarActivoHorarioEspacio(
-        tenantSlug,
-        selectedEspacioId,
-        horario.id,
-        { activo: !horario.activo }
-      )
-      await loadHorarios()
-    } catch (err) {
-      console.error('Error al cambiar estado del horario:', err)
-      setError('No se pudo cambiar el estado del horario')
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
-  const handleDeleteHorario = async (horario) => {
-    if (!window.confirm(`¿Eliminar horario ${DIAS_SEMANA[horario.dia_semana]} ${horario.hora_inicio} - ${horario.hora_fin}`)) {
-      return
-    }
+  const handleGuardarBloques = async (payloadPorDia) => {
+    if (!selectedEspacioId) return
 
     try {
       setIsSaving(true)
-      await espaciosTrabajoService.eliminarHorarioEspacio(
-        tenantSlug,
-        selectedEspacioId,
-        horario.id
+      setError(null)
+
+      const dias = [0, 1, 2, 3, 4, 5, 6]
+      await Promise.all(
+        dias.map((dia) =>
+          espaciosTrabajoService.reemplazarHorariosPorBloques(tenantSlug, selectedEspacioId, {
+            dia_semana: dia,
+            bloques_inicio_min: payloadPorDia[dia] || [],
+          })
+        )
       )
+
       await loadHorarios()
+      if (onSuccess) onSuccess()
     } catch (err) {
-      console.error('Error al eliminar horario:', err)
-      setError('No se pudo eliminar el horario')
+      console.error('Error al guardar horarios por bloques:', err)
+      setError('No se pudieron guardar los horarios por bloques')
     } finally {
       setIsSaving(false)
     }
@@ -212,47 +168,35 @@ export const HorariosGeneralesView = ({ user, tenantSlug, aiPrefill, onSuccess }
 
   return (
     <div className="space-y-6">
-      {/* Encabezado */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-carbon-900 dark:text-white">
-            Horarios
-          </h1>
-          <p className="text-carbon-600 dark:text-neutral-400 mt-1">
-            Gestiona los horarios de los espacios de trabajo
-          </p>
+          <h1 className="text-3xl font-bold text-carbon-900 dark:text-white">Horarios</h1>
+          <p className="text-carbon-600 dark:text-neutral-400 mt-1">Gestiona los horarios de los espacios de trabajo</p>
         </div>
       </div>
 
-      {/* Error */}
       {error && (
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
           <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
         </div>
       )}
 
-      {/* Selector de Espacio */}
       <div className="bg-white dark:bg-carbon-800 rounded-lg shadow p-6">
-        <label className="block text-sm font-medium text-carbon-700 dark:text-neutral-300 mb-3">
-          Seleccionar Espacio de Trabajo
-        </label>
-        
+        <label className="block text-sm font-medium text-carbon-700 dark:text-neutral-300 mb-3">Seleccionar Espacio de Trabajo</label>
+
         {loadingEspacios ? (
           <div className="text-center py-4">
             <p className="text-carbon-600 dark:text-neutral-400">Cargando espacios...</p>
           </div>
-          ) : espacios.length === 0 ? (
+        ) : espacios.length === 0 ? (
           <div className="text-center py-4">
-            <p className="text-carbon-600 dark:text-neutral-400">
-              No hay espacios de trabajo disponibles
-            </p>
+            <p className="text-carbon-600 dark:text-neutral-400">No hay espacios de trabajo disponibles</p>
           </div>
-              ) : (
+        ) : (
           <select
             value={selectedEspacioId || ''}
             onChange={(e) => setSelectedEspacioId(e.target.value)}
-            className="w-full px-4 py-2 border border-neutral-200 dark:border-white/[0.08] rounded-lg
-              bg-white dark:bg-carbon-700 text-carbon-900 dark:text-white ? focus : outline-none focus:ring-2 focus:ring-primary-500"
+            className="w-full px-4 py-2 border border-neutral-200 dark:border-white/[0.08] rounded-lg bg-white dark:bg-carbon-700 text-carbon-900 dark:text-white"
           >
             {espacios.map((espacio) => (
               <option key={espacio.id} value={espacio.id}>
@@ -263,18 +207,14 @@ export const HorariosGeneralesView = ({ user, tenantSlug, aiPrefill, onSuccess }
         )}
       </div>
 
-      {/* Tabla de Horarios */}
-      {selectedEspacioId && (
+      {selectedEspacioId && selectedEspacio && (
         <div className="bg-white dark:bg-carbon-800 rounded-lg shadow overflow-hidden">
-          {/* Header de la tabla */}
           <div className="px-6 py-4 border-b border-neutral-200 dark:border-white/[0.08] flex justify-between items-center">
-            <h2 className="text-lg font-semibold text-carbon-900 dark:text-white">
-              Horarios de {selectedEspacio.nombre}
-            </h2>
+            <h2 className="text-lg font-semibold text-carbon-900 dark:text-white">Horarios de {selectedEspacio.nombre}</h2>
             {canManage && (
               <button
                 onClick={() => handleOpenModal(null)}
-                className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg ? disabled : opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 disabled={isSaving || loadingHorarios}
               >
                 + Agregar Horario
@@ -282,120 +222,23 @@ export const HorariosGeneralesView = ({ user, tenantSlug, aiPrefill, onSuccess }
             )}
           </div>
 
-          {/* Contenido de la tabla */}
           {loadingHorarios ? (
             <div className="flex justify-center py-8">
               <p className="text-carbon-600 dark:text-neutral-400">Cargando horarios...</p>
             </div>
-          ) : horarios.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-carbon-600 dark:text-neutral-400 mb-4">
-                No hay horarios registrados para este espacio
-              </p>
-              {canManage && (
-                <button
-                  onClick={() => handleOpenModal(null)}
-                  className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg"
-                >
-                  Crear primer horario
-                </button>
-              )}
-            </div>
-              ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-neutral-100 dark:bg-carbon-700 border-b border-neutral-200 dark:border-white/[0.08]">
-                  <tr>
-                    <th className="px-6 py-3 text-left font-medium text-carbon-900 dark:text-white">
-                      Día
-                    </th>
-                    <th className="px-6 py-3 text-left font-medium text-carbon-900 dark:text-white">
-                      Hora Inicio
-                    </th>
-                    <th className="px-6 py-3 text-left font-medium text-carbon-900 dark:text-white">
-                      Hora Fin
-                    </th>
-                    <th className="px-6 py-3 text-center font-medium text-carbon-900 dark:text-white">
-                      Estado
-                    </th>
-                    {canManage && (
-                      <th className="px-6 py-3 text-right font-medium text-carbon-900 dark:text-white">
-                        Acciones
-                      </th>
-                    )}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-neutral-200 dark:divide-white/[0.08]">
-                  {horarios.map((horario) => (
-                    <tr
-                      key={horario.id}
-                      className="hover:bg-neutral-50 dark:hover:bg-carbon-700/50 transition-colors"
-                    >
-                      <td className="px-6 py-3 text-carbon-900 dark:text-white">
-                        <span className="font-medium">
-                          {DIAS_SEMANA[horario.dia_semana]}
-                        </span>
-                      </td>
-                      <td className="px-6 py-3 text-carbon-900 dark:text-white">
-                        {horario.hora_inicio}
-                      </td>
-                      <td className="px-6 py-3 text-carbon-900 dark:text-white">
-                        {horario.hora_fin}
-                      </td>
-                      <td className="px-6 py-3 text-center">
-                        <span
-                          className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${
-                            horario.activo ?
-                               'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400'
-                              : 'bg-neutral-100 dark:bg-carbon-700 text-carbon-600 dark:text-neutral-400'
-                          }`}
-                        >
-                          {horario.activo ? 'Activo' : 'Inactivo'}
-                        </span>
-                      </td>
-                      {canManage && (
-                        <td className="px-6 py-3 text-right">
-                          <div className="flex justify-end gap-2">
-                            <button
-                              onClick={() => handleOpenModal(horario)}
-                              className="text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300
-                                transition-colors"
-                              title="Editar"
-                            >
-                              Editar
-                            </button>
-                            <button
-                              onClick={() => handleToggleActivo(horario)}
-                              className={`transition-colors ${
-                                horario.activo ?
-                                   'text-orange-600 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300'
-                                  : 'text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300'
-                              }`}
-                              title={horario.activo ? 'Desactivar' : 'Activar'}
-                            >
-                              {horario.activo ? 'Desactivar' : 'Activar'}
-                            </button>
-                            <button
-                              onClick={() => handleDeleteHorario(horario)}
-                              className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300
-                                transition-colors"
-                              title="Eliminar"
-                            >
-                              Eliminar
-                            </button>
-                          </div>
-                        </td>
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          ) : (
+            <div className="p-6">
+              <HorarioBloquesEditor
+                horarios={horarios}
+                canManage={canManage}
+                isSaving={isSaving}
+                onSave={handleGuardarBloques}
+              />
             </div>
           )}
         </div>
       )}
 
-      {/* Modal para crear/editar horario */}
       {isModalOpen && selectedEspacioId && (
         <HorarioEspacioModal
           isOpen={isModalOpen}

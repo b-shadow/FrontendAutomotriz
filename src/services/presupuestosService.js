@@ -52,8 +52,8 @@ const presupuestosService = {
     return response.data
   },
 
-  simularPago: async (tenantSlug, id, porcentaje) => {
-    const response = await apiClient.post(`/api/${tenantSlug}/atencion-tecnica/presupuestos-cita/${id}/simular-pago/`, { porcentaje })
+  simularPago: async (tenantSlug, id, monto) => {
+    const response = await apiClient.post(`/api/${tenantSlug}/atencion-tecnica/presupuestos-cita/${id}/simular-pago/`, { monto })
     return response.data
   },
 

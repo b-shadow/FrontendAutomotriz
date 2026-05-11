@@ -89,7 +89,7 @@ const HorarioBloquesEditor = ({ horarios = [], canManage = false, isSaving = fal
             disabled={isSaving}
             className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg disabled:opacity-50"
           >
-            {isSaving ? 'Guardando...' : 'Guardar Horarios'}
+            {isSaving ? 'Guardando...' : 'Guardar cambios'}
           </button>
         )}
       </div>

@@ -1,14 +1,14 @@
-/**
+﻿/**
  * CitaModalCrear - Modal for creating new citas
  * 
  * Flujo:
- * 1. Usuario selecciona vehículo → cliente se deriva automáticamente
- * 2. Usuario elige servicios (se calcula duración estimada)
- * 3. Usuario ingresa intención: fecha, hora, espacio
- * 4. Resumen con aclaración que backend calcula agenda final
- * 5. Envío → Backend calcula y persiste → Reconsulta → Mostrar resultado canónico
+ * 1. Usuario selecciona vehÃ­culo â†’ cliente se deriva automÃ¡ticamente
+ * 2. Usuario elige servicios (se calcula duraciÃ³n estimada)
+ * 3. Usuario ingresa intenciÃ³n: fecha, hora, espacio
+ * 4. Resumen con aclaraciÃ³n que backend calcula agenda final
+ * 5. EnvÃ­o â†’ Backend calcula y persiste â†’ Reconsulta â†’ Mostrar resultado canÃ³nico
  * 
- * REGLA: Backend es autoridad única sobre segmentos, fragmentación, estado
+ * REGLA: Backend es autoridad Ãºnica sobre segmentos, fragmentaciÃ³n, estado
  */
 import { Info, Hourglass, Check, AlertTriangle, XCircle } from 'lucide-react';
 import React, { useState, useEffect } from 'react'
@@ -17,6 +17,14 @@ import citasService from '../../services/citasService'
 import vehiculosService from '../../services/vehiculosService'
 import planVehiculoService from '../../services/planVehiculoService'
 import espaciosTrabajoService from '../../services/espaciosTrabajoService'
+
+const limpiarPrefijoDisponibilidad = (mensaje = '') => {
+  const texto = String(mensaje || '')
+  if (texto.startsWith('âœ“')) return texto.slice(3).trimStart()
+  if (texto.startsWith('✓')) return texto.slice(1).trimStart()
+  if (texto.startsWith('?')) return texto.slice(1).trimStart()
+  return texto
+}
 
 const CitaModalCrear = ({ onClose, onSuccess }) => {
   const { tenantSlug } = useTenant()
@@ -62,7 +70,7 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
         })
         const vehiculosList = resVehiculos.data || resVehiculos.results || []
         setVehiculos(vehiculosList)
-        console.debug('[CitaModalCrear] Vehículos cargados:', vehiculosList.length)
+        console.debug('[CitaModalCrear] VehÃ­culos cargados:', vehiculosList.length)
 
         // Cargar espacios de trabajo
         const resEspacios = await espaciosTrabajoService.listarEspacios(tenantSlug, {
@@ -97,10 +105,10 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
       setPreviewLoading(true)
       try {
         // NO convertir a UTC - enviar la hora exacta que el usuario ingresa (LOCAL)
-        // El backend también está en La Paz, así que entiende hora local directamente
+        // El backend tambiÃ©n estÃ¡ en La Paz, asÃ­ que entiende hora local directamente
         const fechaLocal = formData.fecha_hora_inicio_programada
 
-        console.debug('[CitaModalCrear Preview] Enviando fecha sin conversión:', {
+        console.debug('[CitaModalCrear Preview] Enviando fecha sin conversiÃ³n:', {
           fechaLocal, payload : {
             vehiculo_id: formData.vehiculo_id, servicios_ids : formData.servicios_plan_detalle_ids,
             fecha_hora_inicio: fechaLocal, espacio_trabajo_id : formData.espacio_trabajo_id || undefined,
@@ -117,14 +125,14 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
       } catch (err) {
         console.error('Error cargando preview:', err)
         setPreview({
-          es_valida: false, mensajes : ['Error validando la intención. Intenta de nuevo.'],
+          es_valida: false, mensajes : ['Error validando la intencion. Intenta de nuevo.'],
         })
       } finally {
         setPreviewLoading(false)
       }
     }
 
-    // Debounce: esperar 500ms después de último cambio
+    // Debounce: esperar 500ms despuÃ©s de Ãºltimo cambio
     const timer = setTimeout(() => {
       cargarPreview()
     }, 500)
@@ -152,7 +160,7 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
           duracion_requerida_min: duracionEstimada,
         })
 
-        console.debug('[CitaModalCrear] Validación disponibilidad espacio:', response)
+        console.debug('[CitaModalCrear] ValidaciÃ³n disponibilidad espacio:', response)
         setEspacioValidation(response)
       } catch (err) {
         console.error('Error validando disponibilidad de espacio:', err)
@@ -164,7 +172,7 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
       }
     }
 
-    // Debounce: esperar 500ms después de último cambio
+    // Debounce: esperar 500ms despuÃ©s de Ãºltimo cambio
     const timer = setTimeout(() => {
       validarDisponibilidad()
     }, 500)
@@ -186,7 +194,7 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
       // Derive customer automatically
       setFormData((prev) => ({
         ...prev, cliente_id : vehiculo.propietario.id,
-        plan_servicio_id: vehiculo.plan_servicio_id,  // ← ASIGNAR EL PLAN
+        plan_servicio_id: vehiculo.plan_servicio_id,  // â† ASIGNAR EL PLAN
       }))
 
       // Load plane for this vehicle
@@ -224,7 +232,7 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
   // Submit
   const handleSubmit = async () => {
     if (!formData.vehiculo_id || formData.servicios_plan_detalle_ids.length === 0) {
-      setError('Completa vehículo y servicios')
+      setError('Completa vehiculo y servicios')
       return
     }
     if (!formData.fecha_hora_inicio_programada) {
@@ -235,7 +243,7 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
     setLoading(true)
     try {
       // NO convertir a UTC - enviar hora local exacta
-      // Backend está en La Paz, entiende hora local
+      // Backend estÃ¡ en La Paz, entiende hora local
       const fechaLocal = formData.fecha_hora_inicio_programada
 
       // Construir payload - solo incluir espacio_trabajo_id si tiene valor
@@ -246,7 +254,7 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
         canal_origen: formData.canal_origen,
       }
 
-      // Solo agregar espacio si se seleccionó uno
+      // Solo agregar espacio si se seleccionÃ³ uno
       if (formData.espacio_trabajo_id) {
         payload.espacio_trabajo_id = formData.espacio_trabajo_id
       }
@@ -277,7 +285,7 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
             onClick={onClose}
             className="text-carbon-500 hover:text-carbon-700 dark:text-neutral-300 dark:hover:text-white text-2xl"
           >
-            ×
+            X
           </button>
         </div>
 
@@ -290,15 +298,15 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
         {/* Step 1: Vehicle */}
         {step === 1 && (
           <div className="space-y-4">
-            <h3 className="font-semibold text-lg">Paso 1: Vehículo</h3>
+            <h3 className="font-semibold text-lg">Paso 1: Vehiculo</h3>
             <div>
-              <label className="block text-sm font-medium mb-2">Vehículo</label>
+              <label className="block text-sm font-medium mb-2">Vehiculo</label>
               <select
                 value={formData.vehiculo_id || ''}
                 onChange={(e) => handleVehiculoChange(e.target.value)}
                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 bg-white dark:bg-carbon-900 text-carbon-900 dark:text-white border-neutral-200 dark:border-white/[0.08]"
               >
-                <option value="">Selecciona vehículo</option>
+                <option value="">Selecciona vehiculo</option>
                 {vehiculos.map((v) => (
                   <option key={v.id} value={v.id}>
                     {v.placa} - {v.marca} {v.modelo}
@@ -342,8 +350,8 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
                 {serviciosDelPlan.length === 0 ? (
                   <div className="text-center py-4 text-carbon-500 dark:text-neutral-400 text-sm">
                     {formData.vehiculo_id && vehiculos.find(v => v.id === formData.vehiculo_id)?.plan_servicio_id 
-                      ? "El plan asociado a este vehículo no tiene servicios." 
-                      : "Este vehículo no cuenta con un plan de servicios asignado. Debes asignarle un plan primero para agendar una cita."}
+                      ? "El plan asociado a este vehiculo no tiene servicios." 
+                      : "Este vehiculo no cuenta con un plan de servicios asignado. Debes asignarle un plan primero para agendar una cita."}
                   </div>
                 ) : (
                   serviciosDelPlan.map((servicio) => {
@@ -379,7 +387,7 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
 
             {duracionEstimada > 0 && (
               <div className="bg-blue-50 dark:bg-blue-900/20 text-carbon-800 dark:text-blue-100 p-3 rounded-lg text-sm">
-                <strong>Duración estimada:</strong> {duracionEstimada} minutos (se calcula al validar)
+                <strong>Duracion estimada:</strong> {duracionEstimada} minutos (se calcula al validar)
               </div>
             )}
 
@@ -404,7 +412,7 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
         {/* Step 3: Schedule Intention */}
         {step === 3 && (
           <div className="space-y-4">
-            <h3 className="font-semibold text-lg">Paso 3: Intención de Programación</h3>
+            <h3 className="font-semibold text-lg">Paso 3: Intencion de Programacion</h3>
             
             <div>
               <label className="block text-sm font-medium mb-2">Fecha deseada</label>
@@ -443,7 +451,7 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
               {espacios.length === 0 ? (
                 <div className="w-full px-3 py-2 border rounded-lg bg-neutral-50 dark:bg-carbon-800/60 text-carbon-600 dark:text-neutral-300 border-neutral-200 dark:border-white/[0.08]">
                   <p className="text-sm">
-                    <Info className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Sin espacios creados. El backend asignará automáticamente.
+                    <Info className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Sin espacios creados. El backend asignara automaticamente.
                   </p>
                 </div>
               ) : (
@@ -456,7 +464,7 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
                   }
                   className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 bg-white dark:bg-carbon-900 text-carbon-900 dark:text-white border-neutral-200 dark:border-white/[0.08]"
                 >
-                  <option value="">Asignación automática</option>
+                  <option value="">Asignacion automatica</option>
                   {espacios.map((espacio) => (
                     <option key={espacio.id} value={espacio.id}>
                       {espacio.nombre}
@@ -464,7 +472,7 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
                   ))}
                 </select>
               )}
-              <p className="text-xs text-carbon-500 dark:text-neutral-400 mt-1">Si no seleccionas, el backend asignará un espacio disponible</p>
+              <p className="text-xs text-carbon-500 dark:text-neutral-400 mt-1">Si no seleccionas, el backend asignara un espacio disponible</p>
 
               {/* Real-time availability validation for selected espacio */}
               {formData.espacio_trabajo_id && (
@@ -479,18 +487,18 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
                     <>
                       {espacioValidation.disponible ? (
                         <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/40 p-3 rounded-lg text-sm">
-                          <p className="text-green-800 dark:text-green-200 font-semibold"><Check className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> {espacioValidation.mensaje}</p>
+                          <p className="text-green-800 dark:text-green-200 font-semibold"><Check className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> {limpiarPrefijoDisponibilidad(espacioValidation.mensaje)}</p>
                           <p className="text-green-700 dark:text-green-300 text-xs mt-1">
                             Disponible desde {new Date(espacioValidation.fecha_hora_inicio).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}
                           </p>
                         </div>
               ) : (
                         <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800/40 p-3 rounded-lg text-sm space-y-2">
-                          <p className="text-yellow-800 dark:text-yellow-200 font-semibold"><AlertTriangle className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> {espacioValidation.mensaje}</p>
+                          <p className="text-yellow-800 dark:text-yellow-200 font-semibold"><AlertTriangle className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> {limpiarPrefijoDisponibilidad(espacioValidation.mensaje)}</p>
                           {espacioValidation.proximo_horario_disponible && (
                             <div className="bg-yellow-100 dark:bg-yellow-900/30 p-2 rounded flex items-center justify-between">
                               <span className="text-yellow-700 dark:text-yellow-300 text-xs">
-                                Próximo horario disponible: <strong>{new Date(espacioValidation.proximo_horario_disponible).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</strong>
+                                Proximo horario disponible: <strong>{new Date(espacioValidation.proximo_horario_disponible).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</strong>
                               </span>
                               <button
                                 type="button"
@@ -517,8 +525,7 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
             </div>
 
             <div className="bg-yellow-50 dark:bg-yellow-900/20 text-carbon-800 dark:text-yellow-100 p-3 rounded-lg text-sm">
-              <strong><Info className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Nota:</strong> Esta es tu intención de horario. El backend validará 
-              disponibilidad y puede ajustar si hay conflictos (fragmentación, múltiples espacios, etc).
+              <strong><Info className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Nota:</strong> Esta es tu intención de horario. Se validara si es posible y si no se te sugiere alguna opcion posible
             </div>
 
             <div className="flex gap-2 justify-end">
@@ -547,7 +554,7 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
             {/* Validation status from backend preview */}
             {previewLoading && (
               <div className="bg-blue-50 dark:bg-blue-900/20 text-carbon-800 dark:text-blue-100 p-3 rounded-lg text-sm">
-                <Hourglass className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Validando programación...
+                <Hourglass className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Validando programacion...
               </div>
             )}
 
@@ -555,18 +562,18 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
               <>
                 {preview.es_valida ? (
                   <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/40 p-3 rounded-lg">
-                    <p className="text-green-800 dark:text-green-200 text-sm font-semibold"><Check className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Programación válida</p>
+                    <p className="text-green-800 dark:text-green-200 text-sm font-semibold"><Check className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Programacion valida</p>
                     {preview.fragmentado && (
                       <p className="text-green-700 dark:text-green-300 text-xs mt-1">
-                        <AlertTriangle className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Se distribuirá en {preview.segmentos_preview.length || 1} segmento(s) debido a horarios
+                        <AlertTriangle className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Se distribuira en {preview.segmentos_preview.length || 1} segmento(s) debido a horarios
                       </p>
                     )}
                   </div>
               ) : (
                   <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/40 p-3 rounded-lg">
-                    <p className="text-red-800 dark:text-red-200 text-sm font-semibold"><XCircle className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Programación inválida</p>
+                    <p className="text-red-800 dark:text-red-200 text-sm font-semibold"><XCircle className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Programacion invalida</p>
                     <p className="text-red-700 dark:text-red-300 text-xs mt-1">
-                      {preview.mensajes?.[0] || 'No se puede programar con estos parámetros'}
+                      {preview.mensajes?.[0] || 'No se puede programar con estos parametros'}
                     </p>
                   </div>
                 )}
@@ -575,7 +582,7 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
 
             <div className="bg-neutral-50 dark:bg-carbon-800/60 p-4 rounded-lg space-y-2 text-sm">
               <p>
-                <strong>Vehículo:</strong> {vehiculoSeleccionado.placa}
+                <strong>Vehiculo:</strong> {vehiculoSeleccionado.placa}
               </p>
               <p>
                 <strong>Cliente:</strong> {cliente.nombre_completo || cliente.nombres}
@@ -584,7 +591,7 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
                 <strong># Servicios:</strong> {formData.servicios_plan_detalle_ids.length}
               </p>
               <p>
-                <strong>Duración total:</strong> {duracionEstimada} minutos
+                <strong>Duracion total:</strong> {duracionEstimada} minutos
               </p>
               <p>
                 <strong>Inicio solicitado:</strong>{' '}
@@ -607,26 +614,16 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
               {/* Show segmentos preview if fragmented */}
               {preview.fragmentado && preview.segmentos_preview.length > 0 && (
                 <div className="mt-3 pt-3 border-t border-neutral-200 dark:border-white/[0.08]">
-                  <p className="font-medium text-sm mb-2">Distribución por espacio:</p>
+                  <p className="font-medium text-sm mb-2">Distribucion por espacio:</p>
                   <div className="space-y-1">
                     {preview.segmentos_preview.map((seg, idx) => (
                       <div key={idx} className="text-xs text-carbon-600 dark:text-neutral-400 ml-2">
-                        • {seg.espacio}: {new Date(seg.inicio).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} a {new Date(seg.fin).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} ({seg.duracion_min} min)
+                        - {seg.espacio}: {new Date(seg.inicio).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} a {new Date(seg.fin).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} ({seg.duracion_min} min)
                       </div>
                     ))}
                   </div>
                 </div>
               )}
-            </div>
-
-            <div className="bg-yellow-50 dark:bg-yellow-900/20 text-carbon-800 dark:text-yellow-100 p-3 rounded-lg text-sm">
-              <strong><AlertTriangle className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> IMPORTANTE:</strong> Al confirmar, el backend:
-              <ul className="mt-2 ml-4 list-disc space-y-1">
-                <li>Validará que la intención sea válida</li>
-                <li>Puede ajustar la hora fin real si hay conflictos o fragmentación</li>
-                <li>Generará los segmentos reales en el(los) espacio(s) de trabajo</li>
-                <li>Establecerá el estado: PROGRAMADA o PENDIENTE_APROBACION</li>
-              </ul>
             </div>
 
             <textarea
@@ -664,3 +661,7 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
 }
 
 export default CitaModalCrear
+
+
+
+

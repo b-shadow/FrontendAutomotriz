@@ -40,7 +40,7 @@ const GestionInventarioView = () => {
       setItems(its.results || its || [])
       setMovimientos(movs.results || movs || [])
     } catch (err) {
-      setError(err.response?.data?.error || 'Error cargando inventario')
+      setError(getErrorMessage(err, 'Error cargando inventario'))
     }
   }, [tenantSlug])
 
@@ -57,7 +57,7 @@ const GestionInventarioView = () => {
       await cargar()
       setTimeout(() => setSuccess(null), 2500)
     } catch (err) {
-      setError(err.response?.data?.error || 'No se pudo crear la categoria')
+      setError(getErrorMessage(err, 'No se pudo crear la categoria'))
     }
   }
 
@@ -77,7 +77,7 @@ const GestionInventarioView = () => {
       await cargar()
       setTimeout(() => setSuccess(null), 2500)
     } catch (err) {
-      setError(err.response?.data?.error || 'No se pudo crear item')
+      setError(getErrorMessage(err, 'No se pudo crear item'))
     }
   }
 
@@ -96,7 +96,7 @@ const GestionInventarioView = () => {
       await cargar()
       setTimeout(() => setSuccess(null), 2500)
     } catch (err) {
-      setError(err.response?.data?.error || 'No se pudo ajustar stock')
+      setError(getErrorMessage(err, 'No se pudo ajustar stock'))
     }
   }
 
@@ -196,3 +196,15 @@ const GestionInventarioView = () => {
 }
 
 export default GestionInventarioView
+  const getErrorMessage = (err, fallback) => {
+    const data = err?.response?.data
+    if (typeof data?.error === 'string') return data.error
+    if (typeof data?.detail === 'string') return data.detail
+    if (data && typeof data === 'object') {
+      const firstKey = Object.keys(data)[0]
+      const firstVal = data[firstKey]
+      if (Array.isArray(firstVal) && firstVal.length) return String(firstVal[0])
+      if (typeof firstVal === 'string') return firstVal
+    }
+    return fallback
+  }

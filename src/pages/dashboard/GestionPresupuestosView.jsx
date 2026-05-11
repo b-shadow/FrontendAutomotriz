@@ -22,7 +22,7 @@ const GestionPresupuestosView = () => {
   const [success, setSuccess] = useState(null)
   const [filters, setFilters] = useState({ estado: '', search: '' })
   const [ajusteModal, setAjusteModal] = useState({ open: false, presupuesto: null, descuento: '', observaciones: '' })
-  const [pagoModal, setPagoModal] = useState({ open: false, presupuesto: null, porcentaje: 25, monto: '' })
+  const [pagoModal, setPagoModal] = useState({ open: false, presupuesto: null, monto: '' })
   const [historialModal, setHistorialModal] = useState({ open: false, presupuesto: null })
 
   const cargar = useCallback(async () => {
@@ -101,7 +101,7 @@ const GestionPresupuestosView = () => {
   }
 
   const abrirPago = (presupuesto) => {
-    setPagoModal({ open: true, presupuesto, porcentaje: 25, monto: '' })
+    setPagoModal({ open: true, presupuesto, monto: '' })
   }
 
   const ejecutarPago = async () => {
@@ -111,13 +111,23 @@ const GestionPresupuestosView = () => {
       return
     }
     try {
+      const monto = Number(pagoModal.monto)
+      const pendiente = Number(pagoModal.presupuesto?.saldo_pendiente || 0)
+      if (Number.isNaN(monto) || monto <= 0) {
+        setError('Ingresa un monto valido mayor a 0.')
+        return
+      }
+      if (monto > pendiente) {
+        setError('El monto no puede exceder el saldo pendiente.')
+        return
+      }
       if (esCliente) {
-        await presupuestosService.simularPago(tenantSlug, pagoModal.presupuesto.id, Number(pagoModal.porcentaje))
+        await presupuestosService.simularPago(tenantSlug, pagoModal.presupuesto.id, monto)
       } else {
-        await presupuestosService.marcarPagado(tenantSlug, pagoModal.presupuesto.id, pagoModal.monto)
+        await presupuestosService.marcarPagado(tenantSlug, pagoModal.presupuesto.id, monto)
       }
       setSuccess('Pago registrado correctamente')
-      setPagoModal({ open: false, presupuesto: null, porcentaje: 25, monto: '' })
+      setPagoModal({ open: false, presupuesto: null, monto: '' })
       cargar()
       setTimeout(() => setSuccess(null), 2500)
     } catch (err) {
@@ -202,7 +212,9 @@ const GestionPresupuestosView = () => {
                       <button onClick={() => transicionar(p.id, 'cerrar')} className="text-neutral-700">Cerrar</button>
                     )}
                     {Number(p.saldo_pendiente || 0) > 0 && puedePagar && (
-                      <button onClick={() => abrirPago(p)} className="text-blue-700">Realizar pago</button>
+                      <button onClick={() => abrirPago(p)} className="text-blue-700">
+                        {esCliente ? 'Pagar' : 'Marcar pago'}
+                      </button>
                     )}
                     <button onClick={() => setHistorialModal({ open: true, presupuesto: p })} className="text-slate-700">Historial pagos</button>
                   </td>
@@ -250,32 +262,23 @@ const GestionPresupuestosView = () => {
           <div className="w-full max-w-md bg-white dark:bg-carbon-900 rounded-lg border border-neutral-200/60 dark:border-white/[0.06] p-5 space-y-4">
             <h3 className="text-lg font-semibold">Realizar pago</h3>
             <p className="text-sm">Total: {pagoModal.presupuesto?.total} | Pendiente: {pagoModal.presupuesto?.saldo_pendiente}</p>
-            {esCliente ? (
-              <select
-                value={pagoModal.porcentaje}
-                onChange={(e) => setPagoModal((m) => ({ ...m, porcentaje: Number(e.target.value) }))}
-                className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-carbon-800"
-              >
-                <option value={25}>25%</option>
-                <option value={50}>50%</option>
-                <option value={75}>75%</option>
-                <option value={100}>100%</option>
-              </select>
-            ) : (
-              <input
-                type="number"
-                min="0.01"
-                step="0.01"
-                placeholder="Monto pagado en efectivo"
-                value={pagoModal.monto}
-                onChange={(e) => setPagoModal((m) => ({ ...m, monto: e.target.value }))}
-                className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-carbon-800"
-              />
-            )}
+            <input
+              type="number"
+              min="0.01"
+              max={Number(pagoModal.presupuesto?.saldo_pendiente || 0)}
+              step="0.01"
+              placeholder="Monto a pagar"
+              value={pagoModal.monto}
+              onChange={(e) => setPagoModal((m) => ({ ...m, monto: e.target.value }))}
+              className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-carbon-800"
+            />
+            <p className="text-xs text-carbon-500 dark:text-neutral-400">
+              Monto maximo permitido: {pagoModal.presupuesto?.saldo_pendiente}
+            </p>
             <div className="flex justify-end gap-2">
-              <button onClick={() => setPagoModal({ open: false, presupuesto: null, porcentaje: 25, monto: '' })} className="px-4 py-2 border rounded-lg">Cancelar</button>
+              <button onClick={() => setPagoModal({ open: false, presupuesto: null, monto: '' })} className="px-4 py-2 border rounded-lg">Cancelar</button>
               <button onClick={ejecutarPago} className="px-4 py-2 bg-primary-600 text-white rounded-lg">
-                {esCliente ? 'Simular pago' : 'Marcar como pagado'}
+                {esCliente ? 'Simular pago' : 'Registrar pago'}
               </button>
             </div>
           </div>

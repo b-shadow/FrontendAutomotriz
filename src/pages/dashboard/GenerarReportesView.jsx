@@ -35,6 +35,10 @@ export const GenerarReportesView = ({ tenantSlug, aiPrefill }) => {
   });
   const [fechaHasta, setFechaHasta] = useState(() => new Date().toISOString().split('T')[0]);
   const [vehiculoPlaca, setVehiculoPlaca] = useState('');
+  const [vehiculoMarca, setVehiculoMarca] = useState('');
+  const [vehiculoModelo, setVehiculoModelo] = useState('');
+  const [estadoCita, setEstadoCita] = useState('');
+  const [canalOrigen, setCanalOrigen] = useState('');
 
   // UI State
   const [showExportModal, setShowExportModal] = useState(false);
@@ -55,9 +59,14 @@ export const GenerarReportesView = ({ tenantSlug, aiPrefill }) => {
         case 'VEHICULO':
           endpoint = `/api/${tenantSlug}/vehiculos-servicios/reportes/vehiculo/`;
           if (vehiculoPlaca) params += `&placa=${vehiculoPlaca}`;
+          if (vehiculoMarca) params += `&marca=${vehiculoMarca}`;
+          if (vehiculoModelo) params += `&modelo=${vehiculoModelo}`;
+          if (estadoCita) params += `&estado_cita=${estadoCita}`;
+          if (canalOrigen) params += `&canal_origen=${canalOrigen}`;
           break;
         case 'PRESUPUESTO':
           endpoint = `/api/${tenantSlug}/vehiculos-servicios/reportes/presupuesto/`;
+          if (vehiculoPlaca) params += `&placa=${vehiculoPlaca}`;
           break;
         case 'INVENTARIO':
           endpoint = `/api/${tenantSlug}/vehiculos-servicios/reportes/inventario/`;
@@ -119,6 +128,14 @@ export const GenerarReportesView = ({ tenantSlug, aiPrefill }) => {
           setVehiculoPlaca(aiPrefill.placa.substring(0, i));
           await new Promise(r => setTimeout(r, 100));
         }
+        changedFilters = true;
+      }
+      if (aiPrefill.marca && targetTab === 'VEHICULO') {
+        setVehiculoMarca(aiPrefill.marca);
+        changedFilters = true;
+      }
+      if (aiPrefill.modelo && targetTab === 'VEHICULO') {
+        setVehiculoModelo(aiPrefill.modelo);
         changedFilters = true;
       }
 
@@ -281,6 +298,62 @@ export const GenerarReportesView = ({ tenantSlug, aiPrefill }) => {
             />
           </div>
         )}
+        {activeTab === 'VEHICULO' && (
+          <div className="flex flex-col gap-1 min-w-[160px]">
+            <label className="text-xs font-semibold text-carbon-500 dark:text-neutral-400 uppercase tracking-wider">Marca</label>
+            <input
+              type="text"
+              placeholder="Toyota"
+              value={vehiculoMarca}
+              onChange={(e) => setVehiculoMarca(e.target.value)}
+              className="px-3 py-2 bg-neutral-50 dark:bg-carbon-950 border border-neutral-200 dark:border-white/[0.06] rounded-xl text-carbon-900 dark:text-white"
+            />
+          </div>
+        )}
+        {activeTab === 'VEHICULO' && (
+          <div className="flex flex-col gap-1 min-w-[160px]">
+            <label className="text-xs font-semibold text-carbon-500 dark:text-neutral-400 uppercase tracking-wider">Modelo</label>
+            <input
+              type="text"
+              placeholder="Corolla"
+              value={vehiculoModelo}
+              onChange={(e) => setVehiculoModelo(e.target.value)}
+              className="px-3 py-2 bg-neutral-50 dark:bg-carbon-950 border border-neutral-200 dark:border-white/[0.06] rounded-xl text-carbon-900 dark:text-white"
+            />
+          </div>
+        )}
+        {activeTab === 'VEHICULO' && (
+          <div className="flex flex-col gap-1 min-w-[180px]">
+            <label className="text-xs font-semibold text-carbon-500 dark:text-neutral-400 uppercase tracking-wider">Estado Cita</label>
+            <select
+              value={estadoCita}
+              onChange={(e) => setEstadoCita(e.target.value)}
+              className="px-3 py-2 bg-neutral-50 dark:bg-carbon-950 border border-neutral-200 dark:border-white/[0.06] rounded-xl text-carbon-900 dark:text-white"
+            >
+              <option value="">Todos</option>
+              <option value="PROGRAMADA">PROGRAMADA</option>
+              <option value="EN_ESPERA_INGRESO">EN_ESPERA_INGRESO</option>
+              <option value="EN_PROCESO">EN_PROCESO</option>
+              <option value="FINALIZADA">FINALIZADA</option>
+              <option value="CANCELADA">CANCELADA</option>
+              <option value="NO_SHOW">NO_SHOW</option>
+            </select>
+          </div>
+        )}
+        {activeTab === 'VEHICULO' && (
+          <div className="flex flex-col gap-1 min-w-[140px]">
+            <label className="text-xs font-semibold text-carbon-500 dark:text-neutral-400 uppercase tracking-wider">Canal</label>
+            <select
+              value={canalOrigen}
+              onChange={(e) => setCanalOrigen(e.target.value)}
+              className="px-3 py-2 bg-neutral-50 dark:bg-carbon-950 border border-neutral-200 dark:border-white/[0.06] rounded-xl text-carbon-900 dark:text-white"
+            >
+              <option value="">Todos</option>
+              <option value="CLIENTE">CLIENTE</option>
+              <option value="ASESOR">ASESOR</option>
+            </select>
+          </div>
+        )}
 
         <button 
           id="btn-aplicar-filtros-reporte"
@@ -304,7 +377,7 @@ export const GenerarReportesView = ({ tenantSlug, aiPrefill }) => {
           {activeTab === 'GLOBAL' && data.kpis && (
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <KpiCard title="Ingresos Totales (Est.)" value={`$${data.kpis.ingresos_totales?.toFixed(2)}`} />
+                <KpiCard title="Ingresos Totales" value={`$${data.kpis.ingresos_totales?.toFixed(2)}`} />
                 <KpiCard title="Citas Totales" value={data.kpis.citas_totales} />
                 <KpiCard title="Completadas vs Canceladas" value={`${data.kpis.citas_completadas} / ${data.kpis.citas_canceladas}`} />
                 <KpiCard title="Ticket Promedio" value={`$${data.kpis.ticket_promedio?.toFixed(2)}`} />
@@ -355,8 +428,8 @@ export const GenerarReportesView = ({ tenantSlug, aiPrefill }) => {
           )}
 
           {/* TAB VEHICULO */}
-          {activeTab === 'VEHICULO' && (
-            <div className="space-y-6">
+        {activeTab === 'VEHICULO' && (
+          <div className="space-y-6">
               {data.top_vehiculos && (
                 <Card className="p-6">
                   <h3 className="text-lg font-bold text-carbon-900 dark:text-white mb-6">Top 10 Vehículos Frecuentes</h3>
@@ -376,10 +449,47 @@ export const GenerarReportesView = ({ tenantSlug, aiPrefill }) => {
               
               {data.vehiculo && (
                 <>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     <KpiCard title="Placa" value={data.vehiculo.placa} />
                     <KpiCard title="Modelo" value={`${data.vehiculo.marca} ${data.vehiculo.modelo}`} />
                     <KpiCard title="Total Visitas" value={data.kpis.total_visitas} />
+                    <KpiCard title="Tasa Completado" value={`${data.kpis.tasa_completado_pct}%`} />
+                    <KpiCard title="Finalizadas" value={data.kpis.citas_finalizadas} />
+                    <KpiCard title="Canceladas" value={data.kpis.citas_canceladas} />
+                    <KpiCard title="No Show" value={data.kpis.citas_no_show} />
+                    <KpiCard title="Promedio Atencion (h)" value={data.kpis.tiempo_promedio_atencion_horas ?? 'N/A'} />
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <Card className="p-6">
+                      <h3 className="text-lg font-bold text-carbon-900 dark:text-white mb-6">Visitas por Mes</h3>
+                      <div className="h-[300px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <RechartsBarChart data={data.citas_por_mes || []}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.1)" />
+                            <XAxis dataKey="mes" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+                            <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+                            <Tooltip contentStyle={{ borderRadius: '12px' }} />
+                            <Bar dataKey="total" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                          </RechartsBarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </Card>
+
+                    <Card className="p-6">
+                      <h3 className="text-lg font-bold text-carbon-900 dark:text-white mb-6">Servicios Mas Frecuentes</h3>
+                      <div className="h-[300px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <RechartsBarChart data={data.servicios_top || []} layout="vertical">
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.1)" />
+                            <XAxis type="number" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+                            <YAxis dataKey="servicio" type="category" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} width={160} />
+                            <Tooltip contentStyle={{ borderRadius: '12px' }} />
+                            <Bar dataKey="total" fill="#10b981" radius={[0, 4, 4, 0]} />
+                          </RechartsBarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </Card>
                   </div>
                   
                   <Card className="p-6">
@@ -414,10 +524,13 @@ export const GenerarReportesView = ({ tenantSlug, aiPrefill }) => {
           {activeTab === 'PRESUPUESTO' && data.kpis && (
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <KpiCard title="Presupuestos Totales" value={data.kpis.presupuestos_total} />
                 <KpiCard title="Pres. Emitidos" value={data.kpis.presupuestos_emitidos} />
                 <KpiCard title="Aprobados" value={data.kpis.presupuestos_aprobados} />
                 <KpiCard title="Rechazados" value={data.kpis.presupuestos_rechazados} />
-                <KpiCard title="Tasa de Cierre" value={`${data.kpis.tasa_aprobacion}%`} />
+                <KpiCard title="Cerrados" value={data.kpis.presupuestos_cerrados} />
+                <KpiCard title="Monto Total" value={`$${data.kpis.monto_total_presupuestado?.toFixed(2)}`} />
+                <KpiCard title="Tasa de Aprobacion" value={`${data.kpis.tasa_aprobacion}%`} />
               </div>
               
               <Card className="p-6">
@@ -438,6 +551,24 @@ export const GenerarReportesView = ({ tenantSlug, aiPrefill }) => {
                   </ResponsiveContainer>
                 </div>
               </Card>
+              {data.por_estado && data.por_estado.length > 0 && (
+                <Card className="p-6">
+                  <h3 className="text-lg font-bold text-carbon-900 dark:text-white mb-6">Distribucion por Estado</h3>
+                  <div className="h-[300px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie data={data.por_estado} cx="50%" cy="50%" outerRadius={90} dataKey="value" nameKey="name">
+                          {data.por_estado.map((entry, index) => (
+                            <Cell key={`pres-cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip contentStyle={{ borderRadius: '12px' }} />
+                        <Legend verticalAlign="bottom" height={36} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </Card>
+              )}
             </div>
           )}
 

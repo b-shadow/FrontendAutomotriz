@@ -9,6 +9,7 @@
 import { useState, useEffect } from 'react'
 import { HorarioEspacioModal } from './HorarioEspacioModal'
 import HorarioGrid from './HorarioGrid'
+import HorarioBloquesEditor from './HorarioBloquesEditor'
 import espaciosTrabajoService from '../../services/espaciosTrabajoService'
 import { canManageHorariosEspacio } from '../../utils/roleHelper'
 
@@ -94,6 +95,30 @@ export const HorariosEspacioPanel = ({ espacio, user, tenantSlug }) => {
     }
   }
 
+  const handleGuardarBloques = async (payloadPorDia) => {
+    try {
+      setIsSaving(true)
+      setError(null)
+
+      const dias = [0, 1, 2, 3, 4, 5, 6]
+      await Promise.all(
+        dias.map((dia) =>
+          espaciosTrabajoService.reemplazarHorariosPorBloques(tenantSlug, espacio.id, {
+            dia_semana: dia,
+            bloques_inicio_min: payloadPorDia[dia] || [],
+          })
+        )
+      )
+
+      await loadHorarios()
+    } catch (err) {
+      console.error('Error al guardar horarios por bloques:', err)
+      setError('No se pudieron guardar los horarios por bloques')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   return (
     <div className="space-y-4 w-full h-full max-w-none">
       {/* Header */}
@@ -126,24 +151,19 @@ export const HorariosEspacioPanel = ({ espacio, user, tenantSlug }) => {
         </div>
       )}
 
-      {/* Empty State */}
-      {!loading && horarios.length === 0 && (
-        <div className="text-center py-8 bg-neutral-50 dark:bg-carbon-700 rounded-lg">
-          <p className="text-carbon-600 dark:text-neutral-400">No hay horarios registrados</p>
-          {canManage && (
-            <button
-              onClick={() => handleOpenModal(null)}
-              className="mt-4 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg"
-            >
-              Crear primer horario
-            </button>
-          )}
-        </div>
+      {/* Editor por bloques (30 min) */}
+      {!loading && (
+        <HorarioBloquesEditor
+          horarios={horarios}
+          canManage={canManage}
+          isSaving={isSaving}
+          onSave={handleGuardarBloques}
+        />
       )}
 
       {/* Horarios Grid - Vista Completa */}
       {!loading && horarios.length > 0 && (
-        <HorarioGrid horarios={horarios} startHour={null} endHour={null} slotMinutes={60} />
+        <HorarioGrid horarios={horarios} startHour={null} endHour={null} slotMinutes={30} />
       )}
 
       {/* Modal */}

@@ -129,7 +129,7 @@ export const TenantSidebar = ({
       label: 'Atención Técnica', icon: <Wrench className="inline-block mx-1 text-current" size={20} strokeWidth={2} />,
       items: [
         {
-          id: 'recepcionVehiculo', label: <><ClipboardCheck className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> RecepciÃ³n de VehÃ­culos</>,
+          id: 'recepcionVehiculo', label: <><ClipboardCheck className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Recepción de Vehículos</>,
           visible: canViewRecepcionVehiculo(user),
         },
         {
@@ -137,7 +137,7 @@ export const TenantSidebar = ({
           visible: canViewCitas(user),
         },
         {
-          id: 'ordenesTrabajo', label: <><ClipboardList className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Ã“rdenes de Trabajo</>,
+          id: 'ordenesTrabajo', label: <><ClipboardList className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Órdenes de Trabajo</>,
           visible: canViewRecepcionVehiculo(user),
         },
         {

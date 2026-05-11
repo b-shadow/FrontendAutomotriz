@@ -6,6 +6,7 @@ import usuariosService from '../../services/usuariosService'
 
 export const GestionUsuariosRolesView = ({ user }) => {
   const { tenantSlug } = useTenant()
+  const esAdmin = user?.rol === 'ADMIN'
   const [activeTab, setActiveTab] = useState('usuarios')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -14,6 +15,14 @@ export const GestionUsuariosRolesView = ({ user }) => {
   const [usuarios, setUsuarios] = useState([])
   const [roles, setRoles] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
+  const [showCrearUsuarioModal, setShowCrearUsuarioModal] = useState(false)
+  const [formCrearUsuario, setFormCrearUsuario] = useState({
+    nombres: '',
+    apellidos: '',
+    email: '',
+    password: '',
+    telefono: '',
+  })
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -118,6 +127,41 @@ export const GestionUsuariosRolesView = ({ user }) => {
     }
   }
 
+  const handleCrearUsuario = async (e) => {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
+    try {
+      await usuariosService.crearUsuario(tenantSlug, {
+        nombres: formCrearUsuario.nombres.trim(),
+        apellidos: formCrearUsuario.apellidos.trim(),
+        email: formCrearUsuario.email.trim().toLowerCase(),
+        password: formCrearUsuario.password,
+        telefono: formCrearUsuario.telefono.trim() || null,
+      })
+      setSuccess('Usuario creado exitosamente')
+      setShowCrearUsuarioModal(false)
+      setFormCrearUsuario({
+        nombres: '',
+        apellidos: '',
+        email: '',
+        password: '',
+        telefono: '',
+      })
+      const usuariosData = await usuariosService.listarUsuarios(tenantSlug)
+      setUsuarios(Array.isArray(usuariosData) ? usuariosData : usuariosData.results || [])
+    } catch (err) {
+      setError(
+        err?.response?.data?.error ||
+        err?.response?.data?.detail ||
+        (typeof err?.response?.data === 'object' ? Object.values(err.response.data)[0]?.[0] : null) ||
+        'Error al crear usuario'
+      )
+    } finally {
+      setLoading(false)
+    }
+  }
+
   // Limpiar mensajes
   useEffect(() => {
     if (success) {
@@ -140,6 +184,19 @@ export const GestionUsuariosRolesView = ({ user }) => {
     const termino = searchTerm.toLowerCase()
     return nombreCompleto.includes(termino) || email.includes(termino)
   })
+
+  const getRolNombre = (usuario) => {
+    if (!usuario?.rol) return 'Sin rol'
+    if (typeof usuario.rol === 'string') return usuario.rol
+    return usuario.rol.nombre || 'Sin rol'
+  }
+
+  const getRolId = (usuario) => {
+    if (!usuario?.rol) return ''
+    if (typeof usuario.rol === 'object') return usuario.rol.id || ''
+    const encontrado = roles.find((r) => r.nombre === usuario.rol)
+    return encontrado?.id || ''
+  }
 
   return (
     <div className="space-y-6">
@@ -188,7 +245,14 @@ export const GestionUsuariosRolesView = ({ user }) => {
       {/* TAB: USUARIOS */}
       {activeTab === 'usuarios' && (
         <div className="space-y-4">
-          <h2 className="text-xl font-bold text-carbon-900 dark:text-white">Usuarios de la Empresa</h2>
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-xl font-bold text-carbon-900 dark:text-white">Usuarios de la Empresa</h2>
+            {esAdmin && (
+              <Button onClick={() => setShowCrearUsuarioModal(true)} disabled={loading}>
+                <User className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Crear Usuario
+              </Button>
+            )}
+          </div>
 
           {/* BUSCADOR */}
           <div className="flex gap-2">
@@ -243,7 +307,7 @@ export const GestionUsuariosRolesView = ({ user }) => {
                         <td className="py-3 px-4">
                           {editingUsuarioId === usuario.id ? (
                             <select
-                              value={usuario.rol.id || ''}
+                              value={getRolId(usuario)}
                               onChange={(e) => {
                                 if (e.target.value) {
                                   handleCambiarRol(usuario.id, e.target.value)
@@ -261,7 +325,7 @@ export const GestionUsuariosRolesView = ({ user }) => {
                             </select>
                             ) : (
                             <span className="px-3 py-1 rounded-full text-xs font-semibold bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300">
-                              {usuario.rol.nombre || 'Sin rol'}
+                              {getRolNombre(usuario)}
                             </span>
                           )}
                         </td>
@@ -322,6 +386,76 @@ export const GestionUsuariosRolesView = ({ user }) => {
               </div>
             )}
           </Card>
+        </div>
+      )}
+
+      {showCrearUsuarioModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-lg rounded-xl border border-neutral-200 bg-white p-6 dark:border-white/[0.08] dark:bg-carbon-900">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-xl font-bold text-carbon-900 dark:text-white">Crear Usuario</h3>
+              <button
+                onClick={() => setShowCrearUsuarioModal(false)}
+                className="rounded px-2 py-1 text-carbon-700 dark:text-neutral-300"
+              >
+                <X className="inline-block mx-1 text-current" size={20} strokeWidth={2} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCrearUsuario} className="space-y-3">
+              <input
+                required
+                placeholder="Nombres"
+                value={formCrearUsuario.nombres}
+                onChange={(e) => setFormCrearUsuario((p) => ({ ...p, nombres: e.target.value }))}
+                className="w-full rounded border border-neutral-300 bg-white px-3 py-2 text-carbon-900 dark:border-white/[0.08] dark:bg-carbon-800 dark:text-white"
+              />
+              <input
+                placeholder="Apellidos"
+                value={formCrearUsuario.apellidos}
+                onChange={(e) => setFormCrearUsuario((p) => ({ ...p, apellidos: e.target.value }))}
+                className="w-full rounded border border-neutral-300 bg-white px-3 py-2 text-carbon-900 dark:border-white/[0.08] dark:bg-carbon-800 dark:text-white"
+              />
+              <input
+                required
+                type="email"
+                placeholder="Email"
+                value={formCrearUsuario.email}
+                onChange={(e) => setFormCrearUsuario((p) => ({ ...p, email: e.target.value }))}
+                className="w-full rounded border border-neutral-300 bg-white px-3 py-2 text-carbon-900 dark:border-white/[0.08] dark:bg-carbon-800 dark:text-white"
+              />
+              <input
+                required
+                type="password"
+                minLength={8}
+                placeholder="Contrasena"
+                value={formCrearUsuario.password}
+                onChange={(e) => setFormCrearUsuario((p) => ({ ...p, password: e.target.value }))}
+                className="w-full rounded border border-neutral-300 bg-white px-3 py-2 text-carbon-900 dark:border-white/[0.08] dark:bg-carbon-800 dark:text-white"
+              />
+              <p className="text-xs text-carbon-500 dark:text-neutral-400">
+                Debe incluir mayuscula, minuscula, numero y simbolo.
+              </p>
+              <input
+                placeholder="Telefono (opcional)"
+                value={formCrearUsuario.telefono}
+                onChange={(e) => setFormCrearUsuario((p) => ({ ...p, telefono: e.target.value }))}
+                className="w-full rounded border border-neutral-300 bg-white px-3 py-2 text-carbon-900 dark:border-white/[0.08] dark:bg-carbon-800 dark:text-white"
+              />
+              <div className="rounded bg-neutral-100 px-3 py-2 text-xs text-carbon-700 dark:bg-carbon-800 dark:text-neutral-300">
+                Rol inicial: <strong>USUARIO</strong> (puedes cambiarlo luego con el boton de editar).
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button type="button" onClick={() => setShowCrearUsuarioModal(false)} disabled={loading}>
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={loading}>
+                  {loading ? 'Creando...' : 'Crear'}
+                </Button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 

@@ -36,6 +36,7 @@ const GestionCitasView = () => {
   const [modals, setModals] = useState({
     crear: false, editar : false,
     reprogramar: false, detalle : false,
+    confirmarNoShow: false,
   })
   const [citaSeleccionada, setCitaSeleccionada] = useState(null)
 
@@ -140,15 +141,26 @@ const GestionCitasView = () => {
     setTimeout(() => setSuccess(null), 3000)
   }
 
-  const handleCancelarCita = async (citaId) => {
-    if (!window.confirm('¿Cancelar esta cita')) return
+  const abrirConfirmacionNoShow = (cita) => {
+    setCitaSeleccionada(cita)
+    setModals((prev) => ({ ...prev, confirmarNoShow: true }))
+  }
+
+  const cerrarConfirmacionNoShow = () => {
+    setModals((prev) => ({ ...prev, confirmarNoShow: false }))
+    setCitaSeleccionada(null)
+  }
+
+  const handleMarcarNoShow = async () => {
+    if (!citaSeleccionada?.id) return
     try {
-      await citasService.cancelarCita(tenantSlug, citaId)
-      setSuccess('Cita cancelada correctamente')
+      await citasService.marcarNoShow(tenantSlug, citaSeleccionada.id)
+      setSuccess('Cita marcada como No Show')
+      cerrarConfirmacionNoShow()
       cargarCitas(pagination.page)
       setTimeout(() => setSuccess(null), 3000)
     } catch (err) {
-      setError(err.response.data.detail || 'Error al cancelar cita')
+      setError(err.response?.data?.error || err.response?.data?.detail || 'Error al marcar No Show')
     }
   }
 
@@ -196,7 +208,9 @@ const GestionCitasView = () => {
               <option value="">Todos</option>
               <option value="PROGRAMADA">Programada</option>
               <option value="PENDIENTE_APROBACION">Pendiente Aprobación</option>
+              <option value="EN_ESPERA_INGRESO">En espera de ingreso</option>
               <option value="CANCELADA">Cancelada</option>
+              <option value="NO_SHOW">No Show</option>
               <option value="FINALIZADA">Finalizada</option>
             </select>
           </div>
@@ -307,13 +321,12 @@ const GestionCitasView = () => {
                             </button>
                           </>
                         )}
-                        {cita.estado !== 'CANCELADA' &&
-                          cita.estado !== 'FINALIZADA' && (
+                        {(cita.estado === 'PROGRAMADA' || cita.estado === 'EN_ESPERA_INGRESO') && (
                             <button
-                              onClick={() => handleCancelarCita(cita.id)}
-                              className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 text-sm font-medium"
+                              onClick={() => abrirConfirmacionNoShow(cita)}
+                              className="text-orange-600 hover:text-orange-800 dark:text-orange-400 dark:hover:text-orange-300 text-sm font-medium"
                             >
-                              Cancelar
+                              No Show
                             </button>
                           )}
                       </td>
@@ -373,6 +386,34 @@ const GestionCitasView = () => {
           cita={citaSeleccionada}
           onClose={() => cerrarModal('detalle')}
         />
+      )}
+
+      {modals.confirmarNoShow && citaSeleccionada && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-2xl border border-neutral-200 bg-white p-6 shadow-2xl dark:border-white/[0.08] dark:bg-carbon-900">
+            <h2 className="text-xl font-bold text-carbon-900 dark:text-white mb-2 tracking-tight">
+              Confirmar No Show
+            </h2>
+            <p className="text-carbon-600 dark:text-neutral-400 mb-6 text-sm">
+              ¿Marcar la cita de <strong>{citaSeleccionada.cliente_nombres || 'cliente'}</strong> ({citaSeleccionada.vehiculo_placa || 'sin placa'}) como No Show?
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={cerrarConfirmacionNoShow}
+                className="flex-1 rounded-xl border border-neutral-200 bg-neutral-100 px-4 py-3 font-semibold text-carbon-900 transition hover:bg-neutral-200 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-neutral-100 dark:hover:bg-white/[0.08]"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleMarcarNoShow}
+                className="flex-1 rounded-xl bg-gradient-to-r from-orange-600 to-red-700 px-4 py-3 font-semibold text-white shadow-lg shadow-orange-900/20 transition hover:brightness-110"
+              >
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

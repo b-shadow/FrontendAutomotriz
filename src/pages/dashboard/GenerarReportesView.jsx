@@ -54,10 +54,10 @@ export const GenerarReportesView = ({ tenantSlug, aiPrefill }) => {
       
       switch (type) {
         case 'GLOBAL':
-          endpoint = `/api/${tenantSlug}/vehiculos-servicios/reportes/global_stats/`;
+          endpoint = `/api/${tenantSlug}/comunicacion-control/reportes/global_stats/`;
           break;
         case 'VEHICULO':
-          endpoint = `/api/${tenantSlug}/vehiculos-servicios/reportes/vehiculo/`;
+          endpoint = `/api/${tenantSlug}/comunicacion-control/reportes/vehiculo/`;
           if (vehiculoPlaca) params += `&placa=${vehiculoPlaca}`;
           if (vehiculoMarca) params += `&marca=${vehiculoMarca}`;
           if (vehiculoModelo) params += `&modelo=${vehiculoModelo}`;
@@ -65,11 +65,11 @@ export const GenerarReportesView = ({ tenantSlug, aiPrefill }) => {
           if (canalOrigen) params += `&canal_origen=${canalOrigen}`;
           break;
         case 'PRESUPUESTO':
-          endpoint = `/api/${tenantSlug}/vehiculos-servicios/reportes/presupuesto/`;
+          endpoint = `/api/${tenantSlug}/comunicacion-control/reportes/presupuesto/`;
           if (vehiculoPlaca) params += `&placa=${vehiculoPlaca}`;
           break;
         case 'INVENTARIO':
-          endpoint = `/api/${tenantSlug}/vehiculos-servicios/reportes/inventario/`;
+          endpoint = `/api/${tenantSlug}/comunicacion-control/reportes/inventario/`;
           break;
       }
       
@@ -136,6 +136,14 @@ export const GenerarReportesView = ({ tenantSlug, aiPrefill }) => {
       }
       if (aiPrefill.modelo && targetTab === 'VEHICULO') {
         setVehiculoModelo(aiPrefill.modelo);
+        changedFilters = true;
+      }
+      if (aiPrefill.estado_cita && targetTab === 'VEHICULO') {
+        setEstadoCita(aiPrefill.estado_cita);
+        changedFilters = true;
+      }
+      if (aiPrefill.canal_origen && targetTab === 'VEHICULO') {
+        setCanalOrigen(aiPrefill.canal_origen);
         changedFilters = true;
       }
 
@@ -381,7 +389,32 @@ export const GenerarReportesView = ({ tenantSlug, aiPrefill }) => {
                 <KpiCard title="Citas Totales" value={data.kpis.citas_totales} />
                 <KpiCard title="Completadas vs Canceladas" value={`${data.kpis.citas_completadas} / ${data.kpis.citas_canceladas}`} />
                 <KpiCard title="Ticket Promedio" value={`$${data.kpis.ticket_promedio?.toFixed(2)}`} />
+                <KpiCard title="Vehiculos en Taller" value={data.kpis.vehiculos_en_taller} />
+                <KpiCard title="Vehiculos Sistema" value={data.kpis.vehiculos_total_sistema} />
+                <KpiCard title="% En Taller" value={`${data.kpis.ratio_vehiculos_en_taller_pct}%`} />
               </div>
+              {data.ranking && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Card className="p-4">
+                    <h4 className="text-sm font-semibold text-carbon-500 dark:text-neutral-400 mb-1">Vehiculo con mas citas</h4>
+                    <p className="text-lg font-bold text-carbon-900 dark:text-white">
+                      {data.ranking.vehiculo_mas_citas ? `${data.ranking.vehiculo_mas_citas.vehiculo} (${data.ranking.vehiculo_mas_citas.placa})` : 'N/A'}
+                    </p>
+                    <p className="text-sm text-carbon-500 dark:text-neutral-400">
+                      {data.ranking.vehiculo_mas_citas ? `${data.ranking.vehiculo_mas_citas.total} citas` : ''}
+                    </p>
+                  </Card>
+                  <Card className="p-4">
+                    <h4 className="text-sm font-semibold text-carbon-500 dark:text-neutral-400 mb-1">Vehiculo con mas detalles resueltos</h4>
+                    <p className="text-lg font-bold text-carbon-900 dark:text-white">
+                      {data.ranking.vehiculo_mas_detalles_resueltos ? `${data.ranking.vehiculo_mas_detalles_resueltos.vehiculo} (${data.ranking.vehiculo_mas_detalles_resueltos.placa})` : 'N/A'}
+                    </p>
+                    <p className="text-sm text-carbon-500 dark:text-neutral-400">
+                      {data.ranking.vehiculo_mas_detalles_resueltos ? `${data.ranking.vehiculo_mas_detalles_resueltos.total} detalles` : ''}
+                    </p>
+                  </Card>
+                </div>
+              )}
               
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <Card className="p-6 col-span-2">
@@ -458,6 +491,9 @@ export const GenerarReportesView = ({ tenantSlug, aiPrefill }) => {
                     <KpiCard title="Canceladas" value={data.kpis.citas_canceladas} />
                     <KpiCard title="No Show" value={data.kpis.citas_no_show} />
                     <KpiCard title="Promedio Atencion (h)" value={data.kpis.tiempo_promedio_atencion_horas ?? 'N/A'} />
+                    <KpiCard title="Tiempo Total en Taller (h)" value={data.kpis.tiempo_total_taller_horas ?? 0} />
+                    <KpiCard title="Detalles Resueltos" value={`${data.kpis.detalles_resueltos} / ${data.kpis.detalles_totales}`} />
+                    <KpiCard title="Tasa Detalles Resueltos" value={`${data.kpis.tasa_detalles_resueltos_pct}%`} />
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -515,6 +551,33 @@ export const GenerarReportesView = ({ tenantSlug, aiPrefill }) => {
                       </table>
                     </div>
                   </Card>
+                  <Card className="p-6">
+                    <h3 className="text-lg font-bold text-carbon-900 dark:text-white mb-4">Detalle de Citas a lo largo del tiempo</h3>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="border-b border-neutral-200 dark:border-white/[0.06]">
+                            <th className="p-3 text-sm font-semibold text-carbon-500 dark:text-neutral-400">Fecha</th>
+                            <th className="p-3 text-sm font-semibold text-carbon-500 dark:text-neutral-400">Servicio</th>
+                            <th className="p-3 text-sm font-semibold text-carbon-500 dark:text-neutral-400">Estado</th>
+                            <th className="p-3 text-sm font-semibold text-carbon-500 dark:text-neutral-400">Tiempo (min)</th>
+                            <th className="p-3 text-sm font-semibold text-carbon-500 dark:text-neutral-400">Precio Ref.</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(data.detalles_historial || []).map((d, i) => (
+                            <tr key={`${d.cita_id}-${i}`} className="border-b border-neutral-100 dark:border-white/[0.02] hover:bg-neutral-50 dark:hover:bg-white/[0.02]">
+                              <td className="p-3 text-sm text-carbon-600 dark:text-neutral-300">{d.fecha_cita || 'N/A'}</td>
+                              <td className="p-3 text-sm font-medium text-carbon-900 dark:text-white">{d.servicio}</td>
+                              <td className="p-3 text-sm text-carbon-600 dark:text-neutral-300">{d.estado_detalle}</td>
+                              <td className="p-3 text-sm text-carbon-600 dark:text-neutral-300">{d.tiempo_estandar_min}</td>
+                              <td className="p-3 text-sm text-carbon-600 dark:text-neutral-300">${Number(d.precio_referencial || 0).toFixed(2)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </Card>
                 </>
               )}
             </div>
@@ -565,6 +628,22 @@ export const GenerarReportesView = ({ tenantSlug, aiPrefill }) => {
                         <Tooltip contentStyle={{ borderRadius: '12px' }} />
                         <Legend verticalAlign="bottom" height={36} />
                       </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </Card>
+              )}
+              {data.top_vehiculos_detalles_resueltos && data.top_vehiculos_detalles_resueltos.length > 0 && (
+                <Card className="p-6">
+                  <h3 className="text-lg font-bold text-carbon-900 dark:text-white mb-6">Top Vehiculos con mas Detalles Resueltos</h3>
+                  <div className="h-[350px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RechartsBarChart data={data.top_vehiculos_detalles_resueltos} layout="vertical" margin={{ left: 20 }}>
+                        <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="rgba(255,255,255,0.1)" />
+                        <XAxis type="number" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+                        <YAxis dataKey="vehiculo" type="category" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} width={160} />
+                        <Tooltip cursor={{ fill: 'rgba(0,0,0,0.05)' }} contentStyle={{ borderRadius: '12px' }} />
+                        <Bar dataKey="detalles_resueltos" fill="#10b981" radius={[0, 4, 4, 0]} barSize={20} />
+                      </RechartsBarChart>
                     </ResponsiveContainer>
                   </div>
                 </Card>

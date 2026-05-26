@@ -640,3 +640,33 @@ export const canViewInventario = (user) => {
   if (!user) return false
   return isAdminTenant(user) || isAlmacenero(user)
 }
+
+export const canManageProveedores = (user) => {
+  if (!user) return false
+  return isAdminTenant(user) || isAlmacenero(user) || isAdministrativo(user)
+}
+
+export const canManageCompras = (user) => {
+  if (!user) return false
+  return isAdminTenant(user) || isAlmacenero(user)
+}
+
+export const canManageVentasMostrador = (user) => {
+  if (!user) return false
+  return isAdminTenant(user) || isAdministrativo(user)
+}
+
+export const canManagePagosTaller = (user) => {
+  if (!user) return false
+  return isAdminTenant(user) || isAdministrativo(user)
+}
+
+export const canManageFacturas = (user) => {
+  if (!user) return false
+  return isAdminTenant(user) || isAdministrativo(user)
+}
+
+export const canManageCaja = (user) => {
+  if (!user) return false
+  return isAdminTenant(user) || isAdministrativo(user)
+}

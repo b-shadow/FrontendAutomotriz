@@ -60,6 +60,93 @@ const inventarioService = {
     const response = await apiClient.post(`/api/${tenantSlug}/gestion-administrativa/solicitudes-repuesto/${solicitudId}/marcar-recibida-taller/`, { detalles })
     return response.data
   },
+
+  asignarProveedorEta: async (tenantSlug, solicitudId, payload) => {
+    const response = await apiClient.post(`/api/${tenantSlug}/gestion-administrativa/solicitudes-repuesto/${solicitudId}/asignar-proveedor-eta/`, payload)
+    return response.data
+  },
+
+  listarProveedores: async (tenantSlug) => {
+    const response = await apiClient.get(`/api/${tenantSlug}/gestion-administrativa/proveedores/`)
+    return response.data
+  },
+
+  crearProveedor: async (tenantSlug, payload) => {
+    const response = await apiClient.post(`/api/${tenantSlug}/gestion-administrativa/proveedores/`, payload)
+    return response.data
+  },
+
+  listarCompras: async (tenantSlug) => {
+    const response = await apiClient.get(`/api/${tenantSlug}/gestion-administrativa/compras/`)
+    return response.data
+  },
+
+  crearCompra: async (tenantSlug, payload) => {
+    const response = await apiClient.post(`/api/${tenantSlug}/gestion-administrativa/compras/`, payload)
+    return response.data
+  },
+
+  marcarCompraRecibida: async (tenantSlug, compraId) => {
+    const response = await apiClient.post(`/api/${tenantSlug}/gestion-administrativa/compras/${compraId}/marcar-recibida/`)
+    return response.data
+  },
+
+  listarVentasMostrador: async (tenantSlug) => {
+    const response = await apiClient.get(`/api/${tenantSlug}/gestion-administrativa/ventas-mostrador/`)
+    return response.data
+  },
+
+  crearVentaMostrador: async (tenantSlug, payload) => {
+    const response = await apiClient.post(`/api/${tenantSlug}/gestion-administrativa/ventas-mostrador/`, payload)
+    return response.data
+  },
+
+  confirmarVentaMostrador: async (tenantSlug, ventaId) => {
+    const response = await apiClient.post(`/api/${tenantSlug}/gestion-administrativa/ventas-mostrador/${ventaId}/confirmar/`)
+    return response.data
+  },
+
+  listarPagosTaller: async (tenantSlug, params = {}) => {
+    const qs = new URLSearchParams(params).toString()
+    const response = await apiClient.get(`/api/${tenantSlug}/gestion-administrativa/pagos-taller/${qs ? `?${qs}` : ''}`)
+    return response.data
+  },
+
+  crearPagoTaller: async (tenantSlug, payload) => {
+    const response = await apiClient.post(`/api/${tenantSlug}/gestion-administrativa/pagos-taller/`, payload)
+    return response.data
+  },
+
+  marcarPagoRecibido: async (tenantSlug, pagoId) => {
+    const response = await apiClient.post(`/api/${tenantSlug}/gestion-administrativa/pagos-taller/${pagoId}/marcar-recibido/`)
+    return response.data
+  },
+
+  listarFacturas: async (tenantSlug) => {
+    const response = await apiClient.get(`/api/${tenantSlug}/gestion-administrativa/facturas/`)
+    return response.data
+  },
+
+  crearFactura: async (tenantSlug, payload) => {
+    const response = await apiClient.post(`/api/${tenantSlug}/gestion-administrativa/facturas/`, payload)
+    return response.data
+  },
+
+  listarCajas: async (tenantSlug) => {
+    const response = await apiClient.get(`/api/${tenantSlug}/gestion-administrativa/cajas/`)
+    return response.data
+  },
+
+  miCaja: async (tenantSlug) => {
+    const response = await apiClient.get(`/api/${tenantSlug}/gestion-administrativa/cajas/mi-caja/`)
+    return response.data
+  },
+
+  listarMovimientosCaja: async (tenantSlug, params = {}) => {
+    const qs = new URLSearchParams(params).toString()
+    const response = await apiClient.get(`/api/${tenantSlug}/gestion-administrativa/movimientos-caja/${qs ? `?${qs}` : ''}`)
+    return response.data
+  },
 }
 
 export default inventarioService

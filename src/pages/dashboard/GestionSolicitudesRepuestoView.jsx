@@ -86,6 +86,25 @@ const GestionSolicitudesRepuestoView = () => {
     }
   }
 
+  const asignarProveedorEta = async (s) => {
+    const proveedorId = window.prompt('ID del proveedor asignado')
+    if (!proveedorId) return
+    const eta = window.prompt('ETA estimado (ej. 2026-05-20 o 3 dias)', '') || ''
+    const observaciones = window.prompt('Observaciones (opcional)', '') || ''
+    try {
+      await inventarioService.asignarProveedorEta(tenantSlug, s.id, {
+        proveedor_id: proveedorId,
+        eta,
+        observaciones,
+      })
+      setSuccess('Proveedor y ETA asignados')
+      await cargar()
+      setTimeout(() => setSuccess(null), 2500)
+    } catch (err) {
+      setError(err.response?.data?.error || 'No se pudo asignar proveedor/ETA')
+    }
+  }
+
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold text-carbon-900 dark:text-white">Solicitudes de Repuesto</h1>
@@ -114,6 +133,7 @@ const GestionSolicitudesRepuestoView = () => {
                 <td className="px-3 py-2 flex gap-2">
                   <button onClick={() => aprobar(s)} className="text-emerald-700">Aprobar</button>
                   <button onClick={() => enProceso(s)} className="text-amber-700">En proceso</button>
+                  <button onClick={() => asignarProveedorEta(s)} className="text-sky-700">Asignar prov/ETA</button>
                   <button onClick={() => abrirEntrega(s)} className="text-indigo-700">Entregar</button>
                 </td>
               </tr>

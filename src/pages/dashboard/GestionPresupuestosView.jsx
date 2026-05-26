@@ -22,8 +22,9 @@ const GestionPresupuestosView = () => {
   const [success, setSuccess] = useState(null)
   const [filters, setFilters] = useState({ estado: '', search: '' })
   const [ajusteModal, setAjusteModal] = useState({ open: false, presupuesto: null, descuento: '', observaciones: '' })
-  const [pagoModal, setPagoModal] = useState({ open: false, presupuesto: null, monto: '' })
+  const [pagoModal, setPagoModal] = useState({ open: false, presupuesto: null, monto: '', metodoPago: 'QR' })
   const [historialModal, setHistorialModal] = useState({ open: false, presupuesto: null })
+  const [qrModal, setQrModal] = useState({ open: false, pagoId: null, data: null, estado: null })
 
   const cargar = useCallback(async () => {
     if (!tenantSlug) return
@@ -42,6 +43,43 @@ const GestionPresupuestosView = () => {
   useEffect(() => {
     cargar()
   }, [cargar])
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const result = params.get('stripe_result')
+    const presupuestoId = params.get('presupuesto_id')
+    const pagoTallerId = params.get('pago_taller_id')
+    const sessionId = params.get('session_id')
+    if (!result || !presupuestoId || !pagoTallerId) return
+
+    const limpiarUrl = () => {
+      const url = new URL(window.location.href)
+      url.searchParams.delete('stripe_result')
+      url.searchParams.delete('presupuesto_id')
+      url.searchParams.delete('pago_taller_id')
+      url.searchParams.delete('session_id')
+      window.history.replaceState({}, '', url.toString())
+    }
+
+    const procesar = async () => {
+      try {
+        if (result === 'success' && sessionId) {
+          await presupuestosService.confirmarPagoTarjeta(tenantSlug, presupuestoId, pagoTallerId, sessionId)
+          setSuccess('Pago con tarjeta confirmado correctamente')
+          await cargar()
+          setTimeout(() => setSuccess(null), 3000)
+        } else if (result === 'cancel') {
+          setError('Pago con tarjeta cancelado por el usuario.')
+        }
+      } catch (err) {
+        setError(err.response?.data?.error || 'No se pudo confirmar el pago de tarjeta.')
+      } finally {
+        limpiarUrl()
+      }
+    }
+
+    procesar()
+  }, [tenantSlug, cargar])
 
   const transicionar = async (id, accion) => {
     try {
@@ -101,7 +139,7 @@ const GestionPresupuestosView = () => {
   }
 
   const abrirPago = (presupuesto) => {
-    setPagoModal({ open: true, presupuesto, monto: '' })
+    setPagoModal({ open: true, presupuesto, monto: '', metodoPago: esCliente ? 'TARJETA' : 'QR' })
   }
 
   const ejecutarPago = async () => {
@@ -121,19 +159,61 @@ const GestionPresupuestosView = () => {
         setError('El monto no puede exceder el saldo pendiente.')
         return
       }
+      if (pagoModal.metodoPago === 'QR') {
+        const qr = await presupuestosService.iniciarPagoQR(tenantSlug, pagoModal.presupuesto.id, {
+          monto,
+          descripcion: `Pago presupuesto ${pagoModal.presupuesto.id}`,
+        })
+        setQrModal({ open: true, pagoId: qr.pagoId, data: qr, estado: qr.estado || 'PENDIENTE' })
+        setPagoModal({ open: false, presupuesto: null, monto: '', metodoPago: 'QR' })
+        return
+      }
       if (esCliente) {
-        await presupuestosService.simularPago(tenantSlug, pagoModal.presupuesto.id, monto)
+        await presupuestosService.simularPago(tenantSlug, pagoModal.presupuesto.id, monto, pagoModal.metodoPago)
       } else {
-        await presupuestosService.marcarPagado(tenantSlug, pagoModal.presupuesto.id, monto)
+        if (pagoModal.metodoPago === 'TARJETA') {
+          const stripeData = await presupuestosService.iniciarPagoTarjeta(tenantSlug, pagoModal.presupuesto.id, {
+            monto,
+            descripcion: `Pago tarjeta presupuesto ${pagoModal.presupuesto.id}`,
+          })
+          if (stripeData?.checkoutUrl) {
+            window.location.href = stripeData.checkoutUrl
+            return
+          }
+          setError('No se pudo abrir el checkout de Stripe.')
+          return
+        }
+        await presupuestosService.marcarPagado(tenantSlug, pagoModal.presupuesto.id, monto, pagoModal.metodoPago)
       }
       setSuccess('Pago registrado correctamente')
-      setPagoModal({ open: false, presupuesto: null, monto: '' })
+      setPagoModal({ open: false, presupuesto: null, monto: '', metodoPago: 'QR' })
       cargar()
       setTimeout(() => setSuccess(null), 2500)
     } catch (err) {
       setError(err.response?.data?.error || 'No se pudo registrar el pago')
     }
   }
+
+  useEffect(() => {
+    if (!qrModal.open || !qrModal.pagoId) return undefined
+    const poll = async () => {
+      try {
+        const estado = await presupuestosService.estadoPagoQR(tenantSlug, qrModal.pagoId)
+        const estadoActual = estado?.estado || 'PENDIENTE'
+        setQrModal((prev) => ({ ...prev, estado: estadoActual }))
+        if (estadoActual === 'CONFIRMADO') {
+          setSuccess('Pago QR confirmado correctamente')
+          await cargar()
+          setTimeout(() => setSuccess(null), 2500)
+        }
+      } catch {
+        // noop
+      }
+    }
+    poll()
+    const timer = setInterval(poll, 3000)
+    return () => clearInterval(timer)
+  }, [qrModal.open, qrModal.pagoId, tenantSlug, cargar])
 
   return (
     <div className="space-y-6">
@@ -275,12 +355,57 @@ const GestionPresupuestosView = () => {
             <p className="text-xs text-carbon-500 dark:text-neutral-400">
               Monto maximo permitido: {pagoModal.presupuesto?.saldo_pendiente}
             </p>
+            <select
+              value={pagoModal.metodoPago}
+              onChange={(e) => setPagoModal((m) => ({ ...m, metodoPago: e.target.value }))}
+              className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-carbon-800"
+            >
+              {esCliente ? (
+                <>
+                  <option value="TARJETA">Tarjeta</option>
+                  <option value="QR">QR</option>
+                </>
+              ) : (
+                <>
+                  <option value="QR">QR</option>
+                  <option value="EFECTIVO">Efectivo</option>
+                  <option value="TARJETA">Tarjeta (Stripe)</option>
+                </>
+              )}
+            </select>
             <div className="flex justify-end gap-2">
-              <button onClick={() => setPagoModal({ open: false, presupuesto: null, monto: '' })} className="px-4 py-2 border rounded-lg">Cancelar</button>
+              <button onClick={() => setPagoModal({ open: false, presupuesto: null, monto: '', metodoPago: 'QR' })} className="px-4 py-2 border rounded-lg">Cancelar</button>
               <button onClick={ejecutarPago} className="px-4 py-2 bg-primary-600 text-white rounded-lg">
-                {esCliente ? 'Simular pago' : 'Registrar pago'}
+                {pagoModal.metodoPago === 'QR' ? 'Generar QR' : (esCliente ? 'Simular pago' : 'Registrar pago')}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {qrModal.open && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+          <div className="w-full max-w-lg bg-white dark:bg-carbon-900 rounded-lg border border-neutral-200/60 dark:border-white/[0.06] p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold">{qrModal.data?.simulado ? 'Pago QR Simulado' : 'Pago QR Libelula'}</h3>
+              <button onClick={() => setQrModal({ open: false, pagoId: null, data: null, estado: null })} className="px-3 py-1 border rounded">Cerrar</button>
+            </div>
+            <p className="text-sm">Estado: <span className="font-semibold">{qrModal.estado || 'PENDIENTE'}</span></p>
+            <p className="text-sm">Monto real: Bs {qrModal.data?.montoReal}</p>
+            <p className="text-sm">Monto cobrado ({qrModal.data?.ambiente}): Bs {qrModal.data?.montoCobrado}</p>
+            {qrModal.data?.simulado && (
+              <p className="text-xs text-amber-600">Modo simulado: abre el enlace para confirmar o rechazar el pago.</p>
+            )}
+            <p className="text-xs text-carbon-500 dark:text-neutral-400">Vence: {qrModal.data?.fechaExpiracion ? new Date(qrModal.data.fechaExpiracion).toLocaleString() : '-'}</p>
+            {qrModal.data?.qrImagenBase64 && (
+              <img src={`data:image/png;base64,${qrModal.data.qrImagenBase64}`} alt="QR" className="mx-auto h-56 w-56 rounded border border-neutral-200/60 dark:border-white/[0.06]" />
+            )}
+            {!qrModal.data?.qrImagenBase64 && qrModal.data?.qrImagenUrl && (
+              <img src={qrModal.data.qrImagenUrl} alt="QR" className="mx-auto h-56 w-56 rounded border border-neutral-200/60 dark:border-white/[0.06]" />
+            )}
+            {qrModal.data?.urlPago && (
+              <a href={qrModal.data.urlPago} target="_blank" rel="noreferrer" className="text-blue-700 underline text-sm">Abrir enlace de pago</a>
+            )}
           </div>
         </div>
       )}

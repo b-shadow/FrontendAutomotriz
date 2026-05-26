@@ -1,7 +1,26 @@
 import { Briefcase, ClipboardList, User, Users, Building2, CreditCard, Car, Calendar, BarChart, CheckCircle, Package, Rocket, Lightbulb, Check, Info, Mail, Bot } from 'lucide-react';
 import { Card, Button } from '../../components/ui'
+import { useEffect, useState } from 'react'
+import apiClient from '../../services/apiClient'
 
 export const DashboardHome = ({ user, tenant, tenantSlug, onNavigate }) => {
+  const [kpis, setKpis] = useState(null)
+
+  useEffect(() => {
+    let mounted = true
+    const load = async () => {
+      if (!tenantSlug) return
+      try {
+        const res = await apiClient.get(`/api/${tenantSlug}/comunicacion-control/reportes/dashboard_kpis/`)
+        if (mounted) setKpis(res.data?.kpis || null)
+      } catch {
+        if (mounted) setKpis(null)
+      }
+    }
+    load()
+    return () => { mounted = false }
+  }, [tenantSlug])
+
   const getModulesAvailable = () => {
     const modules = []
     if (user) {
@@ -87,6 +106,20 @@ export const DashboardHome = ({ user, tenant, tenantSlug, onNavigate }) => {
           </div>
         </Card>
       </div>
+
+      {kpis && (
+        <Card className="bg-gradient-to-r from-neutral-50 to-neutral-100 dark:from-carbon-800/20 dark:to-carbon-900/20 border-neutral-200 dark:border-white/[0.06]">
+          <h3 className="text-lg font-bold text-carbon-900 dark:text-white mb-4 tracking-tight">Indicadores del Dia</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+            {Object.entries(kpis).map(([key, value]) => (
+              <div key={key} className="p-3 rounded-lg bg-white/70 dark:bg-white/[0.03] border border-neutral-200/50 dark:border-white/[0.04]">
+                <p className="text-carbon-500 dark:text-neutral-400 text-xs uppercase">{key.replaceAll('_', ' ')}</p>
+                <p className="text-carbon-900 dark:text-white font-bold">{String(value)}</p>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {/* MÓDULOS DISPONIBLES */}
       <Card className="bg-gradient-to-r from-burgundy-50 to-primary-50 dark:from-burgundy-900/15 dark:to-primary-900/15 border-burgundy-200 dark:border-burgundy-800/30">

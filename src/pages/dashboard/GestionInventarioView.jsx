@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useTenant } from '../../hooks/useTenant'
 import inventarioService from '../../services/inventarioService'
 
@@ -16,11 +16,37 @@ const emptyItem = {
   activo: true,
 }
 
-const GestionInventarioView = () => {
+const getErrorMessage = (err, fallback) => {
+  const data = err?.response?.data
+  if (typeof data?.error === 'string') return data.error
+  if (typeof data?.detail === 'string') return data.detail
+  if (data && typeof data === 'object') {
+    const firstKey = Object.keys(data)[0]
+    const firstVal = data[firstKey]
+    if (Array.isArray(firstVal) && firstVal.length) return String(firstVal[0])
+    if (typeof firstVal === 'string') return firstVal
+  }
+  return fallback
+}
+
+const TITLES = {
+  inventario: 'Inventario',
+  solicitudesRepuesto: 'Solicitudes de Repuesto',
+  proveedores: 'Proveedores',
+  comprasInsumos: 'Compras de Insumos',
+  ventasMostrador: 'Ventas Presenciales',
+  pagosTaller: 'Pagos de Taller',
+  facturasRecibos: 'Facturas y Recibos',
+  cajaMovimientos: 'Caja y Movimientos',
+}
+
+const GestionInventarioView = ({ initialSection = 'inventario' }) => {
   const { tenantSlug } = useTenant()
   const [categorias, setCategorias] = useState([])
   const [items, setItems] = useState([])
   const [movimientos, setMovimientos] = useState([])
+  const [proveedores, setProveedores] = useState([])
+  const [compras, setCompras] = useState([])
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
 
@@ -31,14 +57,18 @@ const GestionInventarioView = () => {
     if (!tenantSlug) return
     try {
       setError(null)
-      const [cats, its, movs] = await Promise.all([
+      const [cats, its, movs, provs, comps] = await Promise.all([
         inventarioService.listarCategorias(tenantSlug),
         inventarioService.listarItems(tenantSlug),
         inventarioService.listarMovimientos(tenantSlug),
+        inventarioService.listarProveedores(tenantSlug),
+        inventarioService.listarCompras(tenantSlug),
       ])
       setCategorias(cats.results || cats || [])
       setItems(its.results || its || [])
       setMovimientos(movs.results || movs || [])
+      setProveedores(provs.results || provs || [])
+      setCompras(comps.results || comps || [])
     } catch (err) {
       setError(getErrorMessage(err, 'Error cargando inventario'))
     }
@@ -58,6 +88,61 @@ const GestionInventarioView = () => {
       setTimeout(() => setSuccess(null), 2500)
     } catch (err) {
       setError(getErrorMessage(err, 'No se pudo crear la categoria'))
+    }
+  }
+
+  const crearProveedor = async () => {
+    const nombre = window.prompt('Nombre del proveedor')
+    if (!nombre) return
+    const telefono = window.prompt('Telefono (opcional)', '') || ''
+    const email = window.prompt('Email (opcional)', '') || ''
+    const contacto = window.prompt('Contacto (opcional)', '') || ''
+    try {
+      await inventarioService.crearProveedor(tenantSlug, { nombre, telefono, email, contacto, activo: true })
+      setSuccess('Proveedor creado')
+      await cargar()
+      setTimeout(() => setSuccess(null), 2500)
+    } catch (err) {
+      setError(getErrorMessage(err, 'No se pudo crear proveedor'))
+    }
+  }
+
+  const crearCompra = async () => {
+    if (!items.length) {
+      setError('Debes tener items creados para registrar compra.')
+      return
+    }
+    const proveedor = proveedores[0]
+    const item = items[0]
+    const cantidad = Number(window.prompt(`Cantidad para ${item.nombre}`, '1') || 0)
+    const costo = Number(window.prompt('Costo unitario', String(item.costo_promedio || 0)) || 0)
+    if (!cantidad || cantidad <= 0 || costo < 0) {
+      setError('Cantidad/costo invalidos.')
+      return
+    }
+    try {
+      await inventarioService.crearCompra(tenantSlug, {
+        proveedor_id: proveedor?.id || null,
+        numero_documento: `CMP-${Date.now()}`,
+        estado: 'BORRADOR',
+        detalles: [{ item_inventario_id: item.id, cantidad, costo_unitario: costo }],
+      })
+      setSuccess('Compra creada')
+      await cargar()
+      setTimeout(() => setSuccess(null), 2500)
+    } catch (err) {
+      setError(getErrorMessage(err, 'No se pudo crear compra'))
+    }
+  }
+
+  const recibirCompra = async (compraId) => {
+    try {
+      await inventarioService.marcarCompraRecibida(tenantSlug, compraId)
+      setSuccess('Compra recibida y stock actualizado')
+      await cargar()
+      setTimeout(() => setSuccess(null), 2500)
+    } catch (err) {
+      setError(getErrorMessage(err, 'No se pudo recibir compra'))
     }
   }
 
@@ -103,9 +188,11 @@ const GestionInventarioView = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-carbon-900 dark:text-white">Inventario</h1>
+        <h1 className="text-3xl font-bold text-carbon-900 dark:text-white">{TITLES[initialSection] || 'Inventario'}</h1>
         <div className="flex gap-2">
           <button onClick={crearCategoria} className="px-3 py-2 bg-neutral-700 text-white rounded">Nueva categoria</button>
+          <button onClick={crearProveedor} className="px-3 py-2 bg-neutral-700 text-white rounded">Nuevo proveedor</button>
+          <button onClick={crearCompra} className="px-3 py-2 bg-neutral-700 text-white rounded">Nueva compra</button>
           <button onClick={() => setShowCrearItemModal(true)} className="px-3 py-2 bg-primary-600 text-white rounded">Crear item</button>
         </div>
       </div>
@@ -135,6 +222,62 @@ const GestionInventarioView = () => {
                 <td className="px-3 py-2">{i.stock_actual}</td>
                 <td className="px-3 py-2">{i.stock_minimo}</td>
                 <td className="px-3 py-2"><button onClick={() => ajustarStock(i)} className="text-indigo-700">Ajustar</button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="bg-white dark:bg-carbon-900 rounded-lg border border-neutral-200/60 dark:border-white/[0.06] overflow-hidden">
+        <div className="p-4 font-semibold">Proveedores</div>
+        <table className="w-full text-sm">
+          <thead className="bg-neutral-50 dark:bg-carbon-800">
+            <tr>
+              <th className="px-3 py-2 text-left">Nombre</th>
+              <th className="px-3 py-2 text-left">Telefono</th>
+              <th className="px-3 py-2 text-left">Email</th>
+              <th className="px-3 py-2 text-left">Contacto</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(proveedores || []).map((p) => (
+              <tr key={p.id} className="border-t border-neutral-200/60 dark:border-white/[0.06]">
+                <td className="px-3 py-2">{p.nombre}</td>
+                <td className="px-3 py-2">{p.telefono || '-'}</td>
+                <td className="px-3 py-2">{p.email || '-'}</td>
+                <td className="px-3 py-2">{p.contacto || '-'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="bg-white dark:bg-carbon-900 rounded-lg border border-neutral-200/60 dark:border-white/[0.06] overflow-hidden">
+        <div className="p-4 font-semibold">Compras</div>
+        <table className="w-full text-sm">
+          <thead className="bg-neutral-50 dark:bg-carbon-800">
+            <tr>
+              <th className="px-3 py-2 text-left">Documento</th>
+              <th className="px-3 py-2 text-left">Proveedor</th>
+              <th className="px-3 py-2 text-left">Estado</th>
+              <th className="px-3 py-2 text-left">Total</th>
+              <th className="px-3 py-2 text-left">Accion</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(compras || []).map((c) => (
+              <tr key={c.id} className="border-t border-neutral-200/60 dark:border-white/[0.06]">
+                <td className="px-3 py-2">{c.numero_documento}</td>
+                <td className="px-3 py-2">{c.proveedor_nombre || '-'}</td>
+                <td className="px-3 py-2">{c.estado}</td>
+                <td className="px-3 py-2">{c.total}</td>
+                <td className="px-3 py-2">
+                  {c.estado !== 'CONFIRMADA' ? (
+                    <button onClick={() => recibirCompra(c.id)} className="text-indigo-700">Marcar recibida</button>
+                  ) : (
+                    <span className="text-green-700">Recibida</span>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -196,15 +339,3 @@ const GestionInventarioView = () => {
 }
 
 export default GestionInventarioView
-  const getErrorMessage = (err, fallback) => {
-    const data = err?.response?.data
-    if (typeof data?.error === 'string') return data.error
-    if (typeof data?.detail === 'string') return data.detail
-    if (data && typeof data === 'object') {
-      const firstKey = Object.keys(data)[0]
-      const firstVal = data[firstKey]
-      if (Array.isArray(firstVal) && firstVal.length) return String(firstVal[0])
-      if (typeof firstVal === 'string') return firstVal
-    }
-    return fallback
-  }

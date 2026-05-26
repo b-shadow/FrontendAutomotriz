@@ -198,9 +198,21 @@ export const TenantDashboard = () => {
       case 'avanceVehiculo':
         return <GestionAvanceVehiculoView tenantSlug={tenantSlug} user={user} />
       case 'inventario':
-        return <GestionInventarioView tenantSlug={tenantSlug} user={user} />
+        return <GestionInventarioView tenantSlug={tenantSlug} user={user} initialSection="inventario" />
       case 'solicitudesRepuesto':
         return <GestionSolicitudesRepuestoView tenantSlug={tenantSlug} user={user} />
+      case 'proveedores':
+        return <GestionInventarioView tenantSlug={tenantSlug} user={user} initialSection="proveedores" />
+      case 'comprasInsumos':
+        return <GestionInventarioView tenantSlug={tenantSlug} user={user} initialSection="comprasInsumos" />
+      case 'ventasMostrador':
+        return <GestionInventarioView tenantSlug={tenantSlug} user={user} initialSection="ventasMostrador" />
+      case 'pagosTaller':
+        return <GestionInventarioView tenantSlug={tenantSlug} user={user} initialSection="pagosTaller" />
+      case 'facturasRecibos':
+        return <GestionInventarioView tenantSlug={tenantSlug} user={user} initialSection="facturasRecibos" />
+      case 'cajaMovimientos':
+        return <GestionInventarioView tenantSlug={tenantSlug} user={user} initialSection="cajaMovimientos" />
       case 'gestionarBackup':
         return <GestionBackupView />
       case 'asistenteIA':

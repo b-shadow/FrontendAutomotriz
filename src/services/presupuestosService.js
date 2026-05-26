@@ -52,13 +52,36 @@ const presupuestosService = {
     return response.data
   },
 
-  simularPago: async (tenantSlug, id, monto) => {
-    const response = await apiClient.post(`/api/${tenantSlug}/atencion-tecnica/presupuestos-cita/${id}/simular-pago/`, { monto })
+  simularPago: async (tenantSlug, id, monto, metodoPago = 'TARJETA') => {
+    const response = await apiClient.post(`/api/${tenantSlug}/atencion-tecnica/presupuestos-cita/${id}/simular-pago/`, { monto, metodo_pago: metodoPago })
     return response.data
   },
 
-  marcarPagado: async (tenantSlug, id, monto) => {
-    const response = await apiClient.post(`/api/${tenantSlug}/atencion-tecnica/presupuestos-cita/${id}/marcar-pagado/`, { monto })
+  iniciarPagoQR: async (tenantSlug, id, payload) => {
+    const response = await apiClient.post(`/api/${tenantSlug}/atencion-tecnica/presupuestos-cita/${id}/iniciar-pago-qr/`, payload)
+    return response.data
+  },
+
+  iniciarPagoTarjeta: async (tenantSlug, id, payload) => {
+    const response = await apiClient.post(`/api/${tenantSlug}/atencion-tecnica/presupuestos-cita/${id}/iniciar-pago-tarjeta/`, payload)
+    return response.data
+  },
+
+  confirmarPagoTarjeta: async (tenantSlug, id, pagoTallerId, sessionId) => {
+    const response = await apiClient.post(`/api/${tenantSlug}/atencion-tecnica/presupuestos-cita/${id}/confirmar-pago-tarjeta/`, {
+      pago_taller_id: pagoTallerId,
+      session_id: sessionId,
+    })
+    return response.data
+  },
+
+  estadoPagoQR: async (tenantSlug, pagoId) => {
+    const response = await apiClient.get(`/api/${tenantSlug}/gestion-administrativa/pagos-taller/${pagoId}/estado-qr/`)
+    return response.data
+  },
+
+  marcarPagado: async (tenantSlug, id, monto, metodoPago = 'QR') => {
+    const response = await apiClient.post(`/api/${tenantSlug}/atencion-tecnica/presupuestos-cita/${id}/marcar-pagado/`, { monto, metodo_pago: metodoPago })
     return response.data
   },
 }

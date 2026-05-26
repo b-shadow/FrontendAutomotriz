@@ -6,6 +6,7 @@ import LoginTenant from './pages/LoginTenant'
 import RegistroTenant from './pages/RegistroTenant'
 import RecuperarPasswordTenant from './pages/RecuperarPasswordTenant'
 import TenantDashboard from './pages/TenantDashboard'
+import PagoQRSimulador from './pages/PagoQRSimulador'
 import TenantResolver from './components/TenantResolver'
 import TenantGuard from './components/TenantGuard'
 
@@ -33,6 +34,7 @@ function App() {
           
           {/* Registro de nueva empresa (multi-paso wizard) */}
           <Route path="/empresas/nueva" element={<RegistrarEmpresa />} />
+          <Route path="/pagos/simulador/:codigoPago/:token" element={<PagoQRSimulador />} />
           
           {/* Listado público de empresas */}
           <Route path="/empresas" element={<ListarEmpresas />} />

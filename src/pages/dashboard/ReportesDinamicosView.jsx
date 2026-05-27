@@ -166,48 +166,58 @@ export const ReportesDinamicosView = ({ tenantSlug }) => {
   const [globalError, setGlobalError] = useState('');
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [isListening, setIsListening] = useState(false);
-  const [recognition, setRecognition] = useState(null);
+  const mediaRecorderRef = React.useRef(null);
+  const audioChunksRef = React.useRef([]);
 
-  React.useEffect(() => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      const rec = new SpeechRecognition();
-      rec.continuous = false;
-      rec.interimResults = true;
-      rec.lang = 'es-ES';
-
-      rec.onresult = (event) => {
-        let currentTranscript = '';
-        for (let i = 0; i < event.results.length; i++) {
-          currentTranscript += event.results[i][0].transcript;
-        }
-        setPrompt(currentTranscript);
-      };
-
-      rec.onerror = (event) => {
-        console.error("Speech recognition error", event.error);
-        setIsListening(false);
-      };
-
-      rec.onend = () => {
-        setIsListening(false);
-      };
-
-      setRecognition(rec);
-    }
-  }, []);
-
-  const toggleListening = () => {
-    if (!recognition) {
-      alert("Tu navegador no soporta el reconocimiento de voz.");
-      return;
-    }
+  const toggleListening = async () => {
     if (isListening) {
-      recognition.stop();
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+        mediaRecorderRef.current.stop();
+      }
       setIsListening(false);
     } else {
-      recognition.start();
-      setIsListening(true);
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const mediaRecorder = new MediaRecorder(stream);
+        mediaRecorderRef.current = mediaRecorder;
+        audioChunksRef.current = [];
+
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            audioChunksRef.current.push(event.data);
+          }
+        };
+
+        mediaRecorder.onstop = async () => {
+          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+          const formData = new FormData();
+          formData.append('audio', audioBlob, 'audio.webm');
+          
+          stream.getTracks().forEach(track => track.stop());
+
+          try {
+            const response = await apiClient.post(
+              `/api/${tenantSlug}/comunicacion-control/reportes-ia/transcribe_audio/`,
+              formData,
+              { headers: { 'Content-Type': undefined } }
+            );
+            if (response.data && response.data.text) {
+              setPrompt(response.data.text);
+            } else {
+              setPrompt("");
+            }
+          } catch (error) {
+            console.error("Error transcribing audio:", error);
+            setPrompt("⚠️ Error al transcribir el audio.");
+          }
+        };
+
+        mediaRecorder.start();
+        setIsListening(true);
+      } catch (err) {
+        console.error("Error al acceder al micrófono:", err);
+        setPrompt("⚠️ No se pudo acceder al micrófono.");
+      }
     }
   };
 

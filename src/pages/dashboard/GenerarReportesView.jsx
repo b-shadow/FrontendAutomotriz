@@ -10,36 +10,17 @@ import {
   Calendar,
   Search,
   Filter,
-  Loader2,
-  Sparkles
+  Loader2
 } from 'lucide-react';
 import { Card } from '../../components/ui';
 import apiClient from '../../services/apiClient';
-import { ReportesDinamicosView } from './ReportesDinamicosView';
 import { 
   LineChart, Line, BarChart as RechartsBarChart, Bar, PieChart, Pie, Cell, 
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
 } from 'recharts';
 import * as XLSX from 'xlsx';
 
-const CHART_COLORS = ['#10b981', '#6366f1', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6'];
-
-const CustomTooltip = ({ active, payload, label }) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-white/80 dark:bg-carbon-900/80 backdrop-blur-md p-4 rounded-2xl border border-white/20 shadow-xl">
-        <p className="font-bold text-carbon-900 dark:text-white mb-2">{label}</p>
-        {payload.map((entry, index) => (
-          <p key={index} className="text-sm font-medium flex items-center gap-2" style={{ color: entry.color || CHART_COLORS[index] }}>
-            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color || CHART_COLORS[index] }}></span>
-            {entry.name}: {entry.value}
-          </p>
-        ))}
-      </div>
-    );
-  }
-  return null;
-};
+const COLORS = ['#d4572f', '#10203a', '#10b981', '#f59e0b', '#6366f1'];
 
 export const GenerarReportesView = ({ tenantSlug, aiPrefill }) => {
   const [activeTab, setActiveTab] = useState('GLOBAL');
@@ -58,6 +39,12 @@ export const GenerarReportesView = ({ tenantSlug, aiPrefill }) => {
   const [vehiculoModelo, setVehiculoModelo] = useState('');
   const [estadoCita, setEstadoCita] = useState('');
   const [canalOrigen, setCanalOrigen] = useState('');
+  
+  const [usuarioRol, setUsuarioRol] = useState('');
+  const [usuarioEstado, setUsuarioEstado] = useState('');
+  const [ventaEstado, setVentaEstado] = useState('');
+  const [compraEstado, setCompraEstado] = useState('');
+  const [compraProveedorId, setCompraProveedorId] = useState('');
 
   // UI State
   const [showExportModal, setShowExportModal] = useState(false);
@@ -66,7 +53,6 @@ export const GenerarReportesView = ({ tenantSlug, aiPrefill }) => {
   const ghostActiveRef = useRef(false);
   
   const fetchReportData = async (type = activeTab) => {
-    if (type === 'IA') return;
     setLoading(true);
     try {
       let endpoint = '';
@@ -90,6 +76,20 @@ export const GenerarReportesView = ({ tenantSlug, aiPrefill }) => {
           break;
         case 'INVENTARIO':
           endpoint = `/api/${tenantSlug}/comunicacion-control/reportes/inventario/`;
+          break;
+        case 'USUARIOS':
+          endpoint = `/api/${tenantSlug}/comunicacion-control/reportes/usuarios/`;
+          if (usuarioRol) params += `&rol=${usuarioRol}`;
+          if (usuarioEstado) params += `&estado=${usuarioEstado}`;
+          break;
+        case 'VENTAS':
+          endpoint = `/api/${tenantSlug}/comunicacion-control/reportes/ventas_mostrador/`;
+          if (ventaEstado) params += `&estado_venta=${ventaEstado}`;
+          break;
+        case 'COMPRAS':
+          endpoint = `/api/${tenantSlug}/comunicacion-control/reportes/compras/`;
+          if (compraEstado) params += `&estado_compra=${compraEstado}`;
+          if (compraProveedorId) params += `&proveedor_id=${compraProveedorId}`;
           break;
       }
       
@@ -211,6 +211,12 @@ export const GenerarReportesView = ({ tenantSlug, aiPrefill }) => {
       exportData = data.top_servicios || [];
     } else if (activeTab === 'PRESUPUESTO') {
       exportData = data.funnel || [];
+    } else if (activeTab === 'USUARIOS') {
+      exportData = data.top_clientes || [];
+    } else if (activeTab === 'VENTAS') {
+      exportData = [data.kpis] || [];
+    } else if (activeTab === 'COMPRAS') {
+      exportData = [data.kpis] || [];
     }
 
     if (exportData.length === 0) {
@@ -250,8 +256,7 @@ export const GenerarReportesView = ({ tenantSlug, aiPrefill }) => {
     { id: 'GLOBAL', label: 'Estadísticas Globales', icon: LineChartIcon },
     { id: 'VEHICULO', label: 'Por Vehículo', icon: Car },
     { id: 'PRESUPUESTO', label: 'Por Presupuesto', icon: FileText },
-    { id: 'INVENTARIO', label: 'Por Catálogo (Inventario)', icon: Package },
-    { id: 'IA', label: 'Inteligencia Artificial', icon: Sparkles }
+    { id: 'INVENTARIO', label: 'Por Catálogo (Inventario)', icon: Package }
   ];
 
   return (
@@ -264,145 +269,243 @@ export const GenerarReportesView = ({ tenantSlug, aiPrefill }) => {
           <p className="text-carbon-500 dark:text-neutral-400">Analítica avanzada de tu empresa</p>
         </div>
         
-        {activeTab !== 'IA' && (
-          <button 
-            id="btn-exportar-reporte"
-            onClick={() => setShowExportModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-carbon-900 dark:bg-white text-white dark:text-carbon-900 rounded-xl hover:bg-carbon-800 dark:hover:bg-neutral-200 transition-colors font-medium shadow-sm"
-          >
-            <Download size={18} /> Exportar Reporte
-          </button>
-        )}
-      </div>
-
-      {/* Tabs */}
-      <div className="flex overflow-x-auto hide-scrollbar gap-2 p-1 bg-white dark:bg-carbon-900 border border-neutral-200 dark:border-white/[0.06] rounded-2xl shadow-sm">
-        {tabs.map(tab => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-3 rounded-xl font-medium text-sm transition-all whitespace-nowrap ${
-                isActive 
-                  ? 'bg-primary-50 text-primary-700 dark:bg-primary-500/10 dark:text-primary-400' 
-                  : 'text-carbon-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-white/[0.02]'
-              }`}
-            >
-              <Icon size={18} /> {tab.label}
-            </button>
-          )
-        })}
-      </div>
-
-      {/* Filters */}
-      {activeTab !== 'IA' && (
-        <Card className="p-4 bg-white dark:bg-carbon-900 flex flex-wrap gap-4 items-end">
-          <div className="flex flex-col gap-1">
-          <label className="text-xs font-semibold text-carbon-500 dark:text-neutral-400 uppercase tracking-wider">Desde</label>
-          <input 
-            type="date" 
-            value={fechaDesde}
-            onChange={(e) => setFechaDesde(e.target.value)}
-            className="px-3 py-2 bg-neutral-50 dark:bg-carbon-950 border border-neutral-200 dark:border-white/[0.06] rounded-xl text-carbon-900 dark:text-white"
-          />
-        </div>
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-semibold text-carbon-500 dark:text-neutral-400 uppercase tracking-wider">Hasta</label>
-          <input 
-            type="date" 
-            value={fechaHasta}
-            onChange={(e) => setFechaHasta(e.target.value)}
-            className="px-3 py-2 bg-neutral-50 dark:bg-carbon-950 border border-neutral-200 dark:border-white/[0.06] rounded-xl text-carbon-900 dark:text-white"
-          />
-        </div>
-        
-        {activeTab === 'VEHICULO' && (
-          <div className="flex flex-col gap-1 flex-1 min-w-[200px]">
-            <label className="text-xs font-semibold text-carbon-500 dark:text-neutral-400 uppercase tracking-wider">Placa del Vehículo</label>
-            <input 
-              type="text" 
-              placeholder="Ej. ABC-123"
-              value={vehiculoPlaca}
-              onChange={(e) => setVehiculoPlaca(e.target.value.toUpperCase())}
-              className="px-3 py-2 bg-neutral-50 dark:bg-carbon-950 border border-neutral-200 dark:border-white/[0.06] rounded-xl text-carbon-900 dark:text-white uppercase"
-            />
-          </div>
-        )}
-        {activeTab === 'VEHICULO' && (
-          <div className="flex flex-col gap-1 min-w-[160px]">
-            <label className="text-xs font-semibold text-carbon-500 dark:text-neutral-400 uppercase tracking-wider">Marca</label>
-            <input
-              type="text"
-              placeholder="Toyota"
-              value={vehiculoMarca}
-              onChange={(e) => setVehiculoMarca(e.target.value)}
-              className="px-3 py-2 bg-neutral-50 dark:bg-carbon-950 border border-neutral-200 dark:border-white/[0.06] rounded-xl text-carbon-900 dark:text-white"
-            />
-          </div>
-        )}
-        {activeTab === 'VEHICULO' && (
-          <div className="flex flex-col gap-1 min-w-[160px]">
-            <label className="text-xs font-semibold text-carbon-500 dark:text-neutral-400 uppercase tracking-wider">Modelo</label>
-            <input
-              type="text"
-              placeholder="Corolla"
-              value={vehiculoModelo}
-              onChange={(e) => setVehiculoModelo(e.target.value)}
-              className="px-3 py-2 bg-neutral-50 dark:bg-carbon-950 border border-neutral-200 dark:border-white/[0.06] rounded-xl text-carbon-900 dark:text-white"
-            />
-          </div>
-        )}
-        {activeTab === 'VEHICULO' && (
-          <div className="flex flex-col gap-1 min-w-[180px]">
-            <label className="text-xs font-semibold text-carbon-500 dark:text-neutral-400 uppercase tracking-wider">Estado Cita</label>
-            <select
-              value={estadoCita}
-              onChange={(e) => setEstadoCita(e.target.value)}
-              className="px-3 py-2 bg-neutral-50 dark:bg-carbon-950 border border-neutral-200 dark:border-white/[0.06] rounded-xl text-carbon-900 dark:text-white"
-            >
-              <option value="">Todos</option>
-              <option value="PROGRAMADA">PROGRAMADA</option>
-              <option value="EN_ESPERA_INGRESO">EN_ESPERA_INGRESO</option>
-              <option value="EN_PROCESO">EN_PROCESO</option>
-              <option value="FINALIZADA">FINALIZADA</option>
-              <option value="CANCELADA">CANCELADA</option>
-              <option value="NO_SHOW">NO_SHOW</option>
-            </select>
-          </div>
-        )}
-        {activeTab === 'VEHICULO' && (
-          <div className="flex flex-col gap-1 min-w-[140px]">
-            <label className="text-xs font-semibold text-carbon-500 dark:text-neutral-400 uppercase tracking-wider">Canal</label>
-            <select
-              value={canalOrigen}
-              onChange={(e) => setCanalOrigen(e.target.value)}
-              className="px-3 py-2 bg-neutral-50 dark:bg-carbon-950 border border-neutral-200 dark:border-white/[0.06] rounded-xl text-carbon-900 dark:text-white"
-            >
-              <option value="">Todos</option>
-              <option value="CLIENTE">CLIENTE</option>
-              <option value="ASESOR">ASESOR</option>
-            </select>
-          </div>
-        )}
-
         <button 
-          id="btn-aplicar-filtros-reporte"
-          onClick={() => fetchReportData(activeTab)}
-          className="flex items-center gap-2 px-6 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-xl transition-colors font-medium ml-auto"
+          id="btn-exportar-reporte"
+          onClick={() => setShowExportModal(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-carbon-900 dark:bg-white text-white dark:text-carbon-900 rounded-xl hover:bg-carbon-800 dark:hover:bg-neutral-200 transition-colors font-medium shadow-sm"
         >
-          <Filter size={18} /> Filtrar
+          <Download size={18} /> Exportar Reporte
         </button>
-      </Card>
-      )}
-
-      {/* Loading State & AI Rendering */}
-      {activeTab === 'IA' ? (
-        <div className="pt-2">
-          <ReportesDinamicosView tenantSlug={tenantSlug} />
+      </div>
+      {/* Constructor Visual de Reportes Clásicos */}
+      <div className="bg-white dark:bg-carbon-900 rounded-3xl p-6 shadow-xl border border-neutral-100 dark:border-white/[0.05] mb-6 relative overflow-hidden group">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="bg-primary-500/10 p-2 rounded-xl">
+            <Filter className="text-primary-500" size={24} />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-carbon-900 dark:text-white">Filtros y Constructor de Reporte</h2>
+            <p className="text-sm text-carbon-500 dark:text-neutral-400">Selecciona el tipo de reporte y aplica los filtros que necesites</p>
+          </div>
         </div>
-      ) : loading ? (
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 relative z-10">
+          {/* Entity / Tab Selector */}
+          <div className="space-y-2 lg:col-span-2">
+            <label className="text-sm font-semibold text-carbon-600 dark:text-neutral-300 flex items-center gap-2">
+              <Package size={16} className="text-primary-500" /> ¿Qué reporte deseas generar?
+            </label>
+            <select 
+              value={activeTab} 
+              onChange={(e) => setActiveTab(e.target.value)}
+              className="w-full bg-neutral-50 dark:bg-carbon-800 border border-neutral-200 dark:border-carbon-700 rounded-xl px-4 py-3.5 text-carbon-900 dark:text-white focus:ring-2 focus:ring-primary-500 outline-none cursor-pointer hover:border-primary-500/50 shadow-sm"
+            >
+              <option value="GLOBAL">📈 Estadísticas Globales (Finanzas y Operación)</option>
+              <option value="VEHICULO">🚗 Reporte Específico por Vehículo</option>
+              <option value="PRESUPUESTO">📄 Reporte de Presupuestos y Cotizaciones</option>
+              <option value="INVENTARIO">📦 Reporte de Inventario y Catálogo</option>
+              <option value="USUARIOS">👥 Reporte de Usuarios y Clientes</option>
+              <option value="VENTAS">🛒 Reporte de Ventas Rápidas de Mostrador</option>
+              <option value="COMPRAS">🏢 Reporte de Compras y Proveedores</option>
+            </select>
+          </div>
+
+          {/* Date Desde */}
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-carbon-600 dark:text-neutral-300 flex items-center gap-2">
+              <Calendar size={16} className="text-indigo-500" /> Desde
+            </label>
+            <input 
+              type="date" 
+              value={fechaDesde}
+              onChange={(e) => setFechaDesde(e.target.value)}
+              className="w-full bg-neutral-50 dark:bg-carbon-800 border border-neutral-200 dark:border-carbon-700 rounded-xl px-4 py-3 text-carbon-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer hover:border-indigo-500/50 shadow-sm"
+            />
+          </div>
+
+          {/* Date Hasta */}
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-carbon-600 dark:text-neutral-300 flex items-center gap-2">
+              <Calendar size={16} className="text-indigo-500" /> Hasta
+            </label>
+            <input 
+              type="date" 
+              value={fechaHasta}
+              onChange={(e) => setFechaHasta(e.target.value)}
+              className="w-full bg-neutral-50 dark:bg-carbon-800 border border-neutral-200 dark:border-carbon-700 rounded-xl px-4 py-3 text-carbon-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer hover:border-indigo-500/50 shadow-sm"
+            />
+          </div>
+        </div>
+
+        {/* Dynamic Filters depending on the active report type */}
+        {activeTab === 'VEHICULO' && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-6 mt-6 pt-6 border-t border-neutral-100 dark:border-white/[0.05]">
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-carbon-500 dark:text-neutral-400 uppercase tracking-wider">Placa</label>
+              <input 
+                type="text" 
+                placeholder="ABC-1234"
+                value={vehiculoPlaca}
+                onChange={(e) => setVehiculoPlaca(e.target.value.toUpperCase())}
+                className="w-full px-4 py-2.5 bg-neutral-50 dark:bg-carbon-950 border border-neutral-200 dark:border-white/[0.06] rounded-xl text-carbon-900 dark:text-white"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-carbon-500 dark:text-neutral-400 uppercase tracking-wider">Marca</label>
+              <input 
+                type="text" 
+                placeholder="Toyota"
+                value={vehiculoMarca}
+                onChange={(e) => setVehiculoMarca(e.target.value)}
+                className="w-full px-4 py-2.5 bg-neutral-50 dark:bg-carbon-950 border border-neutral-200 dark:border-white/[0.06] rounded-xl text-carbon-900 dark:text-white"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-carbon-500 dark:text-neutral-400 uppercase tracking-wider">Modelo</label>
+              <input 
+                type="text" 
+                placeholder="Corolla"
+                value={vehiculoModelo}
+                onChange={(e) => setVehiculoModelo(e.target.value)}
+                className="w-full px-4 py-2.5 bg-neutral-50 dark:bg-carbon-950 border border-neutral-200 dark:border-white/[0.06] rounded-xl text-carbon-900 dark:text-white"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-carbon-500 dark:text-neutral-400 uppercase tracking-wider">Estado Cita</label>
+              <select 
+                value={estadoCita}
+                onChange={(e) => setEstadoCita(e.target.value)}
+                className="w-full px-4 py-2.5 bg-neutral-50 dark:bg-carbon-950 border border-neutral-200 dark:border-white/[0.06] rounded-xl text-carbon-900 dark:text-white"
+              >
+                <option value="">Cualquiera</option>
+                <option value="FINALIZADA">Finalizada</option>
+                <option value="CANCELADA">Cancelada</option>
+                <option value="PENDIENTE">Pendiente</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-carbon-500 dark:text-neutral-400 uppercase tracking-wider">Origen</label>
+              <select 
+                value={canalOrigen}
+                onChange={(e) => setCanalOrigen(e.target.value)}
+                className="w-full px-4 py-2.5 bg-neutral-50 dark:bg-carbon-950 border border-neutral-200 dark:border-white/[0.06] rounded-xl text-carbon-900 dark:text-white"
+              >
+                <option value="">Cualquiera</option>
+                <option value="APP">App Móvil</option>
+                <option value="WEB">Web</option>
+                <option value="TALLER">Taller</option>
+              </select>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'PRESUPUESTO' && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-6 pt-6 border-t border-neutral-100 dark:border-white/[0.05]">
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-carbon-500 dark:text-neutral-400 uppercase tracking-wider">Placa del Vehículo</label>
+              <input 
+                type="text" 
+                placeholder="ABC-1234"
+                value={vehiculoPlaca}
+                onChange={(e) => setVehiculoPlaca(e.target.value)}
+                className="w-full px-4 py-2.5 bg-neutral-50 dark:bg-carbon-950 border border-neutral-200 dark:border-white/[0.06] rounded-xl text-carbon-900 dark:text-white"
+              />
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'USUARIOS' && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-6 pt-6 border-t border-neutral-100 dark:border-white/[0.05]">
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-carbon-500 dark:text-neutral-400 uppercase tracking-wider">Rol de Usuario</label>
+              <select 
+                value={usuarioRol}
+                onChange={(e) => setUsuarioRol(e.target.value)}
+                className="w-full px-4 py-2.5 bg-neutral-50 dark:bg-carbon-950 border border-neutral-200 dark:border-white/[0.06] rounded-xl text-carbon-900 dark:text-white"
+              >
+                <option value="">Cualquiera</option>
+                <option value="CLIENTE">Cliente</option>
+                <option value="MECANICO">Mecánico</option>
+                <option value="ASESOR">Asesor de Servicio</option>
+                <option value="ADMIN">Administrador</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-carbon-500 dark:text-neutral-400 uppercase tracking-wider">Estado</label>
+              <select 
+                value={usuarioEstado}
+                onChange={(e) => setUsuarioEstado(e.target.value)}
+                className="w-full px-4 py-2.5 bg-neutral-50 dark:bg-carbon-950 border border-neutral-200 dark:border-white/[0.06] rounded-xl text-carbon-900 dark:text-white"
+              >
+                <option value="">Cualquiera</option>
+                <option value="ACTIVO">Activo</option>
+                <option value="INACTIVO">Inactivo</option>
+              </select>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'VENTAS' && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-6 pt-6 border-t border-neutral-100 dark:border-white/[0.05]">
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-carbon-500 dark:text-neutral-400 uppercase tracking-wider">Estado de Venta</label>
+              <select 
+                value={ventaEstado}
+                onChange={(e) => setVentaEstado(e.target.value)}
+                className="w-full px-4 py-2.5 bg-neutral-50 dark:bg-carbon-950 border border-neutral-200 dark:border-white/[0.06] rounded-xl text-carbon-900 dark:text-white"
+              >
+                <option value="">Cualquiera</option>
+                <option value="PAGADA">Pagada</option>
+                <option value="PENDIENTE_PAGO">Pendiente de Pago</option>
+                <option value="CANCELADA">Cancelada</option>
+              </select>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'COMPRAS' && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-6 pt-6 border-t border-neutral-100 dark:border-white/[0.05]">
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-carbon-500 dark:text-neutral-400 uppercase tracking-wider">Estado de Compra</label>
+              <select 
+                value={compraEstado}
+                onChange={(e) => setCompraEstado(e.target.value)}
+                className="w-full px-4 py-2.5 bg-neutral-50 dark:bg-carbon-950 border border-neutral-200 dark:border-white/[0.06] rounded-xl text-carbon-900 dark:text-white"
+              >
+                <option value="">Cualquiera</option>
+                <option value="RECIBIDA">Recibida</option>
+                <option value="EN_TRANSITO">En Tránsito</option>
+                <option value="CANCELADA">Cancelada</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-carbon-500 dark:text-neutral-400 uppercase tracking-wider">ID Proveedor</label>
+              <input 
+                type="text" 
+                placeholder="ID Opcional"
+                value={compraProveedorId}
+                onChange={(e) => setCompraProveedorId(e.target.value)}
+                className="w-full px-4 py-2.5 bg-neutral-50 dark:bg-carbon-950 border border-neutral-200 dark:border-white/[0.06] rounded-xl text-carbon-900 dark:text-white"
+              />
+            </div>
+          </div>
+        )}
+
+        <div className="mt-8 flex justify-end">
+          <button 
+            id="btn-aplicar-filtros-reporte"
+            onClick={() => fetchReportData(activeTab)}
+            disabled={loading}
+            className="flex items-center gap-2 px-8 py-3.5 bg-primary-500 hover:bg-primary-600 disabled:bg-carbon-200 dark:disabled:bg-carbon-800 text-white rounded-xl transition-all font-bold shadow-lg shadow-primary-500/25"
+          >
+            {loading ? <Loader2 size={18} className="animate-spin" /> : <Filter size={18} />} 
+            Generar Reporte
+          </button>
+        </div>
+      </div>
+
+      {/* Loading State */}
+      {loading ? (
         <Card className="p-12 flex flex-col items-center justify-center border-dashed border-2 bg-transparent">
           <Loader2 size={32} className="animate-spin text-primary-500 mb-4" />
           <p className="text-carbon-500 dark:text-neutral-400">Generando reporte analítico...</p>
@@ -451,17 +554,11 @@ export const GenerarReportesView = ({ tenantSlug, aiPrefill }) => {
                   <div className="h-[300px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={data.grafico_ingresos}>
-                        <defs>
-                          <linearGradient id="colorIngresos" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor={CHART_COLORS[0]} stopOpacity={0.8}/>
-                            <stop offset="95%" stopColor={CHART_COLORS[0]} stopOpacity={0}/>
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(150,150,150,0.1)" />
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.1)" />
                         <XAxis dataKey="fecha" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
                         <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `$${value}`} />
-                        <Tooltip content={<CustomTooltip />} />
-                        <Line type="monotone" dataKey="ingresos" stroke={CHART_COLORS[0]} strokeWidth={4} dot={{ r: 4, strokeWidth: 2, fill: '#fff' }} activeDot={{ r: 6 }} />
+                        <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)' }} />
+                        <Line type="monotone" dataKey="ingresos" stroke="#d4572f" strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} activeDot={{ r: 6 }} />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
@@ -473,20 +570,19 @@ export const GenerarReportesView = ({ tenantSlug, aiPrefill }) => {
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
-                          data={data.grafico_citas}
+                          data={data.distribucion_estados}
                           cx="50%"
                           cy="50%"
                           innerRadius={60}
                           outerRadius={90}
                           paddingAngle={5}
                           dataKey="value"
-                          stroke="none"
                         >
-                          {data.grafico_citas?.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                          {data.distribucion_estados?.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                           ))}
                         </Pie>
-                        <Tooltip content={<CustomTooltip />} />
+                        <Tooltip contentStyle={{ borderRadius: '12px' }} />
                         <Legend verticalAlign="bottom" height={36} />
                       </PieChart>
                     </ResponsiveContainer>
@@ -637,19 +733,13 @@ export const GenerarReportesView = ({ tenantSlug, aiPrefill }) => {
                 <div className="h-[350px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <RechartsBarChart data={data.funnel} margin={{ top: 20 }}>
-                      <defs>
-                        <linearGradient id="colorFunnel" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor={CHART_COLORS[2]} stopOpacity={0.9}/>
-                          <stop offset="95%" stopColor={CHART_COLORS[2]} stopOpacity={0.2}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(150,150,150,0.1)" />
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.1)" />
                       <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
                       <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-                      <Tooltip cursor={{ fill: 'rgba(150,150,150,0.05)' }} content={<CustomTooltip />} />
-                      <Bar dataKey="value" radius={[8, 8, 0, 0]} barSize={60}>
+                      <Tooltip cursor={{ fill: 'rgba(0,0,0,0.05)' }} contentStyle={{ borderRadius: '12px' }} />
+                      <Bar dataKey="value" fill="#10b981" radius={[4, 4, 0, 0]} barSize={60}>
                         {data.funnel.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={`url(#colorFunnel)`} />
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Bar>
                     </RechartsBarChart>
@@ -662,12 +752,12 @@ export const GenerarReportesView = ({ tenantSlug, aiPrefill }) => {
                   <div className="h-[300px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
-                        <Pie data={data.por_estado} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={5} dataKey="value" nameKey="name" stroke="none">
+                        <Pie data={data.por_estado} cx="50%" cy="50%" outerRadius={90} dataKey="value" nameKey="name">
                           {data.por_estado.map((entry, index) => (
-                            <Cell key={`pres-cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                            <Cell key={`pres-cell-${index}`} fill={COLORS[index % COLORS.length]} />
                           ))}
                         </Pie>
-                        <Tooltip content={<CustomTooltip />} />
+                        <Tooltip contentStyle={{ borderRadius: '12px' }} />
                         <Legend verticalAlign="bottom" height={36} />
                       </PieChart>
                     </ResponsiveContainer>
@@ -680,17 +770,11 @@ export const GenerarReportesView = ({ tenantSlug, aiPrefill }) => {
                   <div className="h-[350px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <RechartsBarChart data={data.top_vehiculos_detalles_resueltos} layout="vertical" margin={{ left: 20 }}>
-                        <defs>
-                          <linearGradient id="colorVehiculos" x1="0" y1="0" x2="1" y2="0">
-                            <stop offset="5%" stopColor={CHART_COLORS[3]} stopOpacity={0.9}/>
-                            <stop offset="95%" stopColor={CHART_COLORS[3]} stopOpacity={0.3}/>
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="rgba(150,150,150,0.1)" />
+                        <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="rgba(255,255,255,0.1)" />
                         <XAxis type="number" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
                         <YAxis dataKey="vehiculo" type="category" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} width={160} />
-                        <Tooltip cursor={{ fill: 'rgba(150,150,150,0.05)' }} content={<CustomTooltip />} />
-                        <Bar dataKey="detalles_resueltos" fill="url(#colorVehiculos)" radius={[0, 8, 8, 0]} barSize={20} />
+                        <Tooltip cursor={{ fill: 'rgba(0,0,0,0.05)' }} contentStyle={{ borderRadius: '12px' }} />
+                        <Bar dataKey="detalles_resueltos" fill="#10b981" radius={[0, 4, 4, 0]} barSize={20} />
                       </RechartsBarChart>
                     </ResponsiveContainer>
                   </div>
@@ -706,17 +790,15 @@ export const GenerarReportesView = ({ tenantSlug, aiPrefill }) => {
               <div className="h-[400px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <RechartsBarChart data={data.top_servicios} layout="vertical" margin={{ left: 30, right: 30 }}>
-                    <defs>
-                      <linearGradient id="colorServicios" x1="0" y1="0" x2="1" y2="0">
-                        <stop offset="5%" stopColor={CHART_COLORS[4]} stopOpacity={0.9}/>
-                        <stop offset="95%" stopColor={CHART_COLORS[4]} stopOpacity={0.3}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="rgba(150,150,150,0.1)" />
+                    <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="rgba(255,255,255,0.1)" />
                     <XAxis type="number" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
                     <YAxis dataKey="nombre" type="category" stroke="#888888" fontSize={11} tickLine={false} axisLine={false} width={150} />
-                    <Tooltip cursor={{ fill: 'rgba(150,150,150,0.05)' }} content={<CustomTooltip />} />
-                    <Bar dataKey="demanda" fill="url(#colorServicios)" radius={[0, 8, 8, 0]} barSize={20} />
+                    <Tooltip cursor={{ fill: 'rgba(0,0,0,0.05)' }} contentStyle={{ borderRadius: '12px' }} />
+                    <Bar dataKey="demanda" fill="#f59e0b" radius={[0, 4, 4, 0]} barSize={20}>
+                      {data.top_servicios.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Bar>
                   </RechartsBarChart>
                 </ResponsiveContainer>
               </div>
@@ -725,6 +807,57 @@ export const GenerarReportesView = ({ tenantSlug, aiPrefill }) => {
 
         </div>
       ) : null}
+
+      {/* TAB USUARIOS */}
+      {activeTab === 'USUARIOS' && data && data.kpis && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <KpiCard title="Total Usuarios" value={data.kpis.total_usuarios} />
+            <KpiCard title="Usuarios Activos" value={data.kpis.usuarios_activos} />
+            <KpiCard title="Usuarios Inactivos" value={data.kpis.usuarios_inactivos} />
+          </div>
+          {data.top_clientes && data.top_clientes.length > 0 && (
+            <Card className="p-6">
+              <h3 className="text-lg font-bold text-carbon-900 dark:text-white mb-6">Top Clientes por Citas Generadas</h3>
+              <div className="h-[350px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RechartsBarChart data={data.top_clientes} layout="vertical" margin={{ left: 20 }}>
+                    <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="rgba(255,255,255,0.1)" />
+                    <XAxis type="number" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+                    <YAxis dataKey="nombre" type="category" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} width={120} />
+                    <Tooltip cursor={{ fill: 'rgba(0,0,0,0.05)' }} contentStyle={{ borderRadius: '12px' }} />
+                    <Bar dataKey="citas" fill="#6366f1" radius={[0, 4, 4, 0]} barSize={20} />
+                  </RechartsBarChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* TAB VENTAS */}
+      {activeTab === 'VENTAS' && data && data.kpis && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <KpiCard title="Ingresos Ventas Mostrador" value={`$${data.kpis.ingresos_ventas_mostrador?.toFixed(2)}`} />
+            <KpiCard title="Total Ventas Registradas" value={data.kpis.total_ventas} />
+            <KpiCard title="Ventas Pagadas" value={data.kpis.ventas_pagadas} />
+            <KpiCard title="Ventas Pendientes" value={data.kpis.ventas_pendientes} />
+          </div>
+        </div>
+      )}
+
+      {/* TAB COMPRAS */}
+      {activeTab === 'COMPRAS' && data && data.kpis && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <KpiCard title="Gastos Totales en Compras" value={`$${data.kpis.gastos_compras?.toFixed(2)}`} />
+            <KpiCard title="Total Órdenes" value={data.kpis.total_compras} />
+            <KpiCard title="Compras Recibidas" value={data.kpis.compras_recibidas} />
+            <KpiCard title="Órdenes en Tránsito" value={data.kpis.compras_pendientes} />
+          </div>
+        </div>
+      )}
 
       {/* Modal Exportación */}
       {showExportModal && (

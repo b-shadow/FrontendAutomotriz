@@ -33,7 +33,6 @@ import GestionSolicitudesRepuestoView from './dashboard/GestionSolicitudesRepues
 import GestionBackupView from './dashboard/GestionBackupView'
 import AsistenteIAView from './dashboard/AsistenteIAView'
 import { ReportesDinamicosView } from './dashboard/ReportesDinamicosView'
-import { GenerarReportesView } from './dashboard/GenerarReportesView'
 import { FloatingAIAvatar } from '../components/FloatingAIAvatar'
 import ChatAssistant from '../components/assistant/ChatAssistant'
 
@@ -219,7 +218,7 @@ export const TenantDashboard = () => {
       case 'asistenteIA':
         return <AsistenteIAView />
       case 'generarReportes':
-        return <GenerarReportesView tenantSlug={tenantSlug} aiPrefill={pendingAction} />
+        return <ReportesDinamicosView tenantSlug={tenantSlug} />
       default:
         return <DashboardHome user={user} tenant={tenant} tenantSlug={tenantSlug} onNavigate={handleNavigate} />
     }

@@ -32,6 +32,7 @@ import GestionInventarioView from './dashboard/GestionInventarioView'
 import GestionSolicitudesRepuestoView from './dashboard/GestionSolicitudesRepuestoView'
 import GestionBackupView from './dashboard/GestionBackupView'
 import AsistenteIAView from './dashboard/AsistenteIAView'
+import { ReportesDinamicosView } from './dashboard/ReportesDinamicosView'
 import { GenerarReportesView } from './dashboard/GenerarReportesView'
 import { FloatingAIAvatar } from '../components/FloatingAIAvatar'
 import ChatAssistant from '../components/assistant/ChatAssistant'
@@ -218,12 +219,7 @@ export const TenantDashboard = () => {
       case 'asistenteIA':
         return <AsistenteIAView />
       case 'generarReportes':
-        return (
-          <GenerarReportesView 
-            tenantSlug={tenantSlug}
-            aiPrefill={(['PENDIENTE', 'EJECUTADA'].includes(pendingAction?.estado)) && ['VER_REPORTE_GLOBAL', 'VER_REPORTE_VEHICULO', 'VER_REPORTE_PRESUPUESTO', 'VER_REPORTE_INVENTARIO', 'EXPORTAR_REPORTE'].includes(pendingAction?.accion) ? { ...pendingAction.parametros, type: pendingAction.accion, status: pendingAction.estado, _ts: pendingAction._ts } : null}
-          />
-        )
+        return <GenerarReportesView tenantSlug={tenantSlug} aiPrefill={pendingAction} />
       default:
         return <DashboardHome user={user} tenant={tenant} tenantSlug={tenantSlug} onNavigate={handleNavigate} />
     }

@@ -10,17 +10,36 @@ import {
   Calendar,
   Search,
   Filter,
-  Loader2
+  Loader2,
+  Sparkles
 } from 'lucide-react';
 import { Card } from '../../components/ui';
 import apiClient from '../../services/apiClient';
+import { ReportesDinamicosView } from './ReportesDinamicosView';
 import { 
   LineChart, Line, BarChart as RechartsBarChart, Bar, PieChart, Pie, Cell, 
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
 } from 'recharts';
 import * as XLSX from 'xlsx';
 
-const COLORS = ['#d4572f', '#10203a', '#10b981', '#f59e0b', '#6366f1'];
+const CHART_COLORS = ['#10b981', '#6366f1', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6'];
+
+const CustomTooltip = ({ active, payload, label }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white/80 dark:bg-carbon-900/80 backdrop-blur-md p-4 rounded-2xl border border-white/20 shadow-xl">
+        <p className="font-bold text-carbon-900 dark:text-white mb-2">{label}</p>
+        {payload.map((entry, index) => (
+          <p key={index} className="text-sm font-medium flex items-center gap-2" style={{ color: entry.color || CHART_COLORS[index] }}>
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color || CHART_COLORS[index] }}></span>
+            {entry.name}: {entry.value}
+          </p>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
 
 export const GenerarReportesView = ({ tenantSlug, aiPrefill }) => {
   const [activeTab, setActiveTab] = useState('GLOBAL');
@@ -47,6 +66,7 @@ export const GenerarReportesView = ({ tenantSlug, aiPrefill }) => {
   const ghostActiveRef = useRef(false);
   
   const fetchReportData = async (type = activeTab) => {
+    if (type === 'IA') return;
     setLoading(true);
     try {
       let endpoint = '';
@@ -230,7 +250,8 @@ export const GenerarReportesView = ({ tenantSlug, aiPrefill }) => {
     { id: 'GLOBAL', label: 'Estadísticas Globales', icon: LineChartIcon },
     { id: 'VEHICULO', label: 'Por Vehículo', icon: Car },
     { id: 'PRESUPUESTO', label: 'Por Presupuesto', icon: FileText },
-    { id: 'INVENTARIO', label: 'Por Catálogo (Inventario)', icon: Package }
+    { id: 'INVENTARIO', label: 'Por Catálogo (Inventario)', icon: Package },
+    { id: 'IA', label: 'Inteligencia Artificial', icon: Sparkles }
   ];
 
   return (
@@ -243,13 +264,15 @@ export const GenerarReportesView = ({ tenantSlug, aiPrefill }) => {
           <p className="text-carbon-500 dark:text-neutral-400">Analítica avanzada de tu empresa</p>
         </div>
         
-        <button 
-          id="btn-exportar-reporte"
-          onClick={() => setShowExportModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-carbon-900 dark:bg-white text-white dark:text-carbon-900 rounded-xl hover:bg-carbon-800 dark:hover:bg-neutral-200 transition-colors font-medium shadow-sm"
-        >
-          <Download size={18} /> Exportar Reporte
-        </button>
+        {activeTab !== 'IA' && (
+          <button 
+            id="btn-exportar-reporte"
+            onClick={() => setShowExportModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-carbon-900 dark:bg-white text-white dark:text-carbon-900 rounded-xl hover:bg-carbon-800 dark:hover:bg-neutral-200 transition-colors font-medium shadow-sm"
+          >
+            <Download size={18} /> Exportar Reporte
+          </button>
+        )}
       </div>
 
       {/* Tabs */}
@@ -274,8 +297,9 @@ export const GenerarReportesView = ({ tenantSlug, aiPrefill }) => {
       </div>
 
       {/* Filters */}
-      <Card className="p-4 bg-white dark:bg-carbon-900 flex flex-wrap gap-4 items-end">
-        <div className="flex flex-col gap-1">
+      {activeTab !== 'IA' && (
+        <Card className="p-4 bg-white dark:bg-carbon-900 flex flex-wrap gap-4 items-end">
+          <div className="flex flex-col gap-1">
           <label className="text-xs font-semibold text-carbon-500 dark:text-neutral-400 uppercase tracking-wider">Desde</label>
           <input 
             type="date" 
@@ -371,9 +395,14 @@ export const GenerarReportesView = ({ tenantSlug, aiPrefill }) => {
           <Filter size={18} /> Filtrar
         </button>
       </Card>
+      )}
 
-      {/* Loading State */}
-      {loading ? (
+      {/* Loading State & AI Rendering */}
+      {activeTab === 'IA' ? (
+        <div className="pt-2">
+          <ReportesDinamicosView tenantSlug={tenantSlug} />
+        </div>
+      ) : loading ? (
         <Card className="p-12 flex flex-col items-center justify-center border-dashed border-2 bg-transparent">
           <Loader2 size={32} className="animate-spin text-primary-500 mb-4" />
           <p className="text-carbon-500 dark:text-neutral-400">Generando reporte analítico...</p>
@@ -422,11 +451,17 @@ export const GenerarReportesView = ({ tenantSlug, aiPrefill }) => {
                   <div className="h-[300px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={data.grafico_ingresos}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.1)" />
+                        <defs>
+                          <linearGradient id="colorIngresos" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor={CHART_COLORS[0]} stopOpacity={0.8}/>
+                            <stop offset="95%" stopColor={CHART_COLORS[0]} stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(150,150,150,0.1)" />
                         <XAxis dataKey="fecha" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
                         <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `$${value}`} />
-                        <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)' }} />
-                        <Line type="monotone" dataKey="ingresos" stroke="#d4572f" strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} activeDot={{ r: 6 }} />
+                        <Tooltip content={<CustomTooltip />} />
+                        <Line type="monotone" dataKey="ingresos" stroke={CHART_COLORS[0]} strokeWidth={4} dot={{ r: 4, strokeWidth: 2, fill: '#fff' }} activeDot={{ r: 6 }} />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
@@ -438,19 +473,20 @@ export const GenerarReportesView = ({ tenantSlug, aiPrefill }) => {
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
-                          data={data.distribucion_estados}
+                          data={data.grafico_citas}
                           cx="50%"
                           cy="50%"
                           innerRadius={60}
                           outerRadius={90}
                           paddingAngle={5}
                           dataKey="value"
+                          stroke="none"
                         >
-                          {data.distribucion_estados?.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          {data.grafico_citas?.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                           ))}
                         </Pie>
-                        <Tooltip contentStyle={{ borderRadius: '12px' }} />
+                        <Tooltip content={<CustomTooltip />} />
                         <Legend verticalAlign="bottom" height={36} />
                       </PieChart>
                     </ResponsiveContainer>
@@ -601,13 +637,19 @@ export const GenerarReportesView = ({ tenantSlug, aiPrefill }) => {
                 <div className="h-[350px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <RechartsBarChart data={data.funnel} margin={{ top: 20 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.1)" />
+                      <defs>
+                        <linearGradient id="colorFunnel" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor={CHART_COLORS[2]} stopOpacity={0.9}/>
+                          <stop offset="95%" stopColor={CHART_COLORS[2]} stopOpacity={0.2}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(150,150,150,0.1)" />
                       <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
                       <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-                      <Tooltip cursor={{ fill: 'rgba(0,0,0,0.05)' }} contentStyle={{ borderRadius: '12px' }} />
-                      <Bar dataKey="value" fill="#10b981" radius={[4, 4, 0, 0]} barSize={60}>
+                      <Tooltip cursor={{ fill: 'rgba(150,150,150,0.05)' }} content={<CustomTooltip />} />
+                      <Bar dataKey="value" radius={[8, 8, 0, 0]} barSize={60}>
                         {data.funnel.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          <Cell key={`cell-${index}`} fill={`url(#colorFunnel)`} />
                         ))}
                       </Bar>
                     </RechartsBarChart>
@@ -620,12 +662,12 @@ export const GenerarReportesView = ({ tenantSlug, aiPrefill }) => {
                   <div className="h-[300px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
-                        <Pie data={data.por_estado} cx="50%" cy="50%" outerRadius={90} dataKey="value" nameKey="name">
+                        <Pie data={data.por_estado} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={5} dataKey="value" nameKey="name" stroke="none">
                           {data.por_estado.map((entry, index) => (
-                            <Cell key={`pres-cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                            <Cell key={`pres-cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                           ))}
                         </Pie>
-                        <Tooltip contentStyle={{ borderRadius: '12px' }} />
+                        <Tooltip content={<CustomTooltip />} />
                         <Legend verticalAlign="bottom" height={36} />
                       </PieChart>
                     </ResponsiveContainer>
@@ -638,11 +680,17 @@ export const GenerarReportesView = ({ tenantSlug, aiPrefill }) => {
                   <div className="h-[350px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <RechartsBarChart data={data.top_vehiculos_detalles_resueltos} layout="vertical" margin={{ left: 20 }}>
-                        <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="rgba(255,255,255,0.1)" />
+                        <defs>
+                          <linearGradient id="colorVehiculos" x1="0" y1="0" x2="1" y2="0">
+                            <stop offset="5%" stopColor={CHART_COLORS[3]} stopOpacity={0.9}/>
+                            <stop offset="95%" stopColor={CHART_COLORS[3]} stopOpacity={0.3}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="rgba(150,150,150,0.1)" />
                         <XAxis type="number" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
                         <YAxis dataKey="vehiculo" type="category" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} width={160} />
-                        <Tooltip cursor={{ fill: 'rgba(0,0,0,0.05)' }} contentStyle={{ borderRadius: '12px' }} />
-                        <Bar dataKey="detalles_resueltos" fill="#10b981" radius={[0, 4, 4, 0]} barSize={20} />
+                        <Tooltip cursor={{ fill: 'rgba(150,150,150,0.05)' }} content={<CustomTooltip />} />
+                        <Bar dataKey="detalles_resueltos" fill="url(#colorVehiculos)" radius={[0, 8, 8, 0]} barSize={20} />
                       </RechartsBarChart>
                     </ResponsiveContainer>
                   </div>
@@ -658,15 +706,17 @@ export const GenerarReportesView = ({ tenantSlug, aiPrefill }) => {
               <div className="h-[400px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <RechartsBarChart data={data.top_servicios} layout="vertical" margin={{ left: 30, right: 30 }}>
-                    <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="rgba(255,255,255,0.1)" />
+                    <defs>
+                      <linearGradient id="colorServicios" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="5%" stopColor={CHART_COLORS[4]} stopOpacity={0.9}/>
+                        <stop offset="95%" stopColor={CHART_COLORS[4]} stopOpacity={0.3}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="rgba(150,150,150,0.1)" />
                     <XAxis type="number" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
                     <YAxis dataKey="nombre" type="category" stroke="#888888" fontSize={11} tickLine={false} axisLine={false} width={150} />
-                    <Tooltip cursor={{ fill: 'rgba(0,0,0,0.05)' }} contentStyle={{ borderRadius: '12px' }} />
-                    <Bar dataKey="demanda" fill="#f59e0b" radius={[0, 4, 4, 0]} barSize={20}>
-                      {data.top_servicios.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Bar>
+                    <Tooltip cursor={{ fill: 'rgba(150,150,150,0.05)' }} content={<CustomTooltip />} />
+                    <Bar dataKey="demanda" fill="url(#colorServicios)" radius={[0, 8, 8, 0]} barSize={20} />
                   </RechartsBarChart>
                 </ResponsiveContainer>
               </div>

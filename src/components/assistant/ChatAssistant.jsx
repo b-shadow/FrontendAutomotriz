@@ -30,10 +30,13 @@ const ChatAssistant = ({
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
 
   const messagesEndRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
+  const recordingStartTimeRef = useRef(null);
+  const shouldDiscardRef = useRef(false);
 
   // Auto-scroll al final
   const scrollToBottom = () => {
@@ -219,25 +222,54 @@ const ChatAssistant = ({
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorderRef.current = new MediaRecorder(stream);
+      
+      // Intentar usar un formato estándar y compatible para evitar distorsiones en Whisper
+      let mimeType = 'audio/webm';
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = 'audio/ogg';
+      }
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = ''; // Dejar que el navegador elija
+      }
+      
+      const options = mimeType ? { mimeType } : {};
+      mediaRecorderRef.current = new MediaRecorder(stream, options);
       audioChunksRef.current = [];
+      recordingStartTimeRef.current = Date.now();
+      shouldDiscardRef.current = false;
 
       mediaRecorderRef.current.ondataavailable = (event) => {
         audioChunksRef.current.push(event.data);
       };
 
       mediaRecorderRef.current.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
-        setIsTyping(true);
+        // Detener todos los tracks del micrófono de manera segura una vez concluida la grabación
+        if (mediaRecorderRef.current.stream) {
+          mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+        }
+
+        console.log("[ChatAssistant] Grabación detenida. Chunks capturados:", audioChunksRef.current.length);
+
+        if (shouldDiscardRef.current) {
+          console.log("[ChatAssistant] Grabación demasiado corta o descartada.");
+          return;
+        }
+        
+        const actualMimeType = mediaRecorderRef.current.mimeType || 'audio/webm';
+        const audioBlob = new Blob(audioChunksRef.current, { type: actualMimeType });
+        console.log("[ChatAssistant] Audio Blob generado:", audioBlob.size, "bytes, Tipo:", audioBlob.type);
+
+        setIsTranscribing(true); // Mostrar loader de transcripción en vez de "IA pensando"
         try {
           const res = await assistantService.transcribeAudio(tenantSlug, audioBlob);
-          if (res.texto) {
+          console.log("[ChatAssistant] Transcripción recibida del backend:", res);
+          if (res.texto && res.texto.trim()) {
             handleSend(res.texto);
           }
         } catch (error) {
           console.error("Error transcribiendo:", error);
         } finally {
-          setIsTyping(false);
+          setIsTranscribing(false);
         }
       };
 
@@ -250,9 +282,20 @@ const ChatAssistant = ({
 
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
+      const duration = Date.now() - recordingStartTimeRef.current;
+      if (duration < 800) {
+        shouldDiscardRef.current = true;
+      }
       mediaRecorderRef.current.stop();
       setIsRecording(false);
-      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+    }
+  };
+
+  const handleMicClick = () => {
+    if (isRecording) {
+      stopRecording();
+    } else {
+      startRecording();
     }
   };
 
@@ -478,6 +521,13 @@ const ChatAssistant = ({
               </div>
             </div>
           </div>
+        {isTranscribing && (
+          <div className="flex justify-end pr-2 animate-pulse">
+            <div className="text-[11px] font-semibold text-primary-500 bg-primary-50 dark:bg-primary-950/40 px-3 py-1.5 rounded-full flex items-center gap-1.5">
+              <Loader2 size={12} className="animate-spin" />
+              Procesando audio...
+            </div>
+          </div>
         )}
         <div ref={messagesEndRef} />
       </div>
@@ -516,15 +566,13 @@ const ChatAssistant = ({
 
           <button
             type="button"
-            onMouseDown={startRecording}
-            onMouseUp={stopRecording}
-            onMouseLeave={stopRecording}
+            onClick={handleMicClick}
             disabled={!currentConversationId}
             className={`p-2.5 rounded-xl transition-all ${isRecording
-                ? 'bg-red-100 text-red-600 animate-pulse'
+                ? 'bg-red-500 text-white animate-pulse'
                 : 'text-carbon-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 disabled:opacity-30'
               }`}
-            title="Mantén para grabar"
+            title={isRecording ? "Hacer clic para detener" : "Hacer clic para grabar"}
           >
             <Mic size={20} />
           </button>

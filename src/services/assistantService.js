@@ -51,7 +51,8 @@ const assistantService = {
    */
   transcribeAudio: async (tenantSlug, audioBlob) => {
     const formData = new FormData();
-    formData.append('audio', audioBlob, 'voice_input.wav');
+    const extension = audioBlob.type.includes('ogg') ? 'ogg' : 'webm';
+    formData.append('audio', audioBlob, `voice_input.${extension}`);
     
     const response = await apiClient.post(
       `/api/${tenantSlug}/comunicacion-control/ia/transcribir/`,

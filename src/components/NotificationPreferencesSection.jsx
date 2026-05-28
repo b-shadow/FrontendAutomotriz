@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react'
 import { Card, Button } from './ui'
 import usuariosService from '../services/usuariosService'
 import { useRefresh } from '../context/RefreshContext'
+import { useGhostAutomation } from '../hooks/useGhostAutomation'
+import { Sparkles } from 'lucide-react'
 
 export const NotificationPreferencesSection = ({ tenantSlug, userId, aiPrefill, onSuccess }) => {
   const { refreshTick } = useRefresh()
@@ -10,10 +12,10 @@ export const NotificationPreferencesSection = ({ tenantSlug, userId, aiPrefill, 
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingInitial, setIsLoadingInitial] = useState(true)
 
-  // ESTADO: Preferencias
   const [preferencias, setPreferencias] = useState({
     noti_email: true, noti_push: true,
   })
+  const { isSimulating, setIsSimulating, simulateDelay } = useGhostAutomation()
 
   // ESTADO: Feedback
   const [successMessage, setSuccessMessage] = useState('')
@@ -38,8 +40,8 @@ export const NotificationPreferencesSection = ({ tenantSlug, userId, aiPrefill, 
       } catch (error) {
         console.error('Error al cargar preferencias:', error)
         const errorMsg =
-          error.response.data.detail ||
-          error.response.data.message ||
+          error.response?.data?.detail ||
+          error.response?.data?.message ||
           error.message ||
           'No se pudo cargar las preferencias'
         setErrorMessage(` Error: ${errorMsg}`)
@@ -92,8 +94,8 @@ export const NotificationPreferencesSection = ({ tenantSlug, userId, aiPrefill, 
       })
 
       const errorMsg =
-        error.response.data.detail ||
-        error.response.data.message ||
+        error.response?.data?.detail ||
+        error.response?.data?.message ||
         error.message ||
         'No se pudo actualizar la preferencia'
       setErrorMessage(` Error: ${errorMsg}`)
@@ -105,24 +107,27 @@ export const NotificationPreferencesSection = ({ tenantSlug, userId, aiPrefill, 
 
   // EFECTO: Automatización de la IA (Ghost Click)
   useEffect(() => {
-    if (!aiPrefill) return;
+    if (!aiPrefill || aiPrefill.type !== 'ACTUALIZAR_PREFERENCIAS') return;
 
     const processPrefill = async () => {
+      setIsSimulating(true);
       console.log("Notificaciones: Iniciando simulación para", aiPrefill);
 
       // Si la IA sugiere cambiar email
-      if (aiPrefill.noti_email !== undefined && aiPrefill.noti_email !== preferencias.noti_email) {
+      if (aiPrefill.noti_email !== undefined) {
         console.log(`Notificaciones: Cambiando email a ${aiPrefill.noti_email}`);
-        await new Promise(resolve => setTimeout(resolve, 800)); // Delay para WOW
+        await simulateDelay(800); // Delay para WOW
         setPreferencias(prev => ({ ...prev, noti_email: aiPrefill.noti_email }));
       }
 
       // Si la IA sugiere cambiar push
-      if (aiPrefill.noti_push !== undefined && aiPrefill.noti_push !== preferencias.noti_push) {
+      if (aiPrefill.noti_push !== undefined) {
         console.log(`Notificaciones: Cambiando push a ${aiPrefill.noti_push}`);
-        await new Promise(resolve => setTimeout(resolve, 600));
+        await simulateDelay(600);
         setPreferencias(prev => ({ ...prev, noti_push: aiPrefill.noti_push }));
       }
+
+      setIsSimulating(false);
 
       if (aiPrefill.status === 'EJECUTADA' || aiPrefill.estado === 'EJECUTADA') {
         try {
@@ -131,7 +136,10 @@ export const NotificationPreferencesSection = ({ tenantSlug, userId, aiPrefill, 
           if (aiPrefill.noti_push !== undefined) payload.noti_push = aiPrefill.noti_push;
           
           if (Object.keys(payload).length > 0) {
-            await usuariosService.actualizarPreferenciasNotificacion(tenantSlug, payload);
+            const response = await usuariosService.actualizarPreferenciasNotificacion(tenantSlug, payload);
+            if (response && response.preferencias) {
+              setPreferencias(response.preferencias);
+            }
             setSuccessMessage(<><CheckCircle className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Preferencias guardadas por IA</>);
             setTimeout(() => setSuccessMessage(''), 3000);
           }
@@ -164,8 +172,9 @@ export const NotificationPreferencesSection = ({ tenantSlug, userId, aiPrefill, 
   return (
     <Card className="bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700">
       {/* HEADER */}
-      <h3 className="text-lg font-bold text-carbon-900 dark:text-white mb-4">
+      <h3 className="text-lg font-bold text-carbon-900 dark:text-white mb-4 flex items-center gap-2">
         <Bell className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Preferencias de Notificación
+        {isSimulating && <Sparkles className="text-primary-500 animate-pulse ml-2" size={18} />}
       </h3>
 
       {/* MENSAJES DE ÉXITO */}

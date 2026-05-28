@@ -7,8 +7,8 @@ const assistantService = {
   /**
    * Obtiene la lista de conversaciones del usuario actual en el tenant.
    */
-  getConversations: async (tenantSlug) => {
-    const response = await apiClient.get(`/api/${tenantSlug}/comunicacion-control/ia/`);
+  getConversations: async (tenantSlug, estado = 'ACTIVA') => {
+    const response = await apiClient.get(`/api/${tenantSlug}/comunicacion-control/ia/?estado=${estado}`);
     return response.data;
   },
 
@@ -59,7 +59,7 @@ const assistantService = {
       formData,
       {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          'Content-Type': undefined,
         },
       }
     );

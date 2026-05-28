@@ -69,10 +69,12 @@ export const PlanVehiculoDetalleFormModal = ({
     if (!detalle) {
       // Solo se detecta al crear (no al editar)
       let rolNombre = ''
-      if (typeof user.rol === 'string') {
-        rolNombre = user.rol
-      } else if (user.rol.nombre) {
-        rolNombre = user.rol.nombre
+      if (user && user.rol) {
+        if (typeof user.rol === 'string') {
+          rolNombre = user.rol
+        } else if (user.rol.nombre) {
+          rolNombre = user.rol.nombre
+        }
       }
       if (rolNombre === 'USUARIO') {
         setOrigen('CLIENTE')
@@ -89,11 +91,11 @@ export const PlanVehiculoDetalleFormModal = ({
 
   // Cuando se selecciona un servicio, cargar automáticamente
   const handleServicioChange = (e) => {
-    const servicioId = e.target.value
-    setServicioId(servicioId)
+    const val = e.target.value
+    setServicioId(val)
     
-    if (servicioId) {
-      const servicio = servicios.find((s) => s.id === servicioId)
+    if (val) {
+      const servicio = servicios.find((s) => String(s.id) === String(val))
       if (servicio) {
         setServicioSeleccionado(servicio)
         setTiempo((servicio.tiempo_estandar_min || '').toString())
@@ -115,17 +117,19 @@ export const PlanVehiculoDetalleFormModal = ({
       const fieldsToSimulate = [];
       const typingSpeed = 10;
 
+      const normalizeStr = (str) => String(str || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+
       // Intentar encontrar el ID del servicio si AI pasa nombre_servicio
       if (aiPrefill.nombre_servicio && !servicioId) {
-        const nombreBuscado = aiPrefill.nombre_servicio.toLowerCase();
+        const nombreBuscado = normalizeStr(aiPrefill.nombre_servicio);
         // Buscar coincidencia exacta o parcial
-        const servicioEncontrado = servicios.find(s => s.nombre.toLowerCase() === nombreBuscado) 
-          || servicios.find(s => s.nombre.toLowerCase().includes(nombreBuscado));
+        const servicioEncontrado = servicios.find(s => normalizeStr(s.nombre) === nombreBuscado) 
+          || servicios.find(s => normalizeStr(s.nombre).includes(nombreBuscado));
         
         if (servicioEncontrado) {
           // Usamos timeout para simular que el usuario lo seleccionó
           setTimeout(() => {
-            handleServicioChange({ target: { value: servicioEncontrado.id } });
+            handleServicioChange({ target: { value: String(servicioEncontrado.id) } });
           }, 300);
         }
       }
@@ -151,13 +155,14 @@ export const PlanVehiculoDetalleFormModal = ({
         setTimeout(typeNextChar, 500); // Dar tiempo a que cargue el servicio
       }
     } else if (aiPrefill.status === 'EJECUTADA') {
+      const normalizeStr = (str) => String(str || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
       // Asegurar valores en caso de venir directo como EJECUTADA
       if (aiPrefill.nombre_servicio && !servicioId) {
-        const nombreBuscado = aiPrefill.nombre_servicio.toLowerCase();
-        const servicioEncontrado = servicios.find(s => s.nombre.toLowerCase() === nombreBuscado) 
-          || servicios.find(s => s.nombre.toLowerCase().includes(nombreBuscado));
+        const nombreBuscado = normalizeStr(aiPrefill.nombre_servicio);
+        const servicioEncontrado = servicios.find(s => normalizeStr(s.nombre) === nombreBuscado) 
+          || servicios.find(s => normalizeStr(s.nombre).includes(nombreBuscado));
         if (servicioEncontrado) {
-          handleServicioChange({ target: { value: servicioEncontrado.id } });
+          handleServicioChange({ target: { value: String(servicioEncontrado.id) } });
         }
       }
       if (aiPrefill.prioridad) setPrioridad(aiPrefill.prioridad.toUpperCase());
@@ -246,10 +251,10 @@ export const PlanVehiculoDetalleFormModal = ({
           {/* Plan Info */}
           <div className="bg-neutral-50 dark:bg-carbon-700 p-3 rounded-lg text-xs text-carbon-600 dark:text-neutral-400">
             <p>
-              <strong>Plan:</strong> ID {plan.id.substring(0, 8)}...
+              <strong>Plan:</strong> ID {plan && plan.id ? String(plan.id).substring(0, 8) : ''}...
             </p>
             <p>
-              <strong>Estado del Plan:</strong> {plan.estado}
+              <strong>Estado del Plan:</strong> {plan?.estado || ''}
             </p>
           </div>
 

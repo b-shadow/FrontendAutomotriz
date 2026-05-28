@@ -1,5 +1,6 @@
 import { Pencil, Car, Sparkles } from 'lucide-react';
 import { useState, useEffect } from 'react'
+import { useGhostAutomation } from '../../hooks/useGhostAutomation'
 
 export const VehiculoModal = ({
   isOpen,
@@ -12,7 +13,7 @@ export const VehiculoModal = ({
   currentUser = null,
   aiPrefill = null,
 }) => {
-  const [isSimulating, setIsSimulating] = useState(false)
+  const { isSimulating, setIsSimulating, simulateTyping, simulateClick, simulateDelay } = useGhostAutomation()
   const [isAiClickingSubmit, setIsAiClickingSubmit] = useState(false)
   const [formData, setFormData] = useState({
     placa: '',
@@ -67,57 +68,36 @@ export const VehiculoModal = ({
   useEffect(() => {
     if (!aiPrefill || !isOpen) return;
 
-    const simulateTyping = async (field, value) => {
-      let current = "";
-      const stringValue = String(value);
-      for (let i = 0; i <= stringValue.length; i++) {
-        current = stringValue.substring(0, i);
-        setFormData(prev => ({
-          ...prev,
-          [field]: (field === 'anio' || field === 'kilometraje_actual') ? (parseInt(current, 10) || 0) : current
-        }));
-        await new Promise(resolve => setTimeout(resolve, 40));
-      }
-    };
-
     const processPrefill = async () => {
       setIsSimulating(true);
-      await new Promise(resolve => setTimeout(resolve, 600)); // Esperar que el modal se asiente
+      await simulateDelay(600); // Esperar que el modal se asiente
 
       if (aiPrefill.propietario_id && canSelectPropietario) {
         setFormData(prev => ({ ...prev, propietario_id: aiPrefill.propietario_id }));
-        await new Promise(resolve => setTimeout(resolve, 600));
+        await simulateDelay(600);
       }
 
-      if (aiPrefill.placa) await simulateTyping('placa', aiPrefill.placa);
-      if (aiPrefill.marca) await simulateTyping('marca', aiPrefill.marca);
-      if (aiPrefill.modelo) await simulateTyping('modelo', aiPrefill.modelo);
-      if (aiPrefill.anio) await simulateTyping('anio', aiPrefill.anio);
-      if (aiPrefill.color) await simulateTyping('color', aiPrefill.color);
-      if (aiPrefill.kilometraje_actual) await simulateTyping('kilometraje_actual', aiPrefill.kilometraje_actual);
-      if (aiPrefill.vin_chasis) await simulateTyping('vin_chasis', aiPrefill.vin_chasis);
-      if (aiPrefill.motor) await simulateTyping('motor', aiPrefill.motor);
-      if (aiPrefill.observaciones) await simulateTyping('observaciones', aiPrefill.observaciones);
+      if (aiPrefill.placa) await simulateTyping(setFormData, 'placa', aiPrefill.placa, 40);
+      if (aiPrefill.marca) await simulateTyping(setFormData, 'marca', aiPrefill.marca, 40);
+      if (aiPrefill.modelo) await simulateTyping(setFormData, 'modelo', aiPrefill.modelo, 40);
+      if (aiPrefill.anio) await simulateTyping(setFormData, 'anio', aiPrefill.anio, 40);
+      if (aiPrefill.color) await simulateTyping(setFormData, 'color', aiPrefill.color, 40);
+      if (aiPrefill.kilometraje_actual) await simulateTyping(setFormData, 'kilometraje_actual', aiPrefill.kilometraje_actual, 40);
+      if (aiPrefill.vin_chasis) await simulateTyping(setFormData, 'vin_chasis', aiPrefill.vin_chasis, 40);
+      if (aiPrefill.motor) await simulateTyping(setFormData, 'motor', aiPrefill.motor, 40);
+      if (aiPrefill.observaciones) await simulateTyping(setFormData, 'observaciones', aiPrefill.observaciones, 40);
 
       setIsSimulating(false);
 
-      // Si la acción ya está ejecutada (el usuario ya confirmó en el chat o mandó todos los datos)
-      // enviamos el formulario automáticamente después de rellenar los datos.
       if (aiPrefill.status === 'EJECUTADA' || aiPrefill.estado === 'EJECUTADA') {
         setIsAiClickingSubmit(true);
-        await new Promise(resolve => setTimeout(resolve, 800));
-        // Nota: para cuando esto se ejecute, formData puede que no tenga el valor más actual en el closure,
-        // así que usaremos un hack o dependemos de que React haya actualizado el estado.
-        // Pero dado que los await allow react to flush state, formData debería estar actualizado
-        // al momento de llamar handleSubmit si lo extraemos o el componente se renderiza de nuevo.
-        // En lugar de depender de formData en el closure, lo mejor es despachar un evento de submit real, 
-        // o podemos confiar en que form reference lo maneje.
-        const submitEvent = { preventDefault: () => { } };
-        // Para estar seguros, forzamos un submit invocando al botón
+        await simulateDelay(800);
+        
         const submitBtn = document.getElementById('vehiculo-submit-btn');
         if (submitBtn) {
            submitBtn.click();
         } else {
+           const submitEvent = { preventDefault: () => { } };
            handleSubmit(submitEvent);
         }
         setIsAiClickingSubmit(false);

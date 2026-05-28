@@ -1,4 +1,4 @@
-﻿/**
+/**
  * CitaModalCrear - Modal for creating new citas
  * 
  * Flujo:
@@ -10,7 +10,8 @@
  * 
  * REGLA: Backend es autoridad Ãºnica sobre segmentos, fragmentaciÃ³n, estado
  */
-import { Info, Hourglass, Check, AlertTriangle, XCircle } from 'lucide-react';
+import { Info, Hourglass, Check, AlertTriangle, XCircle, Sparkles } from 'lucide-react';
+import { useGhostAutomation } from '../../hooks/useGhostAutomation'
 import React, { useState, useEffect } from 'react'
 import { useTenant } from '../../hooks/useTenant'
 import citasService from '../../services/citasService'
@@ -26,8 +27,9 @@ const limpiarPrefijoDisponibilidad = (mensaje = '') => {
   return texto
 }
 
-const CitaModalCrear = ({ onClose, onSuccess }) => {
+const CitaModalCrear = ({ onClose, onSuccess, aiPrefill = null }) => {
   const { tenantSlug } = useTenant()
+  const { isSimulating, setIsSimulating, simulateTyping, simulateClick, simulateDelay } = useGhostAutomation()
 
   // Step control
   const [step, setStep] = useState(1)
@@ -180,6 +182,78 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
     return () => clearTimeout(timer)
   }, [formData.espacio_trabajo_id, formData.fecha_hora_inicio_programada, duracionEstimada, tenantSlug])
 
+  // EFECTO: Automatización de IA para paso a paso
+  useEffect(() => {
+    if (!aiPrefill || aiPrefill.type !== 'CREAR_CITA') return;
+
+    const processPrefill = async () => {
+      setIsSimulating(true);
+      await simulateDelay(1000); // Esperar a que se carguen los datos iniciales
+
+      // Paso 1: Seleccionar vehículo
+      if (step === 1) {
+        let targetVehiculoId = null;
+        if (aiPrefill.placa) {
+          const match = vehiculos.find(v => v.placa.toLowerCase() === aiPrefill.placa.toLowerCase());
+          if (match) targetVehiculoId = match.id;
+        }
+        if (!targetVehiculoId && vehiculos.length > 0) {
+          targetVehiculoId = vehiculos[0].id;
+        }
+
+        if (targetVehiculoId) {
+          handleVehiculoChange(targetVehiculoId);
+          await simulateDelay(1000);
+        }
+        setStep(2);
+      }
+
+      // Paso 2: Seleccionar servicios
+      if (step === 2) {
+        if (serviciosDelPlan.length > 0) {
+          const noProgramados = serviciosDelPlan.filter(s => s.estado !== 'PROGRAMADO').map(s => s.id);
+          handleServiciosChange(noProgramados);
+          await simulateDelay(1200);
+        }
+        setStep(3);
+      }
+
+      // Paso 3: Asignar fecha y hora
+      if (step === 3) {
+        if (aiPrefill.fecha) {
+          setFormData(prev => ({
+            ...prev,
+            fecha_hora_inicio_programada: `${aiPrefill.fecha}T${prev.fecha_hora_inicio_programada?.split('T')[1] || '09:00:00'}`
+          }));
+        }
+        if (aiPrefill.hora) {
+          setFormData(prev => ({
+            ...prev,
+            fecha_hora_inicio_programada: `${prev.fecha_hora_inicio_programada?.split('T')[0] || new Date().toISOString().split('T')[0]}T${aiPrefill.hora}:00`
+          }));
+        }
+        await simulateDelay(1000);
+        setStep(4);
+      }
+
+      // Paso 4: Observaciones y Guardar
+      if (step === 4) {
+        if (aiPrefill.observaciones) {
+          await simulateTyping(setFormData, 'observaciones_cliente', aiPrefill.observaciones, 40);
+        }
+
+        setIsSimulating(false);
+
+        if (aiPrefill.status === 'EJECUTADA' || aiPrefill.estado === 'EJECUTADA') {
+          await simulateDelay(1000);
+          handleSubmit();
+        }
+      }
+    };
+
+    processPrefill();
+  }, [aiPrefill?._ts, step, vehiculos, serviciosDelPlan]);
+
   // When vehicle changes
   const handleVehiculoChange = async (vehiculoId) => {
     setFormData((prev) => ({
@@ -280,7 +354,10 @@ const CitaModalCrear = ({ onClose, onSuccess }) => {
       <div className="bg-white dark:bg-carbon-900 text-carbon-900 dark:text-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-screen overflow-y-auto border border-neutral-200 dark:border-white/[0.08]">
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold">Nueva Cita</h2>
+          <h2 className="text-2xl font-bold flex items-center gap-2">
+            Nueva Cita
+            {isSimulating && <Sparkles className="text-primary-500 animate-pulse inline-block ml-2" size={20} />}
+          </h2>
           <button
             onClick={onClose}
             className="text-carbon-500 hover:text-carbon-700 dark:text-neutral-300 dark:hover:text-white text-2xl"

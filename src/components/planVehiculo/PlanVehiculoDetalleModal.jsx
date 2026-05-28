@@ -33,7 +33,7 @@ export const PlanVehiculoDetalleModal = ({
       }
     }
     // Fallback: genérico con primeros 8 caracteres del ID
-    return `Servicio (${detalle.id.substring(0, 8)}...)`
+    return `Servicio (${detalle && detalle.id ? String(detalle.id).substring(0, 8) : ''}...)`
   }
 
   const obtenerPrecioDisplay = (detalle) => {

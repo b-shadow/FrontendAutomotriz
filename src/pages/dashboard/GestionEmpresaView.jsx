@@ -4,6 +4,8 @@ import { useTenant } from '../../hooks/useTenant'
 import { Card, Button } from '../../components/ui'
 import empresaService from '../../services/empresaService'
 import suscripcionService from '../../services/suscripcionService'
+import { useGhostAutomation } from '../../hooks/useGhostAutomation'
+import GhostIndicator from '../../components/GhostIndicator'
 
 export const GestionEmpresaView = ({ onNavigate, aiPrefill, onSuccess }) => {
   const { tenantSlug } = useTenant()
@@ -13,7 +15,7 @@ export const GestionEmpresaView = ({ onNavigate, aiPrefill, onSuccess }) => {
   const [success, setSuccess] = useState(null)
   const [loading, setLoading] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
-  const [isSimulating, setIsSimulating] = useState(false)
+  const { isSimulating, setIsSimulating, simulateTyping, simulateClick, simulateDelay } = useGhostAutomation()
   const [saving, setSaving] = useState(false)
   const [formData, setFormData] = useState({
     nombre: ''
@@ -65,35 +67,25 @@ export const GestionEmpresaView = ({ onNavigate, aiPrefill, onSuccess }) => {
   useEffect(() => {
     if (!aiPrefill) return;
 
-    const simulateTyping = async (field, value) => {
-      console.log(`Simulación: Escribiendo '${value}' en campo '${field}'`);
-      let current = "";
-      for (let i = 0; i <= value.length; i++) {
-        current = value.substring(0, i);
-        setFormData(prev => ({ ...prev, [field]: current }));
-        await new Promise(resolve => setTimeout(resolve, 50));
-      }
-    };
-
     const processPrefill = async () => {
       setIsSimulating(true);
 
       // 1. Abrir modo edición si no lo está
       if (!isEditing) {
-        await new Promise(resolve => setTimeout(resolve, 800));
+        await simulateDelay(800);
         setIsEditing(true);
-        await new Promise(resolve => setTimeout(resolve, 600));
+        await simulateDelay(600);
       }
 
       // 2. Simular escritura del nombre
       if (aiPrefill.nuevo_nombre) {
-        await simulateTyping('nombre', aiPrefill.nuevo_nombre);
+        await simulateTyping(setFormData, 'nombre', aiPrefill.nuevo_nombre, 50);
       }
 
       setIsSimulating(false);
 
       if (aiPrefill.status === 'EJECUTADA' || aiPrefill.estado === 'EJECUTADA') {
-        await new Promise(resolve => setTimeout(resolve, 800));
+        await simulateDelay(800);
         const btn = document.getElementById('empresa-submit-btn');
         if (btn) {
           btn.click();
@@ -160,14 +152,7 @@ export const GestionEmpresaView = ({ onNavigate, aiPrefill, onSuccess }) => {
   return (
     <div className="space-y-6">
       {/* INDICADOR DE SIMULACIÓN IA */}
-      {isSimulating && (
-        <div className="fixed top-24 right-8 z-50 animate-bounce">
-          <div className="bg-primary-600 text-white px-4 py-2 rounded-2xl shadow-2xl flex items-center gap-2 border border-primary-400 backdrop-blur-sm bg-opacity-90">
-            <Sparkles className="animate-pulse" size={18} />
-            <span className="text-sm font-bold tracking-tight">IA escribiendo...</span>
-          </div>
-        </div>
-      )}
+      <GhostIndicator isSimulating={isSimulating} />
       {/* HEADER */}
       <div>
         <h1 className="text-3xl font-bold text-carbon-900 dark:text-white"><Building2 className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Gestionar Empresa</h1>

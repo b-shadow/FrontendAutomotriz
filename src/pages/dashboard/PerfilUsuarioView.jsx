@@ -4,12 +4,14 @@ import { Card, Button, Input } from '../../components/ui'
 import NotificationPreferencesSection from '../../components/NotificationPreferencesSection'
 import { useTenant } from '../../hooks/useTenant'
 import usuariosService from '../../services/usuariosService'
+import { useGhostAutomation } from '../../hooks/useGhostAutomation'
+import GhostIndicator from '../../components/GhostIndicator'
 
 export const PerfilUsuarioView = ({ user, tenant, aiPrefill, onSuccess }) => {
   const { tenantSlug } = useTenant()
   // ESTADO: Edición de Perfil
   const [isEditing, setIsEditing] = useState(false)
-  const [isSimulating, setIsSimulating] = useState(false)
+  const { isSimulating, setIsSimulating, simulateTyping, simulateClick, simulateDelay } = useGhostAutomation()
   const [isAiClickingEdit, setIsAiClickingEdit] = useState(false) // Nueva bandera para click visual
   const [formData, setFormData] = useState({
     nombres: user.nombres || '', apellidos: user.apellidos || '',
@@ -56,26 +58,6 @@ export const PerfilUsuarioView = ({ user, tenant, aiPrefill, onSuccess }) => {
 
     console.log("Simulación: Iniciando para acción con TS", aiPrefill._ts);
 
-    const simulateTyping = async (field, value) => {
-      console.log(`Simulación: Escribiendo '${value}' en campo '${field}'`);
-      let current = "";
-      for (let i = 0; i <= value.length; i++) {
-        current = value.substring(0, i);
-        setFormData(prev => ({ ...prev, [field]: current }));
-        await new Promise(resolve => setTimeout(resolve, 50));
-      }
-    };
-
-    const simulateTypingPassword = async (field, value) => {
-      console.log(`Simulación: Escribiendo contraseña en campo '${field}'`);
-      let current = "";
-      for (let i = 0; i <= value.length; i++) {
-        current = value.substring(0, i);
-        setPasswordFormData(prev => ({ ...prev, [field]: current }));
-        await new Promise(resolve => setTimeout(resolve, 150)); // Un poco más rápido que antes pero aún visible
-      }
-    };
-
     const processPrefill = async () => {
       setIsSimulating(true);
 
@@ -84,32 +66,32 @@ export const PerfilUsuarioView = ({ user, tenant, aiPrefill, onSuccess }) => {
         if (!isEditing) {
           console.log("Simulación: Abriendo formulario de perfil...");
           setIsAiClickingEdit(true);
-          await new Promise(resolve => setTimeout(resolve, 800));
+          await simulateDelay(800);
           setIsEditing(true);
           setIsAiClickingEdit(false);
-          await new Promise(resolve => setTimeout(resolve, 600)); // Esperar animación de entrada
+          await simulateDelay(600); // Esperar animación de entrada
         } else {
           // Si ya está abierto, esperar un poco para que el usuario note que la IA va a escribir
-          await new Promise(resolve => setTimeout(resolve, 400));
+          await simulateDelay(400);
         }
 
-        if (aiPrefill.nuevo_nombre) await simulateTyping('nombres', aiPrefill.nuevo_nombre);
-        if (aiPrefill.nuevo_apellido) await simulateTyping('apellidos', aiPrefill.nuevo_apellido);
-        if (aiPrefill.nuevo_telefono) await simulateTyping('telefono', aiPrefill.nuevo_telefono);
+        if (aiPrefill.nuevo_nombre) await simulateTyping(setFormData, 'nombres', aiPrefill.nuevo_nombre, 50);
+        if (aiPrefill.nuevo_apellido) await simulateTyping(setFormData, 'apellidos', aiPrefill.nuevo_apellido, 50);
+        if (aiPrefill.nuevo_telefono) await simulateTyping(setFormData, 'telefono', aiPrefill.nuevo_telefono, 50);
       }
 
       // 2. Manejar cambios de contraseña
       if (aiPrefill.nueva_contrasena || aiPrefill.contrasena_actual) {
         console.log("Simulación: Abriendo formulario de contraseña...");
         setShowPasswordForm(true);
-        await new Promise(resolve => setTimeout(resolve, 800));
+        await simulateDelay(800);
 
         if (aiPrefill.contrasena_actual) {
-          await simulateTypingPassword('contraseña_actual', aiPrefill.contrasena_actual);
+          await simulateTyping(setPasswordFormData, 'contraseña_actual', aiPrefill.contrasena_actual, 150);
         }
         if (aiPrefill.nueva_contrasena) {
-          await simulateTypingPassword('contraseña_nueva', aiPrefill.nueva_contrasena);
-          await simulateTypingPassword('contraseña_confirmacion', aiPrefill.nueva_contrasena);
+          await simulateTyping(setPasswordFormData, 'contraseña_nueva', aiPrefill.nueva_contrasena, 150);
+          await simulateTyping(setPasswordFormData, 'contraseña_confirmacion', aiPrefill.nueva_contrasena, 150);
         }
       }
 
@@ -117,20 +99,18 @@ export const PerfilUsuarioView = ({ user, tenant, aiPrefill, onSuccess }) => {
       setIsSimulating(false);
 
       if (aiPrefill.status === 'EJECUTADA' || aiPrefill.estado === 'EJECUTADA') {
-        await new Promise(resolve => setTimeout(resolve, 800));
+        await simulateDelay(800);
         
         if (aiPrefill.accion === 'CAMBIAR_CONTRASENA' || aiPrefill.type === 'CAMBIAR_CONTRASENA') {
-           const btn = document.getElementById('password-submit-btn');
-           if (btn) btn.click();
+           simulateClick('password-submit-btn');
         } else if (aiPrefill.accion === 'CAMBIAR_USUARIO' || aiPrefill.type === 'CAMBIAR_USUARIO' || aiPrefill.accion === 'CAMBIAR_TELEFONO' || aiPrefill.type === 'CAMBIAR_TELEFONO') {
-           const btn = document.getElementById('perfil-submit-btn');
-           if (btn) btn.click();
+           simulateClick('perfil-submit-btn');
         }
       }
     };
 
     processPrefill();
-  }, [aiPrefill]);
+  }, [aiPrefill?._ts]);
 
   // Eliminado el efecto de refetch redundante que causaba el regreso al nombre anterior
   const [showPasswordForm, setShowPasswordForm] = useState(false)
@@ -204,8 +184,8 @@ export const PerfilUsuarioView = ({ user, tenant, aiPrefill, onSuccess }) => {
     } catch (error) {
       // Error: Mostrar mensaje de error real
       const errorMsg =
-        error.response.data.detail ||
-        error.response.data.message ||
+        error.response?.data?.detail ||
+        error.response?.data?.message ||
         error.message ||
         'No se pudo actualizar el perfil'
       setErrorMessage(` Error: ${errorMsg}`)
@@ -278,8 +258,8 @@ export const PerfilUsuarioView = ({ user, tenant, aiPrefill, onSuccess }) => {
     } catch (error) {
       // Error: Mostrar mensaje de error real
       const errorMsg =
-        error.response.data.detail ||
-        error.response.data.message ||
+        error.response?.data?.detail ||
+        error.response?.data?.message ||
         error.message ||
         'No se pudo cambiar la contraseña'
       setPasswordErrorMessage(` Error: ${errorMsg}`)
@@ -303,14 +283,7 @@ export const PerfilUsuarioView = ({ user, tenant, aiPrefill, onSuccess }) => {
   return (
     <div className="space-y-6">
       {/* INDICADOR DE SIMULACIÓN IA */}
-      {isSimulating && (
-        <div className="fixed top-24 right-8 z-50 animate-bounce">
-          <div className="bg-primary-600 text-white px-4 py-2 rounded-2xl shadow-2xl flex items-center gap-2 border border-primary-400 backdrop-blur-sm bg-opacity-90">
-            <Sparkles className="animate-pulse" size={18} />
-            <span className="text-sm font-bold tracking-tight">IA escribiendo...</span>
-          </div>
-        </div>
-      )}
+      <GhostIndicator isSimulating={isSimulating} />
 
       {/* HEADER */}
       <div>
@@ -569,7 +542,7 @@ export const PerfilUsuarioView = ({ user, tenant, aiPrefill, onSuccess }) => {
           <div>
             <p className="text-carbon-600 dark:text-neutral-400">Rol en {tenant.nombre}</p>
             <p className="text-carbon-900 dark:text-white font-semibold text-lg">
-              {usuarioCompleto.rol.nombre || 'Usuario'}
+              {usuarioCompleto?.rol?.nombre || 'Usuario'}
             </p>
           </div>
         </div>

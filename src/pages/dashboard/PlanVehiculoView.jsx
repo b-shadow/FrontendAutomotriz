@@ -1,5 +1,5 @@
 import { ClipboardList, Eye, Pencil, RefreshCw, Plus } from 'lucide-react';
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import planVehiculoService from '../../services/planVehiculoService'
 import vehiculosService from '../../services/vehiculosService'
 import {
@@ -12,6 +12,8 @@ import PlanVehiculoDetalleModal from '../../components/planVehiculo/PlanVehiculo
 import CambiarEstadoPlanModal from '../../components/planVehiculo/CambiarEstadoPlanModal'
 import CambiarEstadoDetalleModal from '../../components/planVehiculo/CambiarEstadoDetalleModal'
 import PlanVehiculoDetalleFormModal from '../../components/planVehiculo/PlanVehiculoDetalleFormModal'
+import { useGhostAutomation } from '../../hooks/useGhostAutomation'
+import GhostIndicator from '../../components/GhostIndicator'
 
 /**
  * PlanVehiculoView - Vista principal del CU22: Gestionar Plan de Vehículo
@@ -28,12 +30,16 @@ export const PlanVehiculoView = ({ user, tenantSlug, aiPrefill = null, onSuccess
   const [vehiculos, setVehiculos] = useState([])
   const [loadingPlanes, setLoadingPlanes] = useState(false)
   const [errorPlanes, setErrorPlanes] = useState(null)
+  const { isSimulating, setIsSimulating, simulateTyping, simulateClick, simulateDelay } = useGhostAutomation()
+  const lastProcessedActionRef = useRef(null)
 
   // Estados de filtro
-  const [search, setSearch] = useState('')
-  const [estadoFiltro, setEstadoFiltro] = useState('')
-  const [vehiculoFiltro] = useState('')
-  const [ordering, setOrdering] = useState('-created_at')
+  const [filtros, setFiltros] = useState({
+    search: '',
+    estadoFiltro: '',
+    vehiculoFiltro: '',
+    ordering: '-created_at',
+  })
 
   // Estados de modal cargar
   const [showPlanModal, setShowPlanModal] = useState(false)
@@ -64,73 +70,123 @@ export const PlanVehiculoView = ({ user, tenantSlug, aiPrefill = null, onSuccess
   }, [tenantSlug])
 
   // Cargar planes de vehículos
-  const cargarPlanes = useCallback(async () => {
+  const cargarPlanes = async (filtrosActuales = filtros) => {
     try {
       setLoadingPlanes(true)
       setErrorPlanes(null)
-      const filtros = {
-        ordering,
+      const queryParams = {
+        ordering: filtrosActuales.ordering,
       }
-      if (search) filtros.search = search
-      if (estadoFiltro) filtros.estado = estadoFiltro
-      if (vehiculoFiltro) filtros.vehiculo_id = vehiculoFiltro
+      if (filtrosActuales.search) queryParams.search = filtrosActuales.search
+      if (filtrosActuales.estadoFiltro) queryParams.estado = filtrosActuales.estadoFiltro
+      if (filtrosActuales.vehiculoFiltro) queryParams.vehiculo_id = filtrosActuales.vehiculoFiltro
 
       const data = await planVehiculoService.listarPlanesVehiculo(
         tenantSlug,
-        filtros
+        queryParams
       )
-      setPlanes(Array.isArray(data) ? data : data.results || [])
+      const list = Array.isArray(data) ? data : data.results || []
+      setPlanes(list)
+      return list
     } catch (err) {
       setErrorPlanes('No se pudieron cargar los planes de vehículos.')
       console.error('Error al cargar planes:', err)
+      return []
     } finally {
       setLoadingPlanes(false)
     }
-  }, [tenantSlug, search, estadoFiltro, vehiculoFiltro, ordering])
+  }
 
   useEffect(() => {
-    cargarPlanes()
-  }, [cargarPlanes])
+    cargarPlanes(filtros)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tenantSlug])
+
+  const handleFilterChange = async (e) => {
+    const { name, value } = e.target
+    const nuevosFiltros = {
+      ...filtros,
+      [name]: value,
+    }
+    setFiltros(nuevosFiltros)
+    await cargarPlanes(nuevosFiltros)
+  }
 
   // Lógica de Ghost User
   useEffect(() => {
     if (!aiPrefill) return;
 
-    if (aiPrefill.type === 'BUSCAR_PLAN') {
-      if (aiPrefill.busqueda) {
-        setSearch(aiPrefill.busqueda);
+    // Si esta acción ya fue procesada, no hacer nada
+    const actionKey = `${aiPrefill.type}_${aiPrefill._ts}`;
+    if (lastProcessedActionRef.current === actionKey) return;
+    lastProcessedActionRef.current = actionKey;
+
+    const processPrefill = async () => {
+      setIsSimulating(true);
+
+      if (aiPrefill.type === 'BUSCAR_PLAN_VEHICULO') {
+        const searchTerm = aiPrefill.busqueda || aiPrefill.search || aiPrefill.placa || '';
+        const nuevosFiltros = { ...filtros };
+        if (searchTerm) {
+          nuevosFiltros.search = searchTerm;
+          await simulateTyping(setFiltros, 'search', searchTerm, 50);
+        }
+        if (aiPrefill.estado) {
+          const estadoVal = aiPrefill.estado === 'Todos' ? '' : aiPrefill.estado;
+          nuevosFiltros.estadoFiltro = estadoVal;
+          setFiltros(prev => ({ ...prev, estadoFiltro: estadoVal }));
+          await simulateDelay(600);
+        }
+        await simulateDelay(800);
+        await cargarPlanes(nuevosFiltros);
+        setIsSimulating(false);
+        return;
       }
-      if (aiPrefill.estado) {
-        setEstadoFiltro(aiPrefill.estado === 'Todos' ? '' : aiPrefill.estado);
+
+      // Para otras acciones, necesitamos la lista de planes actual o cargarla
+      let listaPlanes = planes;
+      if (listaPlanes.length === 0) {
+        listaPlanes = await cargarPlanes(filtros);
       }
-      return;
-    }
 
-    if (planes.length === 0 || loadingPlanes) return;
+      // Buscar plan por placa
+      const placaBuscada = (aiPrefill.placa || '').toLowerCase();
+      let planEncontrado = null;
+      
+      if (placaBuscada) {
+        planEncontrado = listaPlanes.find(p => {
+          const info = obtenerInfoVehiculo(p);
+          if (typeof info === 'string') return false;
+          return info.placa && String(info.placa).toLowerCase().includes(placaBuscada);
+        });
+      } else {
+        // Si la IA no envió placa en este paso, intentamos mantener el plan que ya está abierto en la vista
+        planEncontrado = planSeleccionado;
+      }
 
-    // Buscar plan por placa
-    const placaBuscada = (aiPrefill.placa || '').toLowerCase();
-    const planEncontrado = planes.find(p => {
-      const info = obtenerInfoVehiculo(p);
-      if (typeof info === 'string') return false;
-      return info.placa && String(info.placa).toLowerCase().includes(placaBuscada);
-    });
+      if (!planEncontrado) {
+        console.warn('Ghost User: No se encontró plan para continuar la acción');
+        setIsSimulating(false);
+        return;
+      }
 
-    if (!planEncontrado) {
-      console.warn('Ghost User: No se encontró plan para placa', placaBuscada);
-      return;
-    }
+      await simulateDelay(800);
 
-    if (aiPrefill.type === 'VER_PLAN') {
-      handleVerDetalle(planEncontrado);
-    } else if (aiPrefill.type === 'EDITAR_PLAN') {
-      handleEditarPlan(planEncontrado);
-    } else if (aiPrefill.type === 'CAMBIAR_ESTADO_PLAN') {
-      handleCambiarEstado(planEncontrado);
-    } else if (aiPrefill.type === 'AGREGAR_DETALLE_PLAN') {
-      handleAgregarDetalle(planEncontrado);
-    }
-  }, [aiPrefill, planes, loadingPlanes]);
+      if (aiPrefill.type === 'VER_PLAN_VEHICULO') {
+        handleVerDetalle(planEncontrado);
+      } else if (aiPrefill.type === 'EDITAR_PLAN_VEHICULO') {
+        handleEditarPlan(planEncontrado);
+      } else if (aiPrefill.type === 'CAMBIAR_ESTADO_PLAN_VEHICULO') {
+        handleCambiarEstado(planEncontrado);
+      } else if (aiPrefill.type === 'AGREGAR_DETALLE_PLAN_VEHICULO') {
+        handleAgregarDetalle(planEncontrado);
+      }
+
+      setIsSimulating(false);
+    };
+
+    processPrefill();
+  }, [aiPrefill?._ts]);
 
   const handleEditarPlan = (plan) => {
     setPlanEditando(plan)
@@ -242,6 +298,8 @@ export const PlanVehiculoView = ({ user, tenantSlug, aiPrefill = null, onSuccess
 
   return (
     <div className="space-y-6">
+      {/* INDICADOR DE SIMULACIÓN IA */}
+      <GhostIndicator isSimulating={isSimulating} message="IA trabajando..." />
       {/* HEADER */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
@@ -266,8 +324,9 @@ export const PlanVehiculoView = ({ user, tenantSlug, aiPrefill = null, onSuccess
             </label>
             <input
               type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              name="search"
+              value={filtros.search}
+              onChange={handleFilterChange}
               placeholder="Buscar..."
               className="w-full px-3 py-2 border border-neutral-300 dark:border-white/[0.08] rounded-lg dark:bg-carbon-700 dark:text-white text-carbon-900 focus:ring-2 focus:ring-primary-500 outline-none transition-colors"
             />
@@ -279,8 +338,9 @@ export const PlanVehiculoView = ({ user, tenantSlug, aiPrefill = null, onSuccess
               Estado
             </label>
             <select
-              value={estadoFiltro}
-              onChange={(e) => setEstadoFiltro(e.target.value)}
+              name="estadoFiltro"
+              value={filtros.estadoFiltro}
+              onChange={handleFilterChange}
               className="w-full px-3 py-2 border border-neutral-300 dark:border-white/[0.08] rounded-lg dark:bg-carbon-700 dark:text-white text-carbon-900 focus:ring-2 focus:ring-primary-500 outline-none transition-colors"
             >
               <option value="">Todos</option>
@@ -298,8 +358,9 @@ export const PlanVehiculoView = ({ user, tenantSlug, aiPrefill = null, onSuccess
               Ordenar por
             </label>
             <select
-              value={ordering}
-              onChange={(e) => setOrdering(e.target.value)}
+              name="ordering"
+              value={filtros.ordering}
+              onChange={handleFilterChange}
               className="w-full px-3 py-2 border border-neutral-300 dark:border-white/[0.08] rounded-lg dark:bg-carbon-700 dark:text-white text-carbon-900 focus:ring-2 focus:ring-primary-500 outline-none transition-colors"
             >
               <option value="-created_at">Más recientes</option>
@@ -403,7 +464,7 @@ export const PlanVehiculoView = ({ user, tenantSlug, aiPrefill = null, onSuccess
           vehiculos={vehiculos}
           onClose={() => setShowPlanModal(false)}
           onSuccess={handlePlanCreatedOrUpdated}
-          aiPrefill={aiPrefill?.type === 'EDITAR_PLAN' ? aiPrefill : null}
+          aiPrefill={aiPrefill?.type === 'EDITAR_PLAN_VEHICULO' ? aiPrefill : null}
         />
       )}
 
@@ -424,7 +485,7 @@ export const PlanVehiculoView = ({ user, tenantSlug, aiPrefill = null, onSuccess
           plan={planSeleccionado}
           onClose={() => setShowEstadoModal(false)}
           onSuccess={handleEstadoChanged}
-          aiPrefill={aiPrefill?.type === 'CAMBIAR_ESTADO_PLAN' ? aiPrefill : null}
+          aiPrefill={aiPrefill?.type === 'CAMBIAR_ESTADO_PLAN_VEHICULO' ? aiPrefill : null}
         />
       )}
 
@@ -445,7 +506,7 @@ export const PlanVehiculoView = ({ user, tenantSlug, aiPrefill = null, onSuccess
           detalle={detalleEditando}
           onClose={() => setShowFormDetalleModal(false)}
           onSuccess={handleDetalleCreatedOrUpdated}
-          aiPrefill={aiPrefill?.type === 'AGREGAR_DETALLE_PLAN' ? aiPrefill : null}
+          aiPrefill={aiPrefill?.type === 'AGREGAR_DETALLE_PLAN_VEHICULO' ? aiPrefill : null}
         />
       )}
     </div>

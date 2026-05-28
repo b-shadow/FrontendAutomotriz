@@ -1,10 +1,12 @@
 import { CheckCircle, Car, AlertTriangle, Pencil, Pause, Play, Sparkles } from 'lucide-react';
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import vehiculosService from '../../services/vehiculosService'
 import usuariosService from '../../services/usuariosService'
 import { canCreateVehiculos, canChangeVehiculoStatus, canSelectPropietarioVehiculo } from '../../utils/roleHelper'
 import VehiculoModal from '../../components/vehiculos/VehiculoModal'
 import { useRefresh } from '../../context/RefreshContext'
+import { useGhostAutomation } from '../../hooks/useGhostAutomation'
+import GhostIndicator from '../../components/GhostIndicator'
 
 const GestionVehiculosView = ({ user, tenantSlug, aiPrefill, onSuccess }) => {
   // Estados para lista
@@ -13,9 +15,10 @@ const GestionVehiculosView = ({ user, tenantSlug, aiPrefill, onSuccess }) => {
   const [error, setError] = useState(null)
   const [totalEntries, setTotalEntries] = useState(0)
   const { refreshTick } = useRefresh()
-  const [isSimulating, setIsSimulating] = useState(false)
+  const { isSimulating, setIsSimulating, simulateTyping, simulateClick, simulateDelay } = useGhostAutomation()
   const [isAiClickingCreate, setIsAiClickingCreate] = useState(false)
   const [isAiClickingSearch, setIsAiClickingSearch] = useState(false)
+  const lastProcessedActionRef = useRef(null)
 
   // Filtros y paginación
   const [filtros, setFiltros] = useState({
@@ -73,38 +76,37 @@ const GestionVehiculosView = ({ user, tenantSlug, aiPrefill, onSuccess }) => {
   useEffect(() => {
     if (!aiPrefill) return;
 
-    const simulateTyping = async (field, value) => {
-      let current = "";
-      for (let i = 0; i <= value.length; i++) {
-        current = value.substring(0, i);
-        setFiltros(prev => ({ ...prev, [field]: current }));
-        await new Promise(resolve => setTimeout(resolve, 50));
-      }
-    };
+    const actionKey = `${aiPrefill.type}_${aiPrefill._ts}`;
+    if (lastProcessedActionRef.current === actionKey) return;
+    lastProcessedActionRef.current = actionKey;
 
     const processPrefill = async () => {
       setIsSimulating(true);
 
       // 1. Acción: BUSCAR_VEHICULO
-      if (aiPrefill.type === 'BUSCAR_VEHICULO' || aiPrefill.search) {
-        if (aiPrefill.search) {
-          await simulateTyping('search', aiPrefill.search);
+      if (aiPrefill.type === 'BUSCAR_VEHICULO' || aiPrefill.search || aiPrefill.placa || aiPrefill.marca || aiPrefill.modelo) {
+        const searchTerm = aiPrefill.search || aiPrefill.placa || aiPrefill.marca || aiPrefill.modelo || aiPrefill.query || aiPrefill.termino || '';
+        const nuevosFiltros = { ...filtros };
+        if (searchTerm) {
+          nuevosFiltros.search = searchTerm;
+          await simulateTyping(setFiltros, 'search', searchTerm, 50);
         }
         if (aiPrefill.ordering) {
+          nuevosFiltros.ordering = aiPrefill.ordering;
           setFiltros(prev => ({ ...prev, ordering: aiPrefill.ordering }));
-          await new Promise(resolve => setTimeout(resolve, 600));
+          await simulateDelay(600);
         }
 
         setIsAiClickingSearch(true);
-        await new Promise(resolve => setTimeout(resolve, 800));
-        await cargarVehiculos(1);
+        await simulateDelay(800);
+        await cargarVehiculos(1, nuevosFiltros);
         setIsAiClickingSearch(false);
       }
 
       // 2. Acción: REGISTRAR_VEHICULO (Solo abrir modal)
       if (aiPrefill.type === 'REGISTRAR_VEHICULO' || (aiPrefill.placa && !isModalOpen)) {
         setIsAiClickingCreate(true);
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await simulateDelay(1000);
         handleOpenCreateModal();
         setIsAiClickingCreate(false);
       }
@@ -113,7 +115,7 @@ const GestionVehiculosView = ({ user, tenantSlug, aiPrefill, onSuccess }) => {
     };
 
     processPrefill();
-  }, [aiPrefill]);
+  }, [aiPrefill?._ts]);
 
   // Manejar cambio de filtros - búsqueda en tiempo real
   const handleFilterChange = async (e) => {
@@ -227,14 +229,7 @@ const GestionVehiculosView = ({ user, tenantSlug, aiPrefill, onSuccess }) => {
   return (
     <div className="space-y-6">
       {/* INDICADOR DE SIMULACIÓN IA */}
-      {isSimulating && (
-        <div className="fixed top-24 right-8 z-50 animate-bounce">
-          <div className="bg-primary-600 text-white px-4 py-2 rounded-2xl shadow-2xl flex items-center gap-2 border border-primary-400 backdrop-blur-sm bg-opacity-90">
-            <Sparkles className="animate-pulse" size={18} />
-            <span className="text-sm font-bold tracking-tight">IA trabajando...</span>
-          </div>
-        </div>
-      )}
+      <GhostIndicator isSimulating={isSimulating} message="IA trabajando..." />
 
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">

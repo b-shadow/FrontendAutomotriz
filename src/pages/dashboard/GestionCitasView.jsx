@@ -8,6 +8,9 @@ import CitaModalCrear from '../../components/citas/CitaModalCrear'
 import CitaModalEditar from '../../components/citas/CitaModalEditar'
 import CitaModalReprogramar from '../../components/citas/CitaModalReprogramar'
 import CitaDetalleModal from '../../components/citas/CitaDetalleModal'
+import { useGhostAutomation } from '../../hooks/useGhostAutomation'
+import GhostIndicator from '../../components/GhostIndicator'
+import { Sparkles } from 'lucide-react'
 
 
 const estadoColorMap = {
@@ -22,8 +25,9 @@ const estadoLabelMap = {
   NO_SHOW: 'No Show',
 }
 
-const GestionCitasView = () => {
-  const { tenantSlug } = useTenant()
+const GestionCitasView = ({ user, tenantSlug: propTenantSlug, onNavigate, aiPrefill, onSuccess }) => {
+  const { tenantSlug: contextTenantSlug } = useTenant()
+  const tenantSlug = propTenantSlug || contextTenantSlug
 
   // Data state
   const [citas, setCitas] = useState([])
@@ -31,6 +35,7 @@ const GestionCitasView = () => {
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
   const [pagination, setPagination] = useState({ page: 1, pageSize: 10, total: 0 })
+  const { isSimulating, setIsSimulating, simulateTyping, simulateClick, simulateDelay } = useGhostAutomation()
 
   // Modal state
   const [modals, setModals] = useState({
@@ -85,6 +90,39 @@ const GestionCitasView = () => {
   useEffect(() => {
     cargarCitas(1)
   }, [cargarCitas, tenantSlug, filters])
+
+  // EFECTO: Simulación de IA (Ghost User)
+  useEffect(() => {
+    if (!aiPrefill) return;
+
+    const processPrefill = async () => {
+      if (aiPrefill.type === 'FILTRAR_CITAS') {
+        setIsSimulating(true);
+        await simulateDelay(600);
+
+        if (aiPrefill.estado) {
+          setFilters(prev => ({ ...prev, estado: aiPrefill.estado }));
+          await simulateDelay(600);
+        }
+
+        if (aiPrefill.fecha_desde) {
+          await simulateTyping(setFilters, 'fecha_desde', aiPrefill.fecha_desde, 50);
+        }
+        if (aiPrefill.fecha_hasta) {
+          await simulateTyping(setFilters, 'fecha_hasta', aiPrefill.fecha_hasta, 50);
+        }
+
+        setIsSimulating(false);
+      } else if (aiPrefill.type === 'CREAR_CITA') {
+        setIsSimulating(true);
+        await simulateDelay(800);
+        abrirModalCrear();
+        setIsSimulating(false);
+      }
+    };
+
+    processPrefill();
+  }, [aiPrefill?._ts]);
 
   // Modal handlers
   const abrirModalCrear = () => {
@@ -168,6 +206,8 @@ const GestionCitasView = () => {
 
   return (
     <div className="space-y-6">
+      {/* INDICADOR DE SIMULACIÓN IA */}
+      <GhostIndicator isSimulating={isSimulating} message="IA filtrando citas..." />
       {/* Header */}
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-carbon-900 dark:text-white">Gestión de Citas</h1>
@@ -365,6 +405,7 @@ const GestionCitasView = () => {
         <CitaModalCrear
           onClose={() => cerrarModal('crear')}
           onSuccess={handleCrearExito}
+          aiPrefill={aiPrefill}
         />
       )}
       {modals.editar && citaSeleccionada && (

@@ -1,5 +1,6 @@
-﻿import { Pencil, Settings } from 'lucide-react';
+import { Pencil, Settings, Sparkles } from 'lucide-react';
 import { useState, useEffect } from 'react'
+import { useGhostAutomation } from '../../hooks/useGhostAutomation'
 
 const BLOQUE_MINUTOS = 30
 const DURACION_MAX_MIN = 12 * 60
@@ -32,6 +33,7 @@ export const ServicioCatalogoModal = ({
   aiPrefill = null,
   onSuccess = null,
 }) => {
+  const { isSimulating, setIsSimulating, simulateTyping, simulateClick, simulateDelay } = useGhostAutomation()
   const [formData, setFormData] = useState({
     codigo: '',
     nombre: '',
@@ -70,60 +72,41 @@ export const ServicioCatalogoModal = ({
   useEffect(() => {
     if (!aiPrefill || !isOpen) return;
 
-    if (aiPrefill.status === 'PENDIENTE') {
-      const formUpdates = {};
-      const fieldsToSimulate = [];
-      const typingSpeed = 10;
+    const processPrefill = async () => {
+      setIsSimulating(true);
+      await simulateDelay(600); // Esperar que el modal se asiente
 
       const aiCodigo = aiPrefill.codigo || (aiPrefill.nombre_servicio ? aiPrefill.nombre_servicio.toUpperCase().replace(/\s+/g, '_') : '');
-      if (aiCodigo && aiCodigo !== formData.codigo) {
-        fieldsToSimulate.push({ field: 'codigo', value: aiCodigo });
+      if (aiCodigo) {
+        await simulateTyping(setFormData, 'codigo', aiCodigo, 40);
       }
-      if (aiPrefill.nombre_servicio && aiPrefill.nombre_servicio !== formData.nombre) {
-        fieldsToSimulate.push({ field: 'nombre', value: aiPrefill.nombre_servicio });
+      if (aiPrefill.nombre_servicio) {
+        await simulateTyping(setFormData, 'nombre', aiPrefill.nombre_servicio, 40);
       }
-      if (aiPrefill.descripcion && aiPrefill.descripcion !== formData.descripcion) {
-        fieldsToSimulate.push({ field: 'descripcion', value: aiPrefill.descripcion });
+      if (aiPrefill.descripcion) {
+        await simulateTyping(setFormData, 'descripcion', aiPrefill.descripcion, 40);
       }
-      if (aiPrefill.tiempo_estandar_min && aiPrefill.tiempo_estandar_min !== formData.tiempo_estandar_min) {
-        fieldsToSimulate.push({ field: 'tiempo_estandar_min', value: aiPrefill.tiempo_estandar_min });
+      if (aiPrefill.tiempo_estandar_min) {
+        await simulateTyping(setFormData, 'tiempo_estandar_min', aiPrefill.tiempo_estandar_min, 40);
       }
-      if (aiPrefill.precio_base && aiPrefill.precio_base !== formData.precio_base) {
-        fieldsToSimulate.push({ field: 'precio_base', value: aiPrefill.precio_base });
+      if (aiPrefill.precio_base) {
+        await simulateTyping(setFormData, 'precio_base', aiPrefill.precio_base, 40);
       }
 
-      if (fieldsToSimulate.length > 0) {
-        let currentFieldIndex = 0;
-        let currentCharIndex = 0;
+      setIsSimulating(false);
 
-        const typeNextChar = () => {
-          if (currentFieldIndex >= fieldsToSimulate.length) return;
-
-          const currentField = fieldsToSimulate[currentFieldIndex];
-          const targetValue = String(currentField.value);
-
-          if (currentCharIndex < targetValue.length) {
-            setFormData(prev => ({
-              ...prev,
-              [currentField.field]: targetValue.substring(0, currentCharIndex + 1)
-            }));
-            currentCharIndex++;
-            setTimeout(typeNextChar, typingSpeed);
-          } else {
-            currentFieldIndex++;
-            currentCharIndex = 0;
-            setTimeout(typeNextChar, typingSpeed * 3);
-          }
-        };
-
-        typeNextChar();
-      }
-    } else if (aiPrefill.status === 'EJECUTADA') {
-      setTimeout(() => {
+      if (aiPrefill.status === 'EJECUTADA' || aiPrefill.estado === 'EJECUTADA') {
+        await simulateDelay(800);
         const btn = document.getElementById('servicio-submit-btn');
-        if (btn) btn.click();
-      }, 500);
-    }
+        if (btn) {
+          btn.click();
+        } else {
+          handleSubmit({ preventDefault: () => {} });
+        }
+      }
+    };
+
+    processPrefill();
   }, [aiPrefill?._ts, isOpen]);
 
   const handleInputChange = (e) => {
@@ -195,6 +178,7 @@ export const ServicioCatalogoModal = ({
         <div className="sticky top-0 bg-white dark:bg-carbon-800 px-6 py-4 border-b border-neutral-200 dark:border-white/[0.08] flex items-center justify-between">
           <h2 className="text-xl font-semibold text-carbon-900 dark:text-white">
             {servicio ? <><Pencil className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Editar Servicio</> : <><Settings className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Agregar Nuevo Servicio</>}
+            {isSimulating && <Sparkles className="text-primary-500 animate-pulse inline-block ml-2" size={18} />}
           </h2>
           <button
             onClick={onClose}

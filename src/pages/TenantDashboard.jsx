@@ -182,11 +182,19 @@ export const TenantDashboard = () => {
             user={user} 
             tenantSlug={tenantSlug} 
             onSuccess={refreshUserData}
-            aiPrefill={(['PENDIENTE', 'EJECUTADA'].includes(pendingAction?.estado)) && ['BUSCAR_PLAN', 'VER_PLAN', 'EDITAR_PLAN', 'CAMBIAR_ESTADO_PLAN', 'AGREGAR_DETALLE_PLAN'].includes(pendingAction?.accion) ? { ...pendingAction.parametros, type: pendingAction.accion, status: pendingAction.estado, _ts: pendingAction._ts } : null}
+            aiPrefill={(['PENDIENTE', 'EJECUTADA'].includes(pendingAction?.estado)) && ['BUSCAR_PLAN_VEHICULO', 'VER_PLAN_VEHICULO', 'EDITAR_PLAN_VEHICULO', 'CAMBIAR_ESTADO_PLAN_VEHICULO', 'AGREGAR_DETALLE_PLAN_VEHICULO'].includes(pendingAction?.accion) ? { ...pendingAction.parametros, type: pendingAction.accion, status: pendingAction.estado, _ts: pendingAction._ts } : null}
           />
         )
       case 'citas':
-        return <GestionCitasView user={user} tenantSlug={tenantSlug} onNavigate={handleNavigate} />
+        return (
+          <GestionCitasView 
+            user={user} 
+            tenantSlug={tenantSlug} 
+            onNavigate={handleNavigate} 
+            onSuccess={refreshUserData}
+            aiPrefill={(['PENDIENTE', 'EJECUTADA'].includes(pendingAction?.estado)) && ['FILTRAR_CITAS', 'CREAR_CITA'].includes(pendingAction?.accion) ? { ...pendingAction.parametros, type: pendingAction.accion, status: pendingAction.estado, _ts: pendingAction._ts } : null}
+          />
+        )
       case 'recepcionVehiculo':
         return <RecepcionVehiculoView tenantSlug={tenantSlug} />
       case 'presupuestos':

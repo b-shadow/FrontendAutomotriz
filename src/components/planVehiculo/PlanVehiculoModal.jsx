@@ -58,7 +58,7 @@ export const PlanVehiculoModal = ({
         }
       }, 500);
     }
-  }, [aiPrefill]);
+  }, [aiPrefill?._ts]);
 
   const handleSubmit = async (e) => {
     e.preventDefault()

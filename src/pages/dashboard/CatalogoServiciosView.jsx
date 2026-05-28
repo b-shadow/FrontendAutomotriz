@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react'
 import serviciosCatalogoService from '../../services/serviciosCatalogoService'
 import { canCreateServiciosCatalogo, canEditServiciosCatalogo, canChangeServicioCatalogoStatus } from '../../utils/roleHelper'
 import ServicioCatalogoModal from '../../components/servicios/ServicioCatalogoModal'
+import { useGhostAutomation } from '../../hooks/useGhostAutomation'
+import GhostIndicator from '../../components/GhostIndicator'
 
 const CatalogoServiciosView = ({ user, tenantSlug, onSuccess, aiPrefill }) => {
   // Estados para lista
@@ -10,6 +12,7 @@ const CatalogoServiciosView = ({ user, tenantSlug, onSuccess, aiPrefill }) => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [totalEntries, setTotalEntries] = useState(0)
+  const { isSimulating, setIsSimulating, simulateTyping, simulateClick, simulateDelay } = useGhostAutomation()
   // Filtros y paginación
   const [filtros, setFiltros] = useState({
     search: '', ordering : '-created_at',
@@ -156,6 +159,8 @@ const CatalogoServiciosView = ({ user, tenantSlug, onSuccess, aiPrefill }) => {
   const canChangeStatus = canChangeServicioCatalogoStatus(user)
   return (
     <div className="space-y-6">
+      {/* INDICADOR DE SIMULACIÓN IA */}
+      <GhostIndicator isSimulating={isSimulating} message="IA automatizando..." />
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>

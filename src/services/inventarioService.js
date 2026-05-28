@@ -106,6 +106,16 @@ const inventarioService = {
     return response.data
   },
 
+  iniciarPagoTarjetaVenta: async (tenantSlug, payload) => {
+    const response = await apiClient.post(`/api/${tenantSlug}/gestion-administrativa/ventas-mostrador/iniciar-pago-tarjeta/`, payload)
+    return response.data
+  },
+
+  confirmarPagoTarjetaVenta: async (tenantSlug, payload) => {
+    const response = await apiClient.post(`/api/${tenantSlug}/gestion-administrativa/ventas-mostrador/confirmar-pago-tarjeta/`, payload)
+    return response.data
+  },
+
   listarPagosTaller: async (tenantSlug, params = {}) => {
     const qs = new URLSearchParams(params).toString()
     const response = await apiClient.get(`/api/${tenantSlug}/gestion-administrativa/pagos-taller/${qs ? `?${qs}` : ''}`)
@@ -114,6 +124,21 @@ const inventarioService = {
 
   crearPagoTaller: async (tenantSlug, payload) => {
     const response = await apiClient.post(`/api/${tenantSlug}/gestion-administrativa/pagos-taller/`, payload)
+    return response.data
+  },
+
+  crearPagoQR: async (tenantSlug, payload) => {
+    const response = await apiClient.post(`/api/${tenantSlug}/gestion-administrativa/pagos-taller/crear-qr/`, payload)
+    return response.data
+  },
+
+  consultarEstadoPagoQR: async (tenantSlug, pagoId) => {
+    const response = await apiClient.get(`/api/${tenantSlug}/gestion-administrativa/pagos-taller/${pagoId}/estado-qr/`)
+    return response.data
+  },
+
+  simularConfirmacionPagoQR: async (tenantSlug, pagoId, payload = { accion: 'confirmar' }) => {
+    const response = await apiClient.post(`/api/${tenantSlug}/gestion-administrativa/pagos-taller/${pagoId}/simular-confirmacion/`, payload)
     return response.data
   },
 

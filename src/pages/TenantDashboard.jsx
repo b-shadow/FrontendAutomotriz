@@ -29,6 +29,12 @@ import GestionOrdenesTrabajoView from './dashboard/GestionOrdenesTrabajoView'
 import GestionTallerInternoView from './dashboard/GestionTallerInternoView'
 import GestionAvanceVehiculoView from './dashboard/GestionAvanceVehiculoView'
 import GestionInventarioView from './dashboard/GestionInventarioView'
+import InventarioView from './dashboard/InventarioView'
+import ProveedoresView from './dashboard/ProveedoresView'
+import ComprasInsumosView from './dashboard/ComprasInsumosView'
+import VentasMostradorView from './dashboard/VentasMostradorView'
+import FacturasRecibosView from './dashboard/FacturasRecibosView'
+import CajaMovimientosView from './dashboard/CajaMovimientosView'
 import GestionSolicitudesRepuestoView from './dashboard/GestionSolicitudesRepuestoView'
 import GestionBackupView from './dashboard/GestionBackupView'
 import AsistenteIAView from './dashboard/AsistenteIAView'
@@ -206,21 +212,21 @@ export const TenantDashboard = () => {
       case 'avanceVehiculo':
         return <GestionAvanceVehiculoView tenantSlug={tenantSlug} user={user} />
       case 'inventario':
-        return <GestionInventarioView tenantSlug={tenantSlug} user={user} initialSection="inventario" />
+        return <InventarioView tenantSlug={tenantSlug} user={user} />
       case 'solicitudesRepuesto':
         return <GestionSolicitudesRepuestoView tenantSlug={tenantSlug} user={user} />
       case 'proveedores':
-        return <GestionInventarioView tenantSlug={tenantSlug} user={user} initialSection="proveedores" />
+        return <ProveedoresView tenantSlug={tenantSlug} user={user} />
       case 'comprasInsumos':
-        return <GestionInventarioView tenantSlug={tenantSlug} user={user} initialSection="comprasInsumos" />
+        return <ComprasInsumosView tenantSlug={tenantSlug} user={user} />
       case 'ventasMostrador':
-        return <GestionInventarioView tenantSlug={tenantSlug} user={user} initialSection="ventasMostrador" />
+        return <VentasMostradorView tenantSlug={tenantSlug} user={user} />
       case 'pagosTaller':
-        return <GestionInventarioView tenantSlug={tenantSlug} user={user} initialSection="pagosTaller" />
+        return <VentasMostradorView tenantSlug={tenantSlug} user={user} />
       case 'facturasRecibos':
-        return <GestionInventarioView tenantSlug={tenantSlug} user={user} initialSection="facturasRecibos" />
+        return <FacturasRecibosView tenantSlug={tenantSlug} user={user} />
       case 'cajaMovimientos':
-        return <GestionInventarioView tenantSlug={tenantSlug} user={user} initialSection="cajaMovimientos" />
+        return <CajaMovimientosView tenantSlug={tenantSlug} user={user} />
       case 'gestionarBackup':
         return <GestionBackupView />
       case 'asistenteIA':

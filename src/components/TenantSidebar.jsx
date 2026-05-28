@@ -17,7 +17,6 @@ import {
   canManageProveedores,
   canManageCompras,
   canManageVentasMostrador,
-  canManagePagosTaller,
   canManageFacturas,
   canManageCaja,
 } from '../utils/roleHelper'
@@ -178,10 +177,6 @@ export const TenantSidebar = ({
         {
           id: 'ventasMostrador', label: <><CreditCard className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Venta Presencial</>,
           visible: canManageVentasMostrador(user),
-        },
-        {
-          id: 'pagosTaller', label: <><CreditCard className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Registrar Pago</>,
-          visible: canManagePagosTaller(user),
         },
         {
           id: 'facturasRecibos', label: <><Save className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Facturas y Recibos</>,

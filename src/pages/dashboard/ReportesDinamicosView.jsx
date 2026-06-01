@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Card } from '../../components/ui';
 import { 
   Bot, 
@@ -23,7 +23,9 @@ import {
 import apiClient from '../../services/apiClient';
 import Plot from 'react-plotly.js';
 import * as XLSX from 'xlsx';
+import { jsPDF } from 'jspdf';
 import ExploradorDatosView from './ExploradorDatosView';
+import assistantService from '../../services/assistantService';
 
 export const ReportesDinamicosView = ({ tenantSlug }) => {
   const [mainMode, setMainMode] = useState('clasico'); // 'clasico' or 'ia'
@@ -32,6 +34,13 @@ export const ReportesDinamicosView = ({ tenantSlug }) => {
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
   const [viewMode, setViewMode] = useState('chart'); // 'chart' or 'data'
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef(null);
+  const transcriptBufferRef = useRef('');
+  const interimTranscriptRef = useRef('');
+  const stopRequestedRef = useRef(false);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
   
   // Visual Builder State
   const [vbEntity, setVbEntity] = useState('vehículos');
@@ -112,17 +121,257 @@ export const ReportesDinamicosView = ({ tenantSlug }) => {
 
   const handleAsk = (e) => {
     e.preventDefault();
+    if (isListening) {
+      stopListening();
+    }
     triggerAsk(prompt);
   };
 
-  const handleExport = () => {
-    if (!result || !result.data || result.data.length === 0) return;
-    
-    const ws = XLSX.utils.json_to_sheet(result.data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "ReporteIA");
-    XLSX.writeFile(wb, `Reporte_IA_${new Date().toISOString().split('T')[0]}.xlsx`);
+  const ensureRecognition = () => {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      return null;
+    }
+
+    if (recognitionRef.current) return recognitionRef.current;
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'es-ES';
+    recognition.continuous = true;
+    recognition.interimResults = true;
+
+    recognition.onstart = () => {
+      transcriptBufferRef.current = '';
+      interimTranscriptRef.current = '';
+      stopRequestedRef.current = false;
+      setIsListening(true);
+      setError('');
+    };
+    recognition.onresult = (event) => {
+      let finalText = '';
+      let interimText = '';
+      for (let i = event.resultIndex; i < event.results.length; i += 1) {
+        const part = event.results[i][0]?.transcript || '';
+        if (event.results[i].isFinal) finalText += part;
+        else interimText += part;
+      }
+      if (finalText) {
+        transcriptBufferRef.current = `${transcriptBufferRef.current} ${finalText}`.trim();
+      }
+      interimTranscriptRef.current = interimText.trim();
+    };
+    recognition.onerror = async (event) => {
+      setIsListening(false);
+      // "aborted" y "no-speech" suelen pasar al detener manualmente o por pausas cortas.
+      if (stopRequestedRef.current || event?.error === 'aborted' || event?.error === 'no-speech') {
+        return;
+      }
+      const canUseRecorder = !!(navigator.mediaDevices?.getUserMedia && window.MediaRecorder);
+      if (canUseRecorder) {
+        // Si el reconocimiento del navegador falla, degradar a grabación+transcripción backend.
+        startAudioRecordingFallback();
+        return;
+      }
+      if (event?.error === 'not-allowed' || event?.error === 'service-not-allowed') {
+        setError('Permiso de micrófono denegado. Habilítalo en el navegador.');
+        return;
+      }
+      setError(`No se pudo capturar el audio (${event?.error || 'desconocido'}).`);
+    };
+    recognition.onend = () => {
+      setIsListening(false);
+      const text = `${transcriptBufferRef.current} ${interimTranscriptRef.current}`.trim();
+      if (text) setPrompt(text);
+      transcriptBufferRef.current = '';
+      interimTranscriptRef.current = '';
+      stopRequestedRef.current = false;
+    };
+
+    recognitionRef.current = recognition;
+    return recognition;
   };
+
+  const startListening = () => {
+    const canUseRecorder = !!(navigator.mediaDevices?.getUserMedia && window.MediaRecorder);
+    if (canUseRecorder) {
+      startAudioRecordingFallback();
+      return;
+    }
+    const recognition = ensureRecognition();
+    if (!recognition) {
+      setError('Tu navegador no soporta grabación de voz.');
+      return;
+    }
+    setError('');
+    try {
+      recognition.start();
+    } catch (err) {
+      // Ignorar error si ya estaba activo; cualquier otro se reporta.
+      if (!String(err?.message || '').toLowerCase().includes('already started')) {
+        setError('No se pudo iniciar la grabación.');
+      }
+    }
+  };
+
+  const stopListening = () => {
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state !== 'inactive') {
+      stopAudioRecordingFallback();
+      return;
+    }
+    if (recognitionRef.current) {
+      stopRequestedRef.current = true;
+      recognitionRef.current.stop();
+      return;
+    }
+  };
+
+  const toggleListening = () => {
+    if (isListening) {
+      stopListening();
+      return;
+    }
+    startListening();
+  };
+
+  useEffect(() => {
+    return () => {
+      recognitionRef.current?.stop();
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
+    };
+  }, []);
+
+  const startAudioRecordingFallback = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      audioChunksRef.current = [];
+      mediaRecorderRef.current = mediaRecorder;
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        try {
+          const audioBlob = new Blob(audioChunksRef.current, { type: mediaRecorder.mimeType || 'audio/webm' });
+          if (audioBlob.size === 0) return;
+          const res = await assistantService.transcribeAudio(tenantSlug, audioBlob);
+          const text = (res?.text || res?.texto || '').trim();
+          if (text) {
+            setPrompt(text);
+            setError('');
+          } else {
+            setError('No se detectó texto en el audio. Habla más cerca del micrófono y vuelve a intentar.');
+          }
+        } catch (err) {
+          setError(err?.response?.data?.error || 'No se pudo transcribir el audio.');
+        } finally {
+          setIsListening(false);
+          stream.getTracks().forEach((track) => track.stop());
+        }
+      };
+
+      setError('');
+      setIsListening(true);
+      mediaRecorder.start();
+    } catch (err) {
+      setError('No se pudo acceder al micrófono.');
+    }
+  };
+
+  const stopAudioRecordingFallback = () => {
+    const recorder = mediaRecorderRef.current;
+    if (!recorder) return;
+    if (recorder.state !== 'inactive') {
+      recorder.stop();
+    } else {
+      setIsListening(false);
+    }
+  };
+
+  const downloadBlob = (blob, filename) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const buildTableHtml = (rows) => {
+    if (!rows?.length) return '<table><tr><td>Sin datos</td></tr></table>';
+    const keys = Object.keys(rows[0]);
+    let html = '<table border="1" cellspacing="0" cellpadding="6"><thead><tr>';
+    keys.forEach((k) => { html += `<th>${String(k).replace(/_/g, ' ')}</th>`; });
+    html += '</tr></thead><tbody>';
+    rows.forEach((r) => {
+      html += '<tr>';
+      keys.forEach((k) => { html += `<td>${r[k] ?? '-'}</td>`; });
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+    return html;
+  };
+
+  const handleExport = (format) => {
+    const rows = result?.data || [];
+    if (!rows.length) return;
+    const baseName = `Reporte_IA_${new Date().toISOString().split('T')[0]}`;
+
+    if (format === 'excel') {
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "ReporteIA");
+      XLSX.writeFile(wb, `${baseName}.xlsx`);
+      return;
+    }
+    if (format === 'csv') {
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const csv = XLSX.utils.sheet_to_csv(ws);
+      downloadBlob(new Blob([csv], { type: 'text/csv;charset=utf-8;' }), `${baseName}.csv`);
+      return;
+    }
+    const tableHtml = buildTableHtml(rows);
+    if (format === 'html') {
+      const doc = `<!doctype html><html><head><meta charset="utf-8"><title>${baseName}</title></head><body>${tableHtml}</body></html>`;
+      downloadBlob(new Blob([doc], { type: 'text/html;charset=utf-8;' }), `${baseName}.html`);
+      return;
+    }
+    if (format === 'word') {
+      const doc = `<!doctype html><html><head><meta charset="utf-8"></head><body>${tableHtml}</body></html>`;
+      downloadBlob(new Blob([doc], { type: 'application/msword' }), `${baseName}.doc`);
+      return;
+    }
+    if (format === 'pdf') {
+      const doc = new jsPDF({ orientation: 'landscape' });
+      const keys = Object.keys(rows[0] || {});
+      let y = 12;
+      doc.setFontSize(12);
+      doc.text(baseName, 14, y);
+      y += 8;
+      doc.setFontSize(8);
+      doc.text(keys.join(' | '), 14, y);
+      y += 6;
+      rows.forEach((row) => {
+        const line = keys.map((k) => String(row[k] ?? '-')).join(' | ');
+        const wrapped = doc.splitTextToSize(line, 270);
+        doc.text(wrapped, 14, y);
+        y += wrapped.length * 4 + 1;
+        if (y > 190) {
+          doc.addPage();
+          y = 12;
+        }
+      });
+      doc.save(`${baseName}.pdf`);
+    }
+  };
+
+  const exportOptions = ['pdf', 'word', 'html', 'csv', 'excel'];
 
   const hasData = result && result.data && result.data.length > 0;
   const hasChart = result && result.plotly_fig;
@@ -202,9 +451,22 @@ export const ReportesDinamicosView = ({ tenantSlug }) => {
           <button
             type="submit"
             disabled={loading || !prompt.trim()}
-            className="mr-2 p-3.5 bg-primary-500 hover:bg-primary-600 disabled:bg-carbon-200 dark:disabled:bg-carbon-800 text-white rounded-2xl transition-all shadow-md flex items-center justify-center min-w-[56px]"
+            className="mr-2 shrink-0 p-3.5 bg-primary-500 hover:bg-primary-600 disabled:bg-carbon-200 dark:disabled:bg-carbon-800 text-white rounded-2xl transition-all shadow-md flex items-center justify-center min-w-[56px]"
           >
             {loading ? <Loader2 size={24} className="animate-spin" /> : <Send size={24} />}
+          </button>
+          <button
+            type="button"
+            onClick={toggleListening}
+            disabled={loading}
+            title={isListening ? 'Detener grabacion' : 'Grabar por voz'}
+            className={`mr-2 shrink-0 p-3.5 rounded-2xl transition-all shadow-md flex items-center justify-center min-w-[56px] ${
+              isListening
+                ? 'bg-red-500 text-white hover:bg-red-600'
+                : 'bg-neutral-100 hover:bg-neutral-200 dark:bg-carbon-800 dark:hover:bg-carbon-700 text-carbon-700 dark:text-neutral-200'
+            }`}
+          >
+            {isListening ? <MicOff size={24} /> : <Mic size={24} />}
           </button>
         </form>
       </div>
@@ -250,13 +512,18 @@ export const ReportesDinamicosView = ({ tenantSlug }) => {
               </button>
             </div>
 
-            <button
-              onClick={handleExport}
-              disabled={!hasData}
-              className="flex items-center gap-2 px-6 py-2.5 bg-carbon-900 hover:bg-carbon-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-carbon-900 rounded-xl transition-all font-semibold shadow-md disabled:opacity-50 disabled:shadow-none"
-            >
-              <Download size={18} /> Exportar Excel
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              {exportOptions.map((opt) => (
+                <button
+                  key={opt}
+                  onClick={() => handleExport(opt)}
+                  disabled={!hasData}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-carbon-900 hover:bg-carbon-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-carbon-900 rounded-xl transition-all text-sm font-semibold shadow-md disabled:opacity-50 disabled:shadow-none"
+                >
+                  <Download size={16} /> {opt.toUpperCase()}
+                </button>
+              ))}
+            </div>
           </div>
 
           <Card className="p-2 sm:p-6 bg-white dark:bg-carbon-900 shadow-xl border-neutral-200 dark:border-white/[0.05] rounded-[2rem] overflow-hidden">

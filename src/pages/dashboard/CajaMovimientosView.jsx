@@ -10,6 +10,19 @@ const CajaMovimientosView = () => {
   const [error, setError] = useState(null)
   const [info, setInfo] = useState(null)
 
+  const calcularResumenDesdeMovimientos = (rows) => {
+    const base = { ingresos: 0, egresos: 0, ajustes: 0, saldo: 0 }
+    const totals = (rows || []).reduce((acc, m) => {
+      const monto = Number(m?.monto || 0)
+      if (m?.tipo === 'INGRESO') acc.ingresos += monto
+      else if (m?.tipo === 'EGRESO') acc.egresos += monto
+      else if (m?.tipo === 'AJUSTE') acc.ajustes += monto
+      return acc
+    }, base)
+    totals.saldo = totals.ingresos - totals.egresos + totals.ajustes
+    return totals
+  }
+
   const cargar = useCallback(async () => {
     setError(null)
     setInfo(null)
@@ -20,7 +33,9 @@ const CajaMovimientosView = () => {
       if (!miCajaActiva) {
         setInfo('No tienes una caja activa asignada. Mostrando movimientos generales.')
         const data = await inventarioService.listarMovimientosCaja(tenantSlug)
-        setMovimientos(data.results || data || [])
+        const rows = data.results || data || []
+        setMovimientos(rows)
+        setResumen(calcularResumenDesdeMovimientos(rows))
         return
       }
 
@@ -33,7 +48,9 @@ const CajaMovimientosView = () => {
           setInfo('No tienes una caja activa asignada. Mostrando movimientos generales.')
         }
         const data = await inventarioService.listarMovimientosCaja(tenantSlug)
-        setMovimientos(data.results || data || [])
+        const rows = data.results || data || []
+        setMovimientos(rows)
+        setResumen(calcularResumenDesdeMovimientos(rows))
       } catch {
         setError('No se pudo cargar caja y movimientos')
       }

@@ -1,11 +1,14 @@
 /** TenantDashboard: Dashboard principal para usuarios logueados en un tenant
  * Ruta: /:tenantSlug/app (protegida por TenantGuard)
  */
+import { Bell, BellOff } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTenant } from '../hooks/useTenant'
 import { useRefresh } from '../context/RefreshContext'
 import authService from '../services/authService'
+import firebaseMessagingService from '../services/firebaseMessagingService'
+import tokenStorage from '../services/tokenStorage'
 import TenantSidebar from '../components/TenantSidebar'
 import ThemeToggle from '../components/ThemeToggle'
 
@@ -56,6 +59,9 @@ export const TenantDashboard = () => {
   const [isAssistantOpen, setIsAssistantOpen] = useState(false)
   // Estado para la acción propuesta por la IA (para pre-llenado visual)
   const [pendingAction, setPendingAction] = useState(null)
+  const [showPushPrompt, setShowPushPrompt] = useState(false)
+  const [pushPromptLoading, setPushPromptLoading] = useState(false)
+  const [pushPromptMessage, setPushPromptMessage] = useState('')
 
   // EFECTO: Refrescar datos cuando cambia el refreshTick
   useEffect(() => {
@@ -64,6 +70,23 @@ export const TenantDashboard = () => {
       refreshUser(); // <--- LLAMADA CLAVE PARA EL WOW DE SINCRONIZACIÓN
     }
   }, [refreshTick, refreshUser])
+
+  useEffect(() => {
+    if (!tenantSlug || typeof window === 'undefined') {
+      return
+    }
+
+    const permission = firebaseMessagingService.getPermissionStatus()
+    const pendingPrompt = tokenStorage.getTenantPushPromptPending(tenantSlug)
+    const hasPushToken = !!tokenStorage.getTenantPushToken(tenantSlug)
+
+    if ((permission === 'default' || permission === 'denied') && (pendingPrompt || !hasPushToken)) {
+      setShowPushPrompt(true)
+      return
+    }
+
+    setShowPushPrompt(false)
+  }, [tenantSlug, user?.id])
 
   // Función para refrescar datos globales del usuario sin recargar
   const refreshUserData = async () => {
@@ -90,6 +113,27 @@ export const TenantDashboard = () => {
 
   const handleNavigate = (viewId) => {
     setActiveView(viewId)
+  }
+
+  const handleEnablePushNotifications = async () => {
+    setPushPromptLoading(true)
+    setPushPromptMessage('')
+
+    try {
+      await firebaseMessagingService.requestPermissionAndRegisterToken(tenantSlug)
+      tokenStorage.setTenantPushPromptPending(tenantSlug, false)
+      setShowPushPrompt(false)
+    } catch (error) {
+      tokenStorage.setTenantPushPromptPending(tenantSlug, true)
+      setPushPromptMessage(error?.message || 'No se pudo activar las notificaciones push.')
+    } finally {
+      setPushPromptLoading(false)
+    }
+  }
+
+  const handleDismissPushPrompt = () => {
+    tokenStorage.setTenantPushPromptPending(tenantSlug, false)
+    setShowPushPrompt(false)
   }
 
   // Renderizar la vista activa
@@ -297,6 +341,43 @@ export const TenantDashboard = () => {
 
         <main className="flex-1 overflow-y-auto px-4 md:px-8 py-6 md:py-8 relative">
           <div className="max-w-7xl mx-auto">
+            {showPushPrompt && (
+              <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm dark:border-amber-500/20 dark:bg-amber-500/10">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+                      <Bell className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Activa las notificaciones del navegador
+                    </p>
+                    <p className="mt-1 text-sm text-amber-700 dark:text-amber-200/90">
+                      Necesitamos registrar este dispositivo para recibir push. Si el navegador las bloqueó, habilítalas en los permisos del sitio y vuelve a intentarlo.
+                    </p>
+                    {pushPromptMessage && (
+                      <p className="mt-2 text-sm text-red-700 dark:text-red-300">
+                        <BellOff className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> {pushPromptMessage}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap gap-3">
+                    <button
+                      type="button"
+                      onClick={handleEnablePushNotifications}
+                      disabled={pushPromptLoading}
+                      className="rounded-xl bg-amber-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {pushPromptLoading ? 'Activando...' : 'Activar notificaciones'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDismissPushPrompt}
+                      className="rounded-xl border border-amber-300 px-4 py-2 text-sm font-semibold text-amber-800 transition hover:bg-amber-100 dark:border-amber-400/30 dark:text-amber-200 dark:hover:bg-amber-500/10"
+                    >
+                      Ahora no
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
             {renderView()}
           </div>
         </main>

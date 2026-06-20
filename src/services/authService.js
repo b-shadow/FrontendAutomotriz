@@ -2,9 +2,30 @@
  * AuthService: Maneja autenticación global y por tenant.
  */
 import apiClient, { publicApiClient } from './apiClient'
+import firebaseMessagingService from './firebaseMessagingService'
 import tokenStorage from './tokenStorage'
 
 export const authService = {
+  async syncPushNotificationsAfterAuth(tenantSlug, usuario) {
+    if (!tenantSlug || !usuario) {
+      return
+    }
+
+    try {
+      const permission = firebaseMessagingService.getPermissionStatus()
+      if (permission === 'granted') {
+        await firebaseMessagingService.syncIfGranted(tenantSlug)
+        return
+      }
+
+      if (permission === 'default' || permission === 'denied') {
+        tokenStorage.setTenantPushPromptPending(tenantSlug, true)
+      }
+    } catch (pushError) {
+      console.warn('No se pudo registrar el dispositivo push tras autenticacion:', pushError?.message || pushError)
+    }
+  },
+
   //ADMIN AUTH
   async loginAdmin() {
     return {
@@ -79,6 +100,7 @@ export const authService = {
       tokenStorage.setTenantRefreshToken(tenantSlug, tokens.refresh)
       tokenStorage.setTenantUser(tenantSlug, usuario)
       tokenStorage.setTenant(tenantSlug, tenant)
+      await this.syncPushNotificationsAfterAuth(tenantSlug, usuario)
       return {
         success: true,
         usuario,
@@ -122,6 +144,7 @@ export const authService = {
       tokenStorage.setTenantRefreshToken(tenantSlug, tokens.refresh)
       tokenStorage.setTenantUser(tenantSlug, usuario)
       tokenStorage.setTenant(tenantSlug, tenant)
+      await this.syncPushNotificationsAfterAuth(tenantSlug, usuario)
       return {
         success: true,
         usuario,
@@ -139,6 +162,11 @@ export const authService = {
   async logoutTenant(tenantSlug) {
     try {
       // Llamar endpoint backend para revocar sesión
+      try {
+        await firebaseMessagingService.deactivateCurrentPushToken(tenantSlug)
+      } catch (pushError) {
+        console.warn('Error desactivando push token:', pushError?.message || pushError)
+      }
       await apiClient.post(`/api/tenants/${tenantSlug}/auth/logout/`)
     } catch (err) {
       console.warn('Error logout backend:', err.message)

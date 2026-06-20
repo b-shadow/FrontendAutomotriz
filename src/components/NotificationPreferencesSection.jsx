@@ -1,6 +1,7 @@
 import { XCircle, CheckCircle, Bell, Mail, Check, X, Lightbulb } from 'lucide-react';
 import { useState, useEffect } from 'react'
 import { Card, Button } from './ui'
+import firebaseMessagingService from '../services/firebaseMessagingService'
 import usuariosService from '../services/usuariosService'
 import { useRefresh } from '../context/RefreshContext'
 import { useGhostAutomation } from '../hooks/useGhostAutomation'
@@ -36,6 +37,9 @@ export const NotificationPreferencesSection = ({ tenantSlug, userId, aiPrefill, 
         setPreferencias(data.preferencias || {
           noti_email: true, noti_push: true,
         })
+        if (tenantSlug) {
+          firebaseMessagingService.syncIfGranted(tenantSlug).catch(() => {})
+        }
         setErrorMessage('')
       } catch (error) {
         console.error('Error al cargar preferencias:', error)
@@ -73,6 +77,10 @@ export const NotificationPreferencesSection = ({ tenantSlug, userId, aiPrefill, 
     // Actualizar en backend
     setIsLoading(true)
     try {
+      if (key === 'noti_push' && nuevoValor) {
+        await firebaseMessagingService.requestPermissionAndRegisterToken(tenantSlug)
+      }
+
       const response = await usuariosService.actualizarPreferenciasNotificacion(
         tenantSlug,
         { [key]: nuevoValor }
@@ -193,7 +201,7 @@ export const NotificationPreferencesSection = ({ tenantSlug, userId, aiPrefill, 
 
       {/* DESCRIPCIÓN */}
       <p className="text-sm text-carbon-700 dark:text-neutral-300 mb-6">
-        Controla cómo deseas recibir notificaciones en el futuro. Estos canales estarán disponibles cuando se implemente el sistema de notificaciones.
+        Controla cómo deseas recibir notificaciones de la operación del taller.
       </p>
 
       {/* PREFERENCIAS */}
@@ -282,7 +290,7 @@ export const NotificationPreferencesSection = ({ tenantSlug, userId, aiPrefill, 
       {/* INFORMACIÓN ADICIONAL */}
       <div className="mt-6 p-4 bg-white dark:bg-carbon-700 rounded-lg border border-neutral-200 dark:border-white/[0.08] text-sm text-carbon-600 dark:text-neutral-400">
         <p>
-          <Lightbulb className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> <strong>Nota:</strong> Estos son solo tus canales preferidos. El sistema de envío de notificaciones se implementará en el futuro.
+          <Lightbulb className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> <strong>Nota:</strong> Si desactivas <code>noti_push</code>, no se enviarán notificaciones push aunque tu dispositivo esté registrado.
         </p>
       </div>
     </Card>

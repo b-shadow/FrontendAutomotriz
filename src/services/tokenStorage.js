@@ -115,12 +115,38 @@ export const tokenStorage = {
     return tenant ? JSON.parse(tenant) : null
   },
 
+  setTenantPushToken(tenantSlug, token) {
+    if (token) {
+      localStorage.setItem(`push_token:${tenantSlug}`, token)
+    } else {
+      localStorage.removeItem(`push_token:${tenantSlug}`)
+    }
+  },
+
+  getTenantPushToken(tenantSlug) {
+    return localStorage.getItem(`push_token:${tenantSlug}`)
+  },
+
+  setTenantPushPromptPending(tenantSlug, pending) {
+    if (pending) {
+      localStorage.setItem(`push_prompt_pending:${tenantSlug}`, '1')
+    } else {
+      localStorage.removeItem(`push_prompt_pending:${tenantSlug}`)
+    }
+  },
+
+  getTenantPushPromptPending(tenantSlug) {
+    return localStorage.getItem(`push_prompt_pending:${tenantSlug}`) === '1'
+  },
+
   // ===== CLEAR TENANT SESSION =====
   logoutTenant(tenantSlug) {
     this.setTenantToken(tenantSlug, null)
     this.setTenantRefreshToken(tenantSlug, null)
     this.setTenantUser(tenantSlug, null)
     this.setTenant(tenantSlug, null)
+    this.setTenantPushToken(tenantSlug, null)
+    this.setTenantPushPromptPending(tenantSlug, false)
   },
 
   // ===== CHECK SESSION =====

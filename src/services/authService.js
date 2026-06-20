@@ -162,11 +162,6 @@ export const authService = {
   async logoutTenant(tenantSlug) {
     try {
       // Llamar endpoint backend para revocar sesión
-      try {
-        await firebaseMessagingService.deactivateCurrentPushToken(tenantSlug)
-      } catch (pushError) {
-        console.warn('Error desactivando push token:', pushError?.message || pushError)
-      }
       await apiClient.post(`/api/tenants/${tenantSlug}/auth/logout/`)
     } catch (err) {
       console.warn('Error logout backend:', err.message)

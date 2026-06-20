@@ -145,7 +145,6 @@ export const tokenStorage = {
     this.setTenantRefreshToken(tenantSlug, null)
     this.setTenantUser(tenantSlug, null)
     this.setTenant(tenantSlug, null)
-    this.setTenantPushToken(tenantSlug, null)
     this.setTenantPushPromptPending(tenantSlug, false)
   },
 

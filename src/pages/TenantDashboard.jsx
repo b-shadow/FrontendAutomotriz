@@ -172,7 +172,7 @@ export const TenantDashboard = () => {
           />
         )
       case 'gestionUsuariosRoles':
-        return <GestionUsuariosRolesView user={user} tenant={tenant} tenantSlug={tenantSlug} />
+        return <GestionUsuariosRolesView user={user} tenant={tenant} tenantSlug={tenantSlug} aiPrefill={getAiPrefill(['CREAR_USUARIO', 'CAMBIAR_ROL_USUARIO'])} />
       case 'gestionSuscripciones':
         return (
           <GestionSuscripcionView
@@ -189,7 +189,7 @@ export const TenantDashboard = () => {
         return (
           <BitacoraView 
             tenantSlug={tenantSlug} 
-            aiPrefill={getAiPrefill(['FILTRAR_BITACORA', 'EXPORTAR_BITACORA'])}
+            aiPrefill={getAiPrefill(['FILTRAR_BITACORA', 'EXPORTAR_BITACORA', 'EXPORTAR_REPORTE'])}
           />
         )
       case 'gestionVehiculos':
@@ -260,13 +260,13 @@ export const TenantDashboard = () => {
       case 'avanceVehiculo':
         return <GestionAvanceVehiculoView tenantSlug={tenantSlug} user={user} />
       case 'inventario':
-        return <InventarioView tenantSlug={tenantSlug} user={user} />
+        return <InventarioView tenantSlug={tenantSlug} user={user} aiPrefill={getAiPrefill(['CREAR_CATEGORIA_INVENTARIO', 'CREAR_ITEM_INVENTARIO'])} />
       case 'solicitudesRepuesto':
         return <GestionSolicitudesRepuestoView tenantSlug={tenantSlug} user={user} />
       case 'proveedores':
-        return <ProveedoresView tenantSlug={tenantSlug} user={user} />
+        return <ProveedoresView tenantSlug={tenantSlug} user={user} aiPrefill={getAiPrefill(['CREAR_PROVEEDOR'])} />
       case 'comprasInsumos':
-        return <ComprasInsumosView tenantSlug={tenantSlug} user={user} />
+        return <ComprasInsumosView tenantSlug={tenantSlug} user={user} aiPrefill={getAiPrefill(['AGREGAR_ITEM_COMPRA'])} />
       case 'ventasMostrador':
         return <VentasMostradorView tenantSlug={tenantSlug} user={user} />
       case 'pagosTaller':

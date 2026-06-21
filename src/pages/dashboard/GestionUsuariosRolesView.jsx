@@ -1,10 +1,10 @@
-import { Briefcase, AlertTriangle, Check, User, Bookmark, X, Pencil, Lock, Unlock, Info, ClipboardList, RefreshCw } from 'lucide-react';
+﻿import { Briefcase, AlertTriangle, Check, User, Bookmark, X, Pencil, Lock, Unlock, Info, ClipboardList, RefreshCw } from 'lucide-react';
 import { useState, useEffect } from 'react'
 import { useTenant } from '../../hooks/useTenant'
 import { Card, Button } from '../../components/ui'
 import usuariosService from '../../services/usuariosService'
 
-export const GestionUsuariosRolesView = ({ user }) => {
+export const GestionUsuariosRolesView = ({ user, aiPrefill }) => {
   const { tenantSlug } = useTenant()
   const esAdmin = user?.rol === 'ADMIN'
   const [activeTab, setActiveTab] = useState('usuarios')
@@ -58,6 +58,22 @@ export const GestionUsuariosRolesView = ({ user }) => {
   }, [tenantSlug])
 
   // Cambiar rol de usuario
+    // Intercept para CAMBIAR_ROL_USUARIO
+  useEffect(() => {
+    if (aiPrefill && aiPrefill.type === 'CAMBIAR_ROL_USUARIO' && aiPrefill.status === 'EJECUTADA') {
+      if (lastRoleTs.current === aiPrefill._ts) return;
+      lastRoleTs.current = aiPrefill._ts;
+
+      const { usuario_id, nuevo_rol } = aiPrefill;
+      if (usuario_id && nuevo_rol) {
+        setEditingUsuarioId(usuario_id);
+        setTimeout(() => {
+          handleCambiarRol(usuario_id, nuevo_rol);
+        }, 800);
+      }
+    }
+  }, [aiPrefill]);
+
   const handleCambiarRol = async (usuarioId, nuevoRolId) => {
     setLoading(true)
     setError(null)

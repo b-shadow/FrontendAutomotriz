@@ -1,14 +1,14 @@
-/**
+﻿/**
  * CitaModalCrear - Modal for creating new citas
  * 
  * Flujo:
- * 1. Usuario selecciona vehÃ­culo â†’ cliente se deriva automÃ¡ticamente
- * 2. Usuario elige servicios (se calcula duraciÃ³n estimada)
- * 3. Usuario ingresa intenciÃ³n: fecha, hora, espacio
- * 4. Resumen con aclaraciÃ³n que backend calcula agenda final
- * 5. EnvÃ­o â†’ Backend calcula y persiste â†’ Reconsulta â†’ Mostrar resultado canÃ³nico
+ * 1. Usuario selecciona vehÃÂ­culo Ã¢â â cliente se deriva automÃÂ¡ticamente
+ * 2. Usuario elige servicios (se calcula duraciÃÂ³n estimada)
+ * 3. Usuario ingresa intenciÃÂ³n: fecha, hora, espacio
+ * 4. Resumen con aclaraciÃÂ³n que backend calcula agenda final
+ * 5. EnvÃÂ­o Ã¢â â Backend calcula y persiste Ã¢â â Reconsulta Ã¢â â Mostrar resultado canÃÂ³nico
  * 
- * REGLA: Backend es autoridad Ãºnica sobre segmentos, fragmentaciÃ³n, estado
+ * REGLA: Backend es autoridad ÃÂºnica sobre segmentos, fragmentaciÃÂ³n, estado
  */
 import { Info, Hourglass, Check, AlertTriangle, XCircle, Sparkles } from 'lucide-react';
 import { useGhostAutomation } from '../../hooks/useGhostAutomation'
@@ -21,8 +21,8 @@ import espaciosTrabajoService from '../../services/espaciosTrabajoService'
 
 const limpiarPrefijoDisponibilidad = (mensaje = '') => {
   const texto = String(mensaje || '')
-  if (texto.startsWith('âœ“')) return texto.slice(3).trimStart()
-  if (texto.startsWith('✓')) return texto.slice(1).trimStart()
+  if (texto.startsWith('Ã¢Åâ')) return texto.slice(3).trimStart()
+  if (texto.startsWith('â')) return texto.slice(1).trimStart()
   if (texto.startsWith('?')) return texto.slice(1).trimStart()
   return texto
 }
@@ -72,7 +72,7 @@ const CitaModalCrear = ({ onClose, onSuccess, aiPrefill = null }) => {
         })
         const vehiculosList = resVehiculos.data || resVehiculos.results || []
         setVehiculos(vehiculosList)
-        console.debug('[CitaModalCrear] VehÃ­culos cargados:', vehiculosList.length)
+        console.debug('[CitaModalCrear] VehÃÂ­culos cargados:', vehiculosList.length)
 
         // Cargar espacios de trabajo
         const resEspacios = await espaciosTrabajoService.listarEspacios(tenantSlug, {
@@ -107,10 +107,10 @@ const CitaModalCrear = ({ onClose, onSuccess, aiPrefill = null }) => {
       setPreviewLoading(true)
       try {
         // NO convertir a UTC - enviar la hora exacta que el usuario ingresa (LOCAL)
-        // El backend tambiÃ©n estÃ¡ en La Paz, asÃ­ que entiende hora local directamente
+        // El backend tambiÃÂ©n estÃÂ¡ en La Paz, asÃÂ­ que entiende hora local directamente
         const fechaLocal = formData.fecha_hora_inicio_programada
 
-        console.debug('[CitaModalCrear Preview] Enviando fecha sin conversiÃ³n:', {
+        console.debug('[CitaModalCrear Preview] Enviando fecha sin conversiÃÂ³n:', {
           fechaLocal, payload : {
             vehiculo_id: formData.vehiculo_id, servicios_ids : formData.servicios_plan_detalle_ids,
             fecha_hora_inicio: fechaLocal, espacio_trabajo_id : formData.espacio_trabajo_id || undefined,
@@ -134,7 +134,7 @@ const CitaModalCrear = ({ onClose, onSuccess, aiPrefill = null }) => {
       }
     }
 
-    // Debounce: esperar 500ms despuÃ©s de Ãºltimo cambio
+    // Debounce: esperar 500ms despuÃÂ©s de ÃÂºltimo cambio
     const timer = setTimeout(() => {
       cargarPreview()
     }, 500)
@@ -162,7 +162,7 @@ const CitaModalCrear = ({ onClose, onSuccess, aiPrefill = null }) => {
           duracion_requerida_min: duracionEstimada,
         })
 
-        console.debug('[CitaModalCrear] ValidaciÃ³n disponibilidad espacio:', response)
+        console.debug('[CitaModalCrear] ValidaciÃÂ³n disponibilidad espacio:', response)
         setEspacioValidation(response)
       } catch (err) {
         console.error('Error validando disponibilidad de espacio:', err)
@@ -174,7 +174,7 @@ const CitaModalCrear = ({ onClose, onSuccess, aiPrefill = null }) => {
       }
     }
 
-    // Debounce: esperar 500ms despuÃ©s de Ãºltimo cambio
+    // Debounce: esperar 500ms despuÃÂ©s de ÃÂºltimo cambio
     const timer = setTimeout(() => {
       validarDisponibilidad()
     }, 500)
@@ -182,7 +182,7 @@ const CitaModalCrear = ({ onClose, onSuccess, aiPrefill = null }) => {
     return () => clearTimeout(timer)
   }, [formData.espacio_trabajo_id, formData.fecha_hora_inicio_programada, duracionEstimada, tenantSlug])
 
-  // EFECTO: Automatización de IA para paso a paso
+  // EFECTO: AutomatizaciÃ³n de IA para paso a paso
   useEffect(() => {
     if (!aiPrefill || aiPrefill.type !== 'CREAR_CITA') return;
 
@@ -190,50 +190,54 @@ const CitaModalCrear = ({ onClose, onSuccess, aiPrefill = null }) => {
       setIsSimulating(true);
       await simulateDelay(1000); // Esperar a que se carguen los datos iniciales
 
-      // Paso 1: Seleccionar vehículo
+      // Paso 1: Seleccionar vehÃ­culo
       if (step === 1) {
         let targetVehiculoId = null;
         if (aiPrefill.placa) {
           const match = vehiculos.find(v => v.placa.toLowerCase() === aiPrefill.placa.toLowerCase());
           if (match) targetVehiculoId = match.id;
         }
-        if (!targetVehiculoId && vehiculos.length > 0) {
-          targetVehiculoId = vehiculos[0].id;
-        }
-
         if (targetVehiculoId) {
           handleVehiculoChange(targetVehiculoId);
           await simulateDelay(1000);
+          setStep(2);
+        } else {
+          setIsSimulating(false);
+          return;
         }
-        setStep(2);
       }
 
       // Paso 2: Seleccionar servicios
       if (step === 2) {
-        if (serviciosDelPlan.length > 0) {
-          const noProgramados = serviciosDelPlan.filter(s => s.estado !== 'PROGRAMADO').map(s => s.id);
-          handleServiciosChange(noProgramados);
-          await simulateDelay(1200);
-        }
-        setStep(3);
+        setIsSimulating(false);
+        return;
       }
 
       // Paso 3: Asignar fecha y hora
       if (step === 3) {
+        let hasData = false;
         if (aiPrefill.fecha) {
           setFormData(prev => ({
             ...prev,
             fecha_hora_inicio_programada: `${aiPrefill.fecha}T${prev.fecha_hora_inicio_programada?.split('T')[1] || '09:00:00'}`
           }));
+          hasData = true;
         }
         if (aiPrefill.hora) {
           setFormData(prev => ({
             ...prev,
             fecha_hora_inicio_programada: `${prev.fecha_hora_inicio_programada?.split('T')[0] || new Date().toISOString().split('T')[0]}T${aiPrefill.hora}:00`
           }));
+          hasData = true;
         }
-        await simulateDelay(1000);
-        setStep(4);
+        
+        if (hasData && aiPrefill.fecha && aiPrefill.hora) {
+           await simulateDelay(1000);
+           setStep(4);
+        } else {
+           setIsSimulating(false);
+           return;
+        }
       }
 
       // Paso 4: Observaciones y Guardar
@@ -268,7 +272,7 @@ const CitaModalCrear = ({ onClose, onSuccess, aiPrefill = null }) => {
       // Derive customer automatically
       setFormData((prev) => ({
         ...prev, cliente_id : vehiculo.propietario.id,
-        plan_servicio_id: vehiculo.plan_servicio_id,  // â† ASIGNAR EL PLAN
+        plan_servicio_id: vehiculo.plan_servicio_id,  // Ã¢â Â ASIGNAR EL PLAN
       }))
 
       // Load plane for this vehicle
@@ -317,7 +321,7 @@ const CitaModalCrear = ({ onClose, onSuccess, aiPrefill = null }) => {
     setLoading(true)
     try {
       // NO convertir a UTC - enviar hora local exacta
-      // Backend estÃ¡ en La Paz, entiende hora local
+      // Backend estÃÂ¡ en La Paz, entiende hora local
       const fechaLocal = formData.fecha_hora_inicio_programada
 
       // Construir payload - solo incluir espacio_trabajo_id si tiene valor
@@ -328,7 +332,7 @@ const CitaModalCrear = ({ onClose, onSuccess, aiPrefill = null }) => {
         canal_origen: formData.canal_origen,
       }
 
-      // Solo agregar espacio si se seleccionÃ³ uno
+      // Solo agregar espacio si se seleccionÃÂ³ uno
       if (formData.espacio_trabajo_id) {
         payload.espacio_trabajo_id = formData.espacio_trabajo_id
       }
@@ -602,7 +606,7 @@ const CitaModalCrear = ({ onClose, onSuccess, aiPrefill = null }) => {
             </div>
 
             <div className="bg-yellow-50 dark:bg-yellow-900/20 text-carbon-800 dark:text-yellow-100 p-3 rounded-lg text-sm">
-              <strong><Info className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Nota:</strong> Esta es tu intención de horario. Se validara si es posible y si no se te sugiere alguna opcion posible
+              <strong><Info className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Nota:</strong> Esta es tu intenciÃ³n de horario. Se validara si es posible y si no se te sugiere alguna opcion posible
             </div>
 
             <div className="flex gap-2 justify-end">

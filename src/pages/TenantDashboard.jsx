@@ -1,4 +1,4 @@
-/** TenantDashboard: Dashboard principal para usuarios logueados en un tenant
+﻿/** TenantDashboard: Dashboard principal para usuarios logueados en un tenant
  * Ruta: /:tenantSlug/app (protegida por TenantGuard)
  */
 import { useState, useEffect } from 'react'
@@ -92,6 +92,15 @@ export const TenantDashboard = () => {
     setActiveView(viewId)
   }
 
+  // Helper para inyectar Ghost UI data a la vista activa de forma universal
+  const getAiPrefill = (validActions) => {
+    if (!pendingAction || !['PENDIENTE', 'EJECUTADA'].includes(pendingAction.estado)) return null;
+    if (validActions.includes(pendingAction.accion)) {
+      return { ...pendingAction.parametros, type: pendingAction.accion, status: pendingAction.estado, _ts: pendingAction._ts };
+    }
+    return null;
+  };
+
   // Renderizar la vista activa
   const renderView = () => {
     switch (activeView) {
@@ -104,12 +113,7 @@ export const TenantDashboard = () => {
             tenant={tenant}
             tenantSlug={tenantSlug}
             onSuccess={refreshUserData}
-            aiPrefill={(['PENDIENTE', 'EJECUTADA'].includes(pendingAction?.estado)) && (
-              pendingAction?.accion === 'CAMBIAR_USUARIO' ||
-              pendingAction?.accion === 'CAMBIAR_TELEFONO' ||
-              pendingAction?.accion === 'CAMBIAR_CONTRASENA' ||
-              pendingAction?.accion === 'ACTUALIZAR_PREFERENCIAS'
-            ) ? { ...pendingAction.parametros, type: pendingAction.accion, status: pendingAction.estado, _ts: pendingAction._ts } : null}
+            aiPrefill={getAiPrefill(['CAMBIAR_NOMBRES_PERSONALES', 'CAMBIAR_TELEFONO', 'CAMBIAR_CONTRASENA', 'ACTUALIZAR_PREFERENCIAS'])}
           />
         )
       case 'gestionEmpresa':
@@ -120,7 +124,7 @@ export const TenantDashboard = () => {
             tenantSlug={tenantSlug}
             onNavigate={handleNavigate}
             onSuccess={refreshUserData}
-            aiPrefill={(['PENDIENTE', 'EJECUTADA'].includes(pendingAction?.estado)) && pendingAction?.accion === 'CAMBIAR_NOMBRE_EMPRESA' ? { ...pendingAction.parametros, type: pendingAction.accion, status: pendingAction.estado, _ts: pendingAction._ts } : null}
+            aiPrefill={getAiPrefill(['CAMBIAR_NOMBRE_EMPRESA'])}
           />
         )
       case 'gestionUsuariosRoles':
@@ -132,7 +136,7 @@ export const TenantDashboard = () => {
             tenant={tenant}
             tenantSlug={tenantSlug}
             onSuccess={refreshUserData}
-            aiPrefill={(['PENDIENTE', 'EJECUTADA'].includes(pendingAction?.estado)) && (pendingAction?.accion === 'COMPRAR_PLAN' || pendingAction?.accion === 'RELLENAR_PAGO' || pendingAction?.accion === 'CANCELAR_CAMBIO') ? { ...pendingAction.parametros, _ts: pendingAction._ts, accion: pendingAction.accion, estado: pendingAction.estado } : null}
+            aiPrefill={getAiPrefill(['COMPRAR_PLAN', 'RELLENAR_PAGO', 'CANCELAR_CAMBIO'])}
           />
         )
       case 'notificaciones':
@@ -141,7 +145,7 @@ export const TenantDashboard = () => {
         return (
           <BitacoraView 
             tenantSlug={tenantSlug} 
-            aiPrefill={(['PENDIENTE', 'EJECUTADA'].includes(pendingAction?.estado)) && ['FILTRAR_BITACORA', 'EXPORTAR_BITACORA'].includes(pendingAction?.accion) ? { ...pendingAction.parametros, type: pendingAction.accion, status: pendingAction.estado, _ts: pendingAction._ts } : null}
+            aiPrefill={getAiPrefill(['FILTRAR_BITACORA', 'EXPORTAR_BITACORA'])}
           />
         )
       case 'gestionVehiculos':
@@ -151,7 +155,7 @@ export const TenantDashboard = () => {
             tenantSlug={tenantSlug}
             onNavigate={handleNavigate}
             onSuccess={refreshUserData}
-            aiPrefill={(['PENDIENTE', 'EJECUTADA'].includes(pendingAction?.estado)) && (pendingAction?.accion === 'BUSCAR_VEHICULO' || pendingAction?.accion === 'REGISTRAR_VEHICULO') ? { ...pendingAction.parametros, type: pendingAction.accion, status: pendingAction.estado, _ts: pendingAction._ts } : null}
+            aiPrefill={getAiPrefill(['BUSCAR_VEHICULO', 'REGISTRAR_VEHICULO'])}
           />
         )
       case 'catalogoServicios':
@@ -161,7 +165,7 @@ export const TenantDashboard = () => {
             tenantSlug={tenantSlug} 
             onNavigate={handleNavigate}
             onSuccess={refreshUserData}
-            aiPrefill={(['PENDIENTE', 'EJECUTADA'].includes(pendingAction?.estado)) && pendingAction?.accion === 'AGREGAR_SERVICIO' ? { ...pendingAction.parametros, type: pendingAction.accion, status: pendingAction.estado, _ts: pendingAction._ts } : null}
+            aiPrefill={getAiPrefill(['AGREGAR_SERVICIO'])}
           />
         )
       case 'espaciosTrabajo':
@@ -170,7 +174,7 @@ export const TenantDashboard = () => {
             user={user} 
             tenantSlug={tenantSlug} 
             onSuccess={refreshUserData}
-            aiPrefill={(['PENDIENTE', 'EJECUTADA'].includes(pendingAction?.estado)) && ['REGISTRAR_ESPACIO', 'EDITAR_ESPACIO', 'VER_HORARIOS_ESPACIO', 'AGREGAR_HORARIO_ESPACIO', 'EDITAR_HORARIO_ESPACIO'].includes(pendingAction?.accion) ? { ...pendingAction.parametros, type: pendingAction.accion, status: pendingAction.estado, _ts: pendingAction._ts } : null}
+            aiPrefill={getAiPrefill(['REGISTRAR_ESPACIO', 'EDITAR_ESPACIO', 'VER_HORARIOS_ESPACIO', 'AGREGAR_HORARIO_ESPACIO', 'EDITAR_HORARIO_ESPACIO'])}
           />
         )
       case 'horarios':
@@ -179,7 +183,7 @@ export const TenantDashboard = () => {
             user={user} 
             tenantSlug={tenantSlug}
             onSuccess={refreshUserData}
-            aiPrefill={(['PENDIENTE', 'EJECUTADA'].includes(pendingAction?.estado)) && ['VER_HORARIOS_ESPACIO', 'AGREGAR_HORARIO_ESPACIO', 'EDITAR_HORARIO_ESPACIO'].includes(pendingAction?.accion) ? { ...pendingAction.parametros, type: pendingAction.accion, status: pendingAction.estado, _ts: pendingAction._ts } : null}
+            aiPrefill={getAiPrefill(['VER_HORARIOS_ESPACIO', 'AGREGAR_HORARIO_ESPACIO', 'EDITAR_HORARIO_ESPACIO'])}
           />
         )
       case 'planVehiculo':
@@ -188,7 +192,7 @@ export const TenantDashboard = () => {
             user={user} 
             tenantSlug={tenantSlug} 
             onSuccess={refreshUserData}
-            aiPrefill={(['PENDIENTE', 'EJECUTADA'].includes(pendingAction?.estado)) && ['BUSCAR_PLAN_VEHICULO', 'VER_PLAN_VEHICULO', 'EDITAR_PLAN_VEHICULO', 'CAMBIAR_ESTADO_PLAN_VEHICULO', 'AGREGAR_DETALLE_PLAN_VEHICULO'].includes(pendingAction?.accion) ? { ...pendingAction.parametros, type: pendingAction.accion, status: pendingAction.estado, _ts: pendingAction._ts } : null}
+            aiPrefill={getAiPrefill(['BUSCAR_PLAN_VEHICULO', 'VER_PLAN_VEHICULO', 'EDITAR_PLAN_VEHICULO', 'CAMBIAR_ESTADO_PLAN_VEHICULO', 'AGREGAR_DETALLE_PLAN_VEHICULO'])}
           />
         )
       case 'citas':
@@ -198,7 +202,7 @@ export const TenantDashboard = () => {
             tenantSlug={tenantSlug} 
             onNavigate={handleNavigate} 
             onSuccess={refreshUserData}
-            aiPrefill={(['PENDIENTE', 'EJECUTADA'].includes(pendingAction?.estado)) && ['FILTRAR_CITAS', 'CREAR_CITA'].includes(pendingAction?.accion) ? { ...pendingAction.parametros, type: pendingAction.accion, status: pendingAction.estado, _ts: pendingAction._ts } : null}
+            aiPrefill={getAiPrefill(['FILTRAR_CITAS', 'CREAR_CITA'])}
           />
         )
       case 'recepcionVehiculo':

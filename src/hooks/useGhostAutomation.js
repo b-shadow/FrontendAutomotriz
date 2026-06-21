@@ -7,29 +7,21 @@ export const useGhostAutomation = () => {
     return new Promise(resolve => setTimeout(resolve, ms));
   }, []);
 
-  const simulateTyping = useCallback(async (setter, field, value, speed = 40) => {
+  const simulateTyping = useCallback(async (setter, field, value) => {
     if (value === undefined || value === null) return;
-    const stringValue = String(value);
-    let current = "";
-    for (let i = 0; i <= stringValue.length; i++) {
-      current = stringValue.substring(0, i);
-      if (field) {
-        setter(prev => {
-          const prevVal = prev[field];
-          let typedVal = current;
-          if (typeof prevVal === 'number') {
-            typedVal = parseInt(current, 10) || 0;
-          }
-          return {
-            ...prev,
-            [field]: typedVal
-          };
-        });
-      } else {
-        setter(current);
-      }
-      await new Promise(resolve => setTimeout(resolve, speed));
+    
+    // Asignación instantánea (sin el delay inestable de tipeo letra por letra)
+    if (field) {
+      setter(prev => ({
+        ...prev,
+        [field]: value
+      }));
+    } else {
+      setter(value);
     }
+    
+    // Pequeño respiro para que React renderice
+    await new Promise(resolve => setTimeout(resolve, 200));
   }, []);
 
   const simulateClick = useCallback(async (buttonId, highlightDuration = 800) => {

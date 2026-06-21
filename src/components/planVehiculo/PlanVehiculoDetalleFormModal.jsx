@@ -110,72 +110,66 @@ export const PlanVehiculoDetalleFormModal = ({
 
   // Ghost User Effect
   useEffect(() => {
-    if (!aiPrefill || loadingServicios) return;
+    if (!aiPrefill || loadingServicios || servicios.length === 0) return;
+
+    const normalizeStr = (str) =>
+      String(str || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+
+    // Buscar servicio: primero por UUID, luego por nombre
+    const encontrarServicio = () => {
+      if (aiPrefill.servicio_catalogo_id) {
+        return servicios.find(s => String(s.id) === String(aiPrefill.servicio_catalogo_id));
+      }
+      if (aiPrefill.nombre_servicio) {
+        const nombreBuscado = normalizeStr(aiPrefill.nombre_servicio);
+        return servicios.find(s => normalizeStr(s.nombre) === nombreBuscado)
+          || servicios.find(s => normalizeStr(s.nombre).includes(nombreBuscado));
+      }
+      return null;
+    };
 
     if (aiPrefill.status === 'PENDIENTE') {
-      const formUpdates = {};
-      const fieldsToSimulate = [];
-      const typingSpeed = 10;
-
-      const normalizeStr = (str) => String(str || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-
-      // Intentar encontrar el ID del servicio si AI pasa nombre_servicio
-      if (aiPrefill.nombre_servicio && !servicioId) {
-        const nombreBuscado = normalizeStr(aiPrefill.nombre_servicio);
-        // Buscar coincidencia exacta o parcial
-        const servicioEncontrado = servicios.find(s => normalizeStr(s.nombre) === nombreBuscado) 
-          || servicios.find(s => normalizeStr(s.nombre).includes(nombreBuscado));
-        
-        if (servicioEncontrado) {
-          // Usamos timeout para simular que el usuario lo seleccionó
-          setTimeout(() => {
-            handleServicioChange({ target: { value: String(servicioEncontrado.id) } });
-          }, 300);
-        }
+      const servicioEncontrado = encontrarServicio();
+      if (servicioEncontrado && String(servicioId) !== String(servicioEncontrado.id)) {
+        setTimeout(() => {
+          handleServicioChange({ target: { value: String(servicioEncontrado.id) } });
+        }, 300);
       }
 
-      if (aiPrefill.prioridad && aiPrefill.prioridad !== prioridad) {
+      if (aiPrefill.prioridad && aiPrefill.prioridad.toUpperCase() !== prioridad) {
         setPrioridad(aiPrefill.prioridad.toUpperCase());
       }
 
       const targetObs = String(aiPrefill.observaciones || '');
       if (targetObs && targetObs !== observaciones) {
-        fieldsToSimulate.push({ field: 'observaciones', value: targetObs });
-      }
-
-      if (fieldsToSimulate.length > 0) {
         let currentCharIndex = 0;
         const typeNextChar = () => {
           if (currentCharIndex < targetObs.length) {
             setObservaciones(targetObs.substring(0, currentCharIndex + 1));
             currentCharIndex++;
-            setTimeout(typeNextChar, typingSpeed);
+            setTimeout(typeNextChar, 10);
           }
         };
-        setTimeout(typeNextChar, 500); // Dar tiempo a que cargue el servicio
+        setTimeout(typeNextChar, 500);
       }
     } else if (aiPrefill.status === 'EJECUTADA') {
-      const normalizeStr = (str) => String(str || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-      // Asegurar valores en caso de venir directo como EJECUTADA
-      if (aiPrefill.nombre_servicio && !servicioId) {
-        const nombreBuscado = normalizeStr(aiPrefill.nombre_servicio);
-        const servicioEncontrado = servicios.find(s => normalizeStr(s.nombre) === nombreBuscado) 
-          || servicios.find(s => normalizeStr(s.nombre).includes(nombreBuscado));
-        if (servicioEncontrado) {
-          handleServicioChange({ target: { value: String(servicioEncontrado.id) } });
-        }
+      const servicioEncontrado = encontrarServicio();
+      if (servicioEncontrado && String(servicioId) !== String(servicioEncontrado.id)) {
+        handleServicioChange({ target: { value: String(servicioEncontrado.id) } });
       }
       if (aiPrefill.prioridad) setPrioridad(aiPrefill.prioridad.toUpperCase());
       if (aiPrefill.observaciones) setObservaciones(aiPrefill.observaciones);
 
+      // Esperar que React aplique el state antes de hacer submit
       setTimeout(() => {
         const btn = document.getElementById('detalle-submit-btn');
         if (btn && !btn.disabled) {
           btn.click();
         }
-      }, 800); // Dar un poco más de tiempo para que react renderice el state
+      }, 900);
     }
   }, [aiPrefill, loadingServicios, servicios]);
+
 
   const handleSubmit = async (e) => {
     e.preventDefault()

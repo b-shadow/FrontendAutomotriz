@@ -1,8 +1,10 @@
-﻿import { useEffect, useState } from 'react'
+﻿import { Database, Plus, Search, Calendar, RefreshCw, X, Download, HardDrive, ShieldAlert, Check } from 'lucide-react'
+import { useState, useEffect } from 'react'
 import { useTenant } from '../../hooks/useTenant'
+import { useGhostAutomation } from '../../hooks/useGhostAutomation'
 import backupsService from '../../services/backupsService'
 
-const GestionBackupView = () => {
+const GestionBackupView = ({ aiPrefill }) => {
   const { tenantSlug } = useTenant()
   const [backups, setBackups] = useState([])
   const [programacion, setProgramacion] = useState({
@@ -19,6 +21,22 @@ const GestionBackupView = () => {
   const [restoreModalOpen, setRestoreModalOpen] = useState(false)
   const [restoreText, setRestoreText] = useState('')
   const [backupToRestore, setBackupToRestore] = useState(null)
+  const [submitBtn, setSubmitBtn] = useState(null)
+
+  useGhostAutomation({
+    aiPrefill,
+    isModalOpen: true,
+    setModalOpen: () => {},
+    setForm: setProgramacion,
+    submitBtnRef: { current: submitBtn },
+    actionType: 'CONFIGURAR_BACKUP',
+    fieldMapping: {
+      activo: 'activo',
+      frecuencia: 'frecuencia',
+      hora_ejecucion: 'hora_ejecucion',
+      compensar_pendientes: 'tolera_compensacion'
+    }
+  })
 
   const cargar = async () => {
     if (!tenantSlug) return

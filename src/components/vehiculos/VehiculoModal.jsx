@@ -72,7 +72,7 @@ export const VehiculoModal = ({
       setIsSimulating(true);
       await simulateDelay(600); // Esperar que el modal se asiente
 
-      if (aiPrefill.propietario_id && canSelectPropietario) {
+      if (aiPrefill.propietario_id && aiPrefill.propietario_id !== 'MANUAL' && canSelectPropietario) {
         setFormData(prev => ({ ...prev, propietario_id: aiPrefill.propietario_id }));
         await simulateDelay(600);
       }
@@ -124,6 +124,10 @@ export const VehiculoModal = ({
 
   const validateForm = () => {
     const newErrors = {}
+
+    if (canSelectPropietario && !formData.propietario_id) {
+      newErrors.propietario_id = 'Debe seleccionar un propietario'
+    }
 
     if (!formData.placa.trim()) {
       newErrors.placa = 'La placa es obligatoria'
@@ -201,6 +205,7 @@ export const VehiculoModal = ({
                   </option>
                 ))}
               </select>
+              {errors.propietario_id && <p className="text-red-500 text-xs mt-1">{errors.propietario_id}</p>}
             </div>
           ) : !vehiculo && currentUser ? (
             <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">

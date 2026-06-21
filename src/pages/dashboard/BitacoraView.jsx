@@ -1,4 +1,4 @@
-import { ClipboardList, BarChart, Calendar, TrendingUp, Users, Search, Hourglass, Lightbulb, AlertTriangle, X } from 'lucide-react';
+﻿import { ClipboardList, BarChart, Calendar, TrendingUp, Users, Search, Hourglass, Lightbulb, AlertTriangle, X } from 'lucide-react';
 import { useState, useEffect } from 'react'
 import auditoriaService from '../../services/auditoriaService'
 import * as XLSX from 'xlsx'

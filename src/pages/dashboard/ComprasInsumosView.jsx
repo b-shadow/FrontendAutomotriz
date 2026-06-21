@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+﻿import { useCallback, useEffect, useMemo, useState } from 'react'
 import { NotebookTabs, Plus, Search, SlidersHorizontal } from 'lucide-react'
 import { useTenant } from '../../hooks/useTenant'
 import inventarioService from '../../services/inventarioService'
 
-const ComprasInsumosView = () => {
+const ComprasInsumosView = ({ user, aiPrefill }) => {
   const { tenantSlug } = useTenant()
   const [compras, setCompras] = useState([])
   const [proveedores, setProveedores] = useState([])
@@ -11,6 +11,7 @@ const ComprasInsumosView = () => {
   const [query, setQuery] = useState('')
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
+  const lastPrefillTs = React.useRef(null)
 
   const cargar = useCallback(async () => {
     if (!tenantSlug) return
@@ -29,6 +30,36 @@ const ComprasInsumosView = () => {
   }, [tenantSlug])
 
   useEffect(() => { cargar() }, [cargar])
+
+    useEffect(() => {
+    if (aiPrefill && aiPrefill.type === 'AGREGAR_ITEM_COMPRA' && aiPrefill.status === 'EJECUTADA') {
+      if (lastPrefillTs.current === aiPrefill._ts) return;
+      lastPrefillTs.current = aiPrefill._ts;
+      
+      const execCompraGhost = async () => {
+        if (!items.length) {
+          setError('Debes crear items primero');
+          return;
+        }
+        const cantidad = Number(aiPrefill.cantidad || 1);
+        const costo = Number(aiPrefill.costo_unitario || items[0].costo_promedio || 0);
+        
+        try {
+          await inventarioService.crearCompra(tenantSlug, {
+            proveedor_id: proveedores[0]?.id || null,
+            numero_documento: "CMP-${Date.now()}",
+            estado: 'BORRADOR',
+            detalles: [{ item_inventario_id: items[0].id, cantidad, costo_unitario: costo }],
+          });
+          setSuccess('Compra creada silenciosamente por IA');
+          await cargar();
+        } catch (err) {
+          setError('No se pudo crear compra');
+        }
+      };
+      execCompraGhost();
+    }
+  }, [aiPrefill, items, proveedores, tenantSlug, cargar]);
 
   const crearCompra = async () => {
     if (!items.length) return setError('Debes crear items primero')

@@ -10,6 +10,7 @@
  */
 import { Pencil, Plus } from 'lucide-react';
 import { useState, useEffect } from 'react'
+import { useGhostAutomation } from '../../hooks/useGhostAutomation'
 
 const TIPOS_ESPACIO = [
   { value: 'TALLER', label: 'Taller' },
@@ -46,88 +47,70 @@ export const EspacioTrabajoModal = ({
 
   const [formData, setFormData] = useState(getInitialFormData())
   const [errors, setErrors] = useState({})
+  const { isSimulating, setIsSimulating, simulateTyping, simulateDelay } = useGhostAutomation()
 
-  // Ghost User Effect
+
   useEffect(() => {
     if (!aiPrefill || !isOpen) return;
 
-    if (aiPrefill.status === 'PENDIENTE') {
-      const formUpdates = {};
-      const fieldsToSimulate = [];
-      const typingSpeed = 20;
+    // Auto-generar código desde nombre ("Espacio Feliz" → "ESPACIO_FELIZ")
+    const generateCodigo = (nombre) => String(nombre || '')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .toUpperCase()
+      .replace(/[^A-Z0-9\s]/g, '')
+      .trim()
+      .replace(/\s+/g, '_');
 
-      if (aiPrefill.codigo && aiPrefill.codigo !== formData.codigo) {
-        fieldsToSimulate.push({ field: 'codigo', value: aiPrefill.codigo });
-      }
-      if (aiPrefill.nombre && aiPrefill.nombre !== formData.nombre) {
-        fieldsToSimulate.push({ field: 'nombre', value: aiPrefill.nombre });
-      }
-      if (aiPrefill.tipo && aiPrefill.tipo !== formData.tipo) {
-        fieldsToSimulate.push({ field: 'tipo', value: aiPrefill.tipo });
-      }
-      if (aiPrefill.observaciones && aiPrefill.observaciones !== formData.observaciones) {
-        fieldsToSimulate.push({ field: 'observaciones', value: aiPrefill.observaciones });
-      }
+    const nombreEspacio = aiPrefill.nombre || '';
+    const aiCodigo = aiPrefill.codigo || generateCodigo(nombreEspacio);
 
-      if (aiPrefill.hasOwnProperty('activo') && aiPrefill.activo !== formData.activo) {
-        fieldsToSimulate.push({ field: 'activo', value: aiPrefill.activo });
-      }
+    // Normalizar tipo: la IA puede mandar "Taller", "taller", "TALLER" — normalizamos a uppercase
+    const normalizeTipo = (val) => {
+      if (!val) return '';
+      const upper = String(val).toUpperCase().trim();
+      const valid = ['TALLER', 'CHEQUEO', 'GARAJE', 'LAVADO'];
+      return valid.includes(upper) ? upper : '';
+    };
+    const tipoNorm = normalizeTipo(aiPrefill.tipo);
 
-      if (fieldsToSimulate.length > 0) {
-        let currentFieldIndex = 0;
-        let currentCharIndex = 0;
+    const processPrefill = async () => {
+      console.log('[Ghost Espacio] processPrefill disparado. status=', aiPrefill.status, '| _ts=', aiPrefill._ts, '| aiPrefill=', JSON.stringify(aiPrefill));
+      setIsSimulating(true);
+      await simulateDelay(400);
 
-        const typeNextChar = () => {
-          if (currentFieldIndex >= fieldsToSimulate.length) return;
-
-          const currentField = fieldsToSimulate[currentFieldIndex];
-          
-          if (['activo'].includes(currentField.field)) {
-             setFormData(prev => ({
-               ...prev,
-               [currentField.field]: currentField.value
-             }));
-             currentFieldIndex++;
-             setTimeout(typeNextChar, typingSpeed * 3);
-          } else {
-            const targetValue = String(currentField.value);
-
-            if (currentCharIndex < targetValue.length) {
-              setFormData(prev => ({
-                ...prev,
-                [currentField.field]: targetValue.substring(0, currentCharIndex + 1)
-              }));
-              currentCharIndex++;
-              setTimeout(typeNextChar, typingSpeed);
-            } else {
-              currentFieldIndex++;
-              currentCharIndex = 0;
-              setTimeout(typeNextChar, typingSpeed * 3);
-            }
-          }
-        };
-
-        typeNextChar();
-      }
-    } else if (aiPrefill.status === 'EJECUTADA') {
-      setFormData(prev => {
-        const updates = { ...prev };
-        if (aiPrefill.codigo) updates.codigo = aiPrefill.codigo;
-        if (aiPrefill.nombre) updates.nombre = aiPrefill.nombre;
-        if (aiPrefill.tipo) updates.tipo = aiPrefill.tipo;
-        if (aiPrefill.observaciones) updates.observaciones = aiPrefill.observaciones;
-        if (aiPrefill.hasOwnProperty('activo')) updates.activo = aiPrefill.activo;
-        return updates;
-      });
-
-      setTimeout(() => {
-        const btn = document.getElementById('espacio-submit-btn');
-        if (btn && !btn.disabled) {
-          btn.click();
+      if (aiPrefill.status === 'EJECUTADA' || aiPrefill.estado === 'EJECUTADA') {
+        setIsSimulating(false);
+        await simulateDelay(800);
+        const submitBtn = document.getElementById('espacio-submit-btn');
+        if (submitBtn) {
+           submitBtn.click();
+        } else {
+           const submitEvent = { preventDefault: () => { } };
+           handleSubmit(submitEvent);
         }
-      }, 500);
-    }
+        return;
+      }
+
+      // FASE PENDIENTE: llenar visualmente con el hook (igual que ServicioCatalogoModal)
+      if (aiCodigo) await simulateTyping(setFormData, 'codigo', aiCodigo, 20);
+      if (nombreEspacio) await simulateTyping(setFormData, 'nombre', nombreEspacio, 30);
+
+      // SELECT tipo: directo (simulateTyping no funciona en <select>)
+      if (tipoNorm) {
+        await simulateDelay(200);
+        setFormData(prev => ({ ...prev, tipo: tipoNorm }));
+      }
+
+      if (aiPrefill.observaciones) {
+        await simulateTyping(setFormData, 'observaciones', String(aiPrefill.observaciones), 20);
+      }
+
+      setIsSimulating(false);
+    };
+
+    processPrefill();
   }, [aiPrefill?._ts, isOpen]);
+
 
   const validateForm = () => {
     const newErrors = {}

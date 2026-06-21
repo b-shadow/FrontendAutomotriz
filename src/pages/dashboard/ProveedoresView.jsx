@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+﻿import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Briefcase, Plus, Search, SlidersHorizontal, X } from 'lucide-react'
 import { useTenant } from '../../hooks/useTenant'
 import inventarioService from '../../services/inventarioService'
@@ -12,7 +12,7 @@ const emptyProveedor = {
   activo: true,
 }
 
-const ProveedoresView = () => {
+const ProveedoresView = ({ user, aiPrefill }) => {
   const { tenantSlug } = useTenant()
   const [proveedores, setProveedores] = useState([])
   const [query, setQuery] = useState('')
@@ -20,6 +20,23 @@ const ProveedoresView = () => {
   const [success, setSuccess] = useState(null)
   const [showModal, setShowModal] = useState(false)
   const [form, setForm] = useState(emptyProveedor)
+  const [submitBtn, setSubmitBtn] = useState(null)
+
+  useGhostAutomation({
+    aiPrefill,
+    isModalOpen: showModal,
+    setModalOpen: setShowModal,
+    setForm,
+    submitBtnRef: { current: submitBtn },
+    actionType: 'CREAR_PROVEEDOR',
+    fieldMapping: {
+      nombre: 'nombre',
+      telefono: 'telefono',
+      email: 'email',
+      direccion: 'direccion',
+      contacto: 'contacto_principal'
+    }
+  })
 
   const cargar = useCallback(async () => {
     if (!tenantSlug) return
@@ -142,7 +159,7 @@ const ProveedoresView = () => {
               </div>
               <div className="md:col-span-2 flex justify-end gap-2 pt-2">
                 <button type="button" onClick={() => setShowModal(false)} className="rounded-lg border px-4 py-2">Cancelar</button>
-                <button type="submit" className="rounded-lg bg-gradient-to-r from-primary-600 to-burgundy-700 px-4 py-2 font-semibold text-white">Guardar proveedor</button>
+                <button ref={setSubmitBtn} type="submit" className="rounded-lg bg-gradient-to-r from-primary-600 to-burgundy-700 px-4 py-2 font-semibold text-white">Guardar proveedor</button>
               </div>
             </form>
           </div>

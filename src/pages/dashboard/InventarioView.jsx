@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react'
 import { Package, Plus, Search, SlidersHorizontal, X } from 'lucide-react'
 import { useTenant } from '../../hooks/useTenant'
+import { useGhostAutomation } from '../../hooks/useGhostAutomation'
 import inventarioService from '../../services/inventarioService'
 
 const emptyItem = {
@@ -39,7 +40,7 @@ const getErrorMessage = (err, fallback) => {
   return fallback
 }
 
-const InventarioView = () => {
+const InventarioView = ({ user, aiPrefill }) => {
   const { tenantSlug } = useTenant()
   const [categorias, setCategorias] = useState([])
   const [items, setItems] = useState([])
@@ -50,6 +51,42 @@ const InventarioView = () => {
   const [showCrearCategoriaModal, setShowCrearCategoriaModal] = useState(false)
   const [formItem, setFormItem] = useState(emptyItem)
   const [formCategoria, setFormCategoria] = useState(emptyCategoria)
+  const [submitBtnItem, setSubmitBtnItem] = useState(null)
+  const [submitBtnCategoria, setSubmitBtnCategoria] = useState(null)
+
+  useGhostAutomation({
+    aiPrefill,
+    isModalOpen: showCrearItemModal,
+    setModalOpen: setShowCrearItemModal,
+    setForm: setFormItem,
+    submitBtnRef: { current: submitBtnItem },
+    actionType: 'CREAR_ITEM_INVENTARIO',
+    fieldMapping: {
+      categoria_id: 'categoria',
+      codigo: 'codigo',
+      nombre: 'nombre',
+      descripcion: 'descripcion',
+      tipo_item: 'tipo_item',
+      unidad_medida: 'unidad_medida',
+      stock_actual: 'stock_actual',
+      stock_minimo: 'stock_minimo',
+      costo_promedio: 'costo_promedio',
+      precio_venta: 'precio_venta'
+    }
+  })
+
+  useGhostAutomation({
+    aiPrefill,
+    isModalOpen: showCrearCategoriaModal,
+    setModalOpen: setShowCrearCategoriaModal,
+    setForm: setFormCategoria,
+    submitBtnRef: { current: submitBtnCategoria },
+    actionType: 'CREAR_CATEGORIA_INVENTARIO',
+    fieldMapping: {
+      nombre: 'nombre',
+      descripcion: 'descripcion'
+    }
+  })
 
   const cargar = useCallback(async () => {
     if (!tenantSlug) return
@@ -201,7 +238,7 @@ const InventarioView = () => {
               </div>
               <div className="flex justify-end gap-2">
                 <button type="button" onClick={() => setShowCrearCategoriaModal(false)} className="rounded-lg border px-4 py-2">Cancelar</button>
-                <button type="submit" className="rounded-lg bg-gradient-to-r from-primary-600 to-burgundy-700 px-4 py-2 font-semibold text-white">Guardar categoria</button>
+                <button ref={setSubmitBtnCategoria} type="submit" className="rounded-lg bg-gradient-to-r from-primary-600 to-burgundy-700 px-4 py-2 font-semibold text-white">Guardar categoria</button>
               </div>
             </form>
           </div>
@@ -266,7 +303,7 @@ const InventarioView = () => {
               </div>
               <div className="flex justify-end gap-2 pt-2 md:col-span-3">
                 <button type="button" onClick={() => setShowCrearItemModal(false)} className="rounded-lg border px-4 py-2">Cancelar</button>
-                <button type="submit" className="rounded-lg bg-gradient-to-r from-primary-600 to-burgundy-700 px-4 py-2 font-semibold text-white">Guardar item</button>
+                <button ref={setSubmitBtnItem} type="submit" className="rounded-lg bg-gradient-to-r from-primary-600 to-burgundy-700 px-4 py-2 font-semibold text-white">Guardar item</button>
               </div>
             </form>
           </div>

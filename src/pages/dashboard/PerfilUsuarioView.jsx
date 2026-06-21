@@ -103,7 +103,7 @@ export const PerfilUsuarioView = ({ user, tenant, aiPrefill, onSuccess }) => {
         
         if (aiPrefill.accion === 'CAMBIAR_CONTRASENA' || aiPrefill.type === 'CAMBIAR_CONTRASENA') {
            simulateClick('password-submit-btn');
-        } else if (aiPrefill.accion === 'CAMBIAR_USUARIO' || aiPrefill.type === 'CAMBIAR_USUARIO' || aiPrefill.accion === 'CAMBIAR_TELEFONO' || aiPrefill.type === 'CAMBIAR_TELEFONO') {
+        } else if (aiPrefill.accion === 'CAMBIAR_NOMBRES_PERSONALES' || aiPrefill.type === 'CAMBIAR_NOMBRES_PERSONALES' || aiPrefill.accion === 'CAMBIAR_TELEFONO' || aiPrefill.type === 'CAMBIAR_TELEFONO') {
            simulateClick('perfil-submit-btn');
         }
       }

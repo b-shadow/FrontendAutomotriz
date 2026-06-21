@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+﻿import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   X, Send, Mic, Sparkles, Bot, User,
   Loader2, CheckCircle2, ChevronRight,
@@ -9,6 +9,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useTenant } from '../../hooks/useTenant';
 import assistantService from '../../services/assistantService';
+import DynamicAIPrompt from './DynamicAIPrompt';
 
 /**
  * ChatAssistant: Interfaz premium flotante del asistente IA.
@@ -42,10 +43,7 @@ const ChatAssistant = ({
   const [viewingHistoryTitle, setViewingHistoryTitle] = useState('');
 
   const messagesEndRef = useRef(null);
-  const mediaRecorderRef = useRef(null);
-  const audioChunksRef = useRef([]);
-  const recordingStartTimeRef = useRef(null);
-  const shouldDiscardRef = useRef(false);
+  const recognitionRef = useRef(null);
 
   // Auto-scroll al final
   const scrollToBottom = () => {
@@ -247,6 +245,7 @@ const ChatAssistant = ({
         text: response.mensaje_ia,
         action: response.accion,
         options: response.options,
+        ui_type: response.ui_type,
       };
 
       setMessages(prev => [...prev, aiMsg]);
@@ -260,28 +259,33 @@ const ChatAssistant = ({
           setBlockedMessageId(null);
         }
       }
+      
+      // Permitimos que el usuario siga escribiendo o hablando sin restricciones
+      // Se mantiene blockedMessageId para saber qué tarjeta de opciones está activa
+      // pero ya no bloquearemos los inputs.
 
       if (isVoiceEnabled) {
         speakText(aiMsg.text);
       }
 
-      // Notificar al dashboard sobre la acción propuesta para el pre-llenado
-      if (onActionProposed && response.accion) {
-        console.log("Notificando acción propuesta:", response.accion.accion);
-        // Agregamos un timestamp para forzar el re-render en el hijo
-        onActionProposed({ ...response.accion, _ts: Date.now() });
+      // Lógica de navegación determinista (ANTES de notificar la acción)
+      if (response.accion?.accion) {
+        console.log("IA solicitando navegación para acción:", response.accion.accion);
+        handleActionNavigation(response.accion.accion);
       }
 
-      // Lógica de navegación mejorada para SPA interno (DESPUÉS de notificar la acción)
-      const redirectPath = response.accion?.redirect_path || response.accion?.parametros?._redirect_path;
-      if (redirectPath) {
-        console.log("IA solicitando navegación a:", redirectPath);
-        setTimeout(() => handleNavigation(redirectPath), 100);
+      // Notificar al dashboard sobre la acción propuesta para el pre-llenado
+      // Esperamos unos milisegundos para asegurar que el componente de destino esté montado si hubo redirección
+      if (onActionProposed && response.accion) {
+        setTimeout(() => {
+          console.log("Notificando acción propuesta al contexto global:", response.accion.accion);
+          onActionProposed({ ...response.accion, _ts: Date.now() });
+        }, 300);
       }
 
       // Si la IA confirma que ejecutó algo (ej: tras un "Sí"), refrescar datos globales
       // EXCEPCIÓN: Acciones que requieren simulación visual extendida (Ghost User)
-      const isGhostAction = ['COMPRAR_PLAN', 'RELLENAR_PAGO', 'CANCELAR_CAMBIO', 'REGISTRAR_VEHICULO', 'BUSCAR_VEHICULO', 'FILTRAR_CITAS', 'CAMBIAR_USUARIO', 'CAMBIAR_TELEFONO', 'CAMBIAR_CONTRASENA', 'ACTUALIZAR_PREFERENCIAS', 'CAMBIAR_NOMBRE_EMPRESA', 'AGREGAR_SERVICIO', 'REGISTRAR_ESPACIO', 'EDITAR_ESPACIO', 'VER_HORARIOS_ESPACIO', 'AGREGAR_HORARIO_ESPACIO', 'EDITAR_HORARIO_ESPACIO', 'BUSCAR_PLAN_VEHICULO', 'VER_PLAN_VEHICULO', 'EDITAR_PLAN_VEHICULO', 'CAMBIAR_ESTADO_PLAN_VEHICULO', 'AGREGAR_DETALLE_PLAN_VEHICULO', 'FILTRAR_BITACORA', 'EXPORTAR_BITACORA', 'VER_REPORTE_GLOBAL', 'VER_REPORTE_VEHICULO', 'VER_REPORTE_PRESUPUESTO', 'VER_REPORTE_INVENTARIO', 'EXPORTAR_REPORTE'].includes(response.accion?.accion);
+      const isGhostAction = ['COMPRAR_PLAN', 'RELLENAR_PAGO', 'CANCELAR_CAMBIO', 'REGISTRAR_VEHICULO', 'BUSCAR_VEHICULO', 'FILTRAR_CITAS', 'CAMBIAR_NOMBRES_PERSONALES', 'CAMBIAR_TELEFONO', 'CAMBIAR_CONTRASENA', 'ACTUALIZAR_PREFERENCIAS', 'CAMBIAR_NOMBRE_EMPRESA', 'AGREGAR_SERVICIO', 'REGISTRAR_ESPACIO', 'EDITAR_ESPACIO', 'VER_HORARIOS_ESPACIO', 'AGREGAR_HORARIO_ESPACIO', 'EDITAR_HORARIO_ESPACIO', 'BUSCAR_PLAN_VEHICULO', 'VER_PLAN_VEHICULO', 'EDITAR_PLAN_VEHICULO', 'CAMBIAR_ESTADO_PLAN_VEHICULO', 'AGREGAR_DETALLE_PLAN_VEHICULO', 'FILTRAR_BITACORA', 'EXPORTAR_BITACORA', 'VER_REPORTE_GLOBAL', 'VER_REPORTE_VEHICULO', 'VER_REPORTE_PRESUPUESTO', 'VER_REPORTE_INVENTARIO', 'EXPORTAR_REPORTE', 'CREAR_CATEGORIA_INVENTARIO', 'CREAR_ITEM_INVENTARIO', 'CREAR_PROVEEDOR', 'AGREGAR_ITEM_COMPRA', 'CONFIGURAR_BACKUP', 'CREAR_USUARIO', 'CAMBIAR_ROL_USUARIO'].includes(response.accion?.accion);
       if (response.accion?.estado === 'EJECUTADA' && onActionSuccess && !isGhostAction) {
         onActionSuccess();
       }
@@ -297,77 +301,47 @@ const ChatAssistant = ({
     }
   };
 
-  // --- Lógica de Grabación de Voz ---
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      
-      // Intentar usar un formato estándar y compatible para evitar distorsiones en Whisper
-      let mimeType = 'audio/webm';
-      if (!MediaRecorder.isTypeSupported(mimeType)) {
-        mimeType = 'audio/ogg';
-      }
-      if (!MediaRecorder.isTypeSupported(mimeType)) {
-        mimeType = ''; // Dejar que el navegador elija
-      }
-      
-      const options = mimeType ? { mimeType } : {};
-      mediaRecorderRef.current = new MediaRecorder(stream, options);
-      audioChunksRef.current = [];
-      recordingStartTimeRef.current = Date.now();
-      shouldDiscardRef.current = false;
-
-      mediaRecorderRef.current.ondataavailable = (event) => {
-        audioChunksRef.current.push(event.data);
-      };
-
-      mediaRecorderRef.current.onstop = async () => {
-        // Detener todos los tracks del micrófono de manera segura una vez concluida la grabación
-        if (mediaRecorderRef.current.stream) {
-          mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
-        }
-
-        console.log("[ChatAssistant] Grabación detenida. Chunks capturados:", audioChunksRef.current.length);
-
-        if (shouldDiscardRef.current) {
-          console.log("[ChatAssistant] Grabación demasiado corta o descartada.");
-          return;
-        }
-        
-        const actualMimeType = mediaRecorderRef.current.mimeType || 'audio/webm';
-        const audioBlob = new Blob(audioChunksRef.current, { type: actualMimeType });
-        console.log("[ChatAssistant] Audio Blob generado:", audioBlob.size, "bytes, Tipo:", audioBlob.type);
-
-        setIsTranscribing(true); // Mostrar loader de transcripción en vez de "IA pensando"
-        try {
-          const res = await assistantService.transcribeAudio(tenantSlug, audioBlob);
-          console.log("[ChatAssistant] Transcripción recibida del backend:", res);
-          if (res.texto && res.texto.trim()) {
-            handleSend(res.texto);
-          }
-        } catch (error) {
-          console.error("Error transcribiendo:", error);
-        } finally {
-          setIsTranscribing(false);
-        }
-      };
-
-      mediaRecorderRef.current.start();
-      setIsRecording(true);
-    } catch (error) {
-      console.error("Error al acceder al micrófono:", error);
+  // --- Lógica de Voz con Web Speech API (sin tokens) ---
+  const startRecording = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert('Tu navegador no soporta reconocimiento de voz. Usa Chrome o Edge.');
+      return;
     }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'es-ES';
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => setIsRecording(true);
+
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      console.log('[Web Speech] Transcripción:', transcript);
+      if (transcript.trim()) {
+        handleSend(transcript.trim());
+      }
+    };
+
+    recognition.onerror = (event) => {
+      console.error('[Web Speech] Error:', event.error);
+      setIsRecording(false);
+    };
+
+    recognition.onend = () => setIsRecording(false);
+
+    recognitionRef.current = recognition;
+    recognition.start();
   };
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      const duration = Date.now() - recordingStartTimeRef.current;
-      if (duration < 800) {
-        shouldDiscardRef.current = true;
-      }
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+      recognitionRef.current = null;
     }
+    setIsRecording(false);
   };
 
   const handleMicClick = () => {
@@ -377,6 +351,7 @@ const ChatAssistant = ({
       startRecording();
     }
   };
+
 
   const handleConfirmAction = async (actionId) => {
     try {
@@ -390,48 +365,65 @@ const ChatAssistant = ({
           ? { ...m, action: { ...m.action, estado: 'EJECUTADA', resultado: res.resultado } }
           : m
       ));
-      // Redirigir si la acción tiene un path asociado (opcional en confirmación si ya se redirigió antes)
-      const redirectPath = targetMsg?.action?.parametros?._redirect_path;
-      if (redirectPath) {
-        handleNavigation(redirectPath);
+      // Redirigir usando el mapa estático de acciones (opcional en confirmación si ya se redirigió antes)
+      if (mActionType) {
+        handleActionNavigation(mActionType);
       }
     } catch (error) {
       console.error("Error confirmando acción:", error);
     }
   };
 
-  const handleNavigation = (path) => {
-    // Mapeo exhaustivo de paths a IDs de vista interna del dashboard
-    const viewMapping = {
-      '/dashboard': 'dashboard',
-      '/configuracion/perfil': 'editarPerfil',
-      '/gestion/empresa': 'gestionEmpresa',
-      '/gestion/usuarios': 'gestionUsuariosRoles',
-      '/gestion/suscripcion': 'gestionSuscripciones',
-      '/notificaciones': 'notificaciones',
-      '/bitacora': 'bitacora',
-      '/vehiculos': 'gestionVehiculos',
-      '/servicios': 'catalogoServicios',
-      '/gestion/espacios-de-trabajo': 'espaciosTrabajo',
-      '/gestion/horarios': 'horarios',
-      '/plan-vehiculo': 'planVehiculo',
-      '/citas': 'citas',
-      '/recepcion': 'recepcionVehiculo',
-      '/asistente-ia': 'asistenteIA',
-      '/reportes': 'generarReportes'
+  const handleActionNavigation = (actionName) => {
+    if (!actionName) return;
+
+    // Mapa estático de Acciones de IA -> IDs de vista del TenantDashboard
+    const actionViewMapping = {
+      'CAMBIAR_NOMBRES_PERSONALES': 'editarPerfil',
+      'CAMBIAR_TELEFONO': 'editarPerfil',
+      'CAMBIAR_CONTRASENA': 'editarPerfil',
+      'ACTUALIZAR_PREFERENCIAS': 'editarPerfil',
+      'CAMBIAR_NOMBRE_EMPRESA': 'gestionEmpresa',
+      'COMPRAR_PLAN': 'gestionSuscripciones',
+      'RELLENAR_PAGO': 'gestionSuscripciones',
+      'CANCELAR_CAMBIO': 'gestionSuscripciones',
+      'REGISTRAR_VEHICULO': 'gestionVehiculos',
+      'BUSCAR_VEHICULO': 'gestionVehiculos',
+      'AGREGAR_SERVICIO': 'catalogoServicios',
+      'REGISTRAR_ESPACIO': 'espaciosTrabajo',
+      'EDITAR_ESPACIO': 'espaciosTrabajo',
+      'VER_HORARIOS_ESPACIO': 'horarios',
+      'AGREGAR_HORARIO_ESPACIO': 'horarios',
+      'EDITAR_HORARIO_ESPACIO': 'horarios',
+      'CREAR_CITA': 'citas',
+      'FILTRAR_CITAS': 'citas',
+      'BUSCAR_PLAN_VEHICULO': 'planVehiculo',
+      'VER_PLAN_VEHICULO': 'planVehiculo',
+      'EDITAR_PLAN_VEHICULO': 'planVehiculo',
+      'CAMBIAR_ESTADO_PLAN_VEHICULO': 'planVehiculo',
+      'AGREGAR_DETALLE_PLAN_VEHICULO': 'planVehiculo',
+      'FILTRAR_BITACORA': 'bitacora',
+      'EXPORTAR_BITACORA': 'bitacora',
+      'VER_REPORTE_GLOBAL': 'generarReportes',
+      'VER_REPORTE_VEHICULO': 'generarReportes',
+      'VER_REPORTE_PRESUPUESTO': 'generarReportes',
+      'VER_REPORTE_INVENTARIO': 'generarReportes',
+      'EXPORTAR_REPORTE': 'generarReportes',
+      'CREAR_CATEGORIA_INVENTARIO': 'inventario',
+      'CREAR_ITEM_INVENTARIO': 'inventario',
+      'CREAR_PROVEEDOR': 'proveedores',
+      'AGREGAR_ITEM_COMPRA': 'comprasInsumos',
+      'CONFIGURAR_BACKUP': 'gestionBackup',
+      'CREAR_USUARIO': 'gestionUsuariosRoles',
+      'CAMBIAR_ROL_USUARIO': 'gestionUsuariosRoles'
     };
 
-    if (onNavigate && viewMapping[path]) {
-      // Priorizar cambio de vista interna para mantener el estado de la SPA en /app
-      onNavigate(viewMapping[path]);
+    const viewId = actionViewMapping[actionName];
+    if (onNavigate && viewId) {
+      // Navegación segura interna basada estrictamente en el viewId
+      onNavigate(viewId);
     } else {
-      // Solo si el path NO es parte del dashboard principal, usar navegación global
-      if (path && typeof path === 'string') {
-        const fullPath = `/${tenantSlug}${path}`;
-        if (window.location.pathname !== fullPath && window.location.pathname !== `${fullPath}/`) {
-          navigate(fullPath);
-        }
-      }
+      console.warn(`No se encontró vista para la acción: ${actionName}`);
     }
   };
 
@@ -556,57 +548,22 @@ const ChatAssistant = ({
                     {msg.text}
                   </div>
 
-                  {/* ACTION CARD */}
-                  {msg.action && (
-                    <div className="bg-white dark:bg-carbon-800 border border-neutral-100 dark:border-white/[0.08] rounded-2xl p-4 shadow-xl shadow-black/5 animate-in slide-in-from-bottom-2">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="w-8 h-8 rounded-lg bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center text-primary-600 dark:text-primary-400">
-                          {msg.action.accion === 'CREAR_CITA' && <Calendar size={18} />}
-                          {msg.action.accion === 'REGISTRAR_VEHICULO' && <Car size={18} />}
-                          {!['CREAR_CITA', 'REGISTRAR_VEHICULO'].includes(msg.action.accion) && <Wrench size={18} />}
-                        </div>
-                        <div>
-                          <h4 className="text-[10px] font-bold uppercase tracking-[0.1em] text-primary-500 dark:text-primary-400">Acción Sugerida</h4>
-                          <p className="text-sm font-bold text-carbon-900 dark:text-white">
-                            {msg.action.accion.replace(/_/g, ' ')}
-                          </p>
-                        </div>
-                      </div>
-
-                      {msg.action.estado !== 'PENDIENTE' && (
-                        <div className="space-y-2 mb-4">
-                          {Object.entries(msg.action.parametros)
-                            .filter(([key]) => !key.startsWith('_'))
-                            .map(([key, val]) => (
-                              <div key={key} className="flex justify-between text-xs py-1.5 border-b border-neutral-50 dark:border-white/[0.03]">
-                                <span className="text-carbon-500 dark:text-neutral-500 capitalize">{key}:</span>
-                                <span className="font-semibold text-carbon-900 dark:text-neutral-200">{val}</span>
-                              </div>
-                            ))}
-                        </div>
-                      )}
-
-                      {msg.action.estado === 'EJECUTADA' ? (
-                        <div className="flex items-center gap-2 py-1 text-green-600 dark:text-green-400 font-bold text-xs bg-green-50 dark:bg-green-900/20 px-3 py-2 rounded-lg">
-                          <CheckCircle2 size={16} /> {msg.action.resultado?.message || 'Acción Completada'}
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2 py-1 text-primary-600 dark:text-primary-400 font-bold text-[10px] uppercase tracking-wider bg-primary-50 dark:bg-primary-900/10 px-3 py-2 rounded-lg border border-primary-100 dark:border-primary-900/20">
-                          <Sparkles size={14} className="animate-pulse" /> Pendiente de confirmación vía chat
-                        </div>
-                      )}
-                    </div>
-                  )}
-
                   {/* OPTIONS SELECTION CARDS */}
-                  {msg.options && msg.options.length > 0 && (
+                  {msg.ui_type && msg.options && msg.options.length > 0 ? (
+                    <DynamicAIPrompt 
+                      type={msg.ui_type} 
+                      options={msg.options} 
+                      onSelect={(val) => { setBlockedMessageId(null); handleSend(val); }} 
+                      disabled={blockedMessageId !== null && blockedMessageId !== msg.id}
+                    />
+                  ) : msg.options && msg.options.length > 0 && (
                     <div className="grid grid-cols-1 gap-2 mt-2 animate-in fade-in slide-in-from-left-2 duration-300">
                       {msg.options
                         .filter(opt => opt && opt.toLowerCase() !== 'cancelar' && opt.toLowerCase() !== 'cancel')
                         .map((opt, idx) => (
                           <button
                             key={idx}
-                            onClick={() => handleSend(opt)}
+                            onClick={() => { setBlockedMessageId(null); handleSend(opt); }}
                             className="flex items-center justify-between p-3.5 bg-white dark:bg-carbon-800 border border-neutral-100 dark:border-white/[0.08] rounded-xl hover:bg-primary-50 dark:hover:bg-primary-900/10 hover:border-primary-200 dark:hover:border-primary-800 transition-all text-left group shadow-sm hover:shadow-md"
                           >
                             <div className="flex items-center gap-3">
@@ -766,18 +723,16 @@ const ChatAssistant = ({
               placeholder={
                 !currentConversationId 
                   ? "Iniciando asistente..." 
-                  : blockedMessageId 
-                    ? "Selecciona una opción de arriba o cancela..." 
-                    : "Escribe tu solicitud..."
+                  : "Escribe tu solicitud..."
               }
-              disabled={!currentConversationId || blockedMessageId !== null}
+              disabled={!currentConversationId}
               className="flex-1 bg-transparent border-none focus:ring-0 text-sm py-2 px-3 text-carbon-900 dark:text-white placeholder-carbon-400 dark:placeholder-neutral-500 disabled:opacity-50"
             />
 
             <button
               type="button"
               onClick={handleMicClick}
-              disabled={!currentConversationId || blockedMessageId !== null}
+              disabled={!currentConversationId}
               className={`p-2.5 rounded-xl transition-all ${isRecording
                   ? 'bg-red-500 text-white animate-pulse'
                   : 'text-carbon-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 disabled:opacity-30'
@@ -789,7 +744,7 @@ const ChatAssistant = ({
 
             <button
               type="submit"
-              disabled={!input.trim() || isTyping || !currentConversationId || blockedMessageId !== null}
+              disabled={!input.trim() || isTyping || !currentConversationId}
               className="w-10 h-10 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 disabled:bg-carbon-300 dark:disabled:bg-carbon-800 text-white rounded-xl flex items-center justify-center transition-all shadow-lg shadow-primary-900/20"
             >
               <Send size={18} className="ml-0.5" />

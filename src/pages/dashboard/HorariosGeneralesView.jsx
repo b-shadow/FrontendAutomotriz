@@ -1,4 +1,4 @@
-/**
+ï»¿/**
  * HorariosGeneralesView.jsx - Vista centralizada de Horarios
  */
 import { useState, useEffect } from 'react'
@@ -7,7 +7,7 @@ import HorarioBloquesEditor from '../../components/espacios/HorarioBloquesEditor
 import espaciosTrabajoService from '../../services/espaciosTrabajoService'
 import { canManageHorariosEspacio } from '../../utils/roleHelper'
 
-const DIAS_SEMANA = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
+const DIAS_SEMANA = ['Lunes', 'Martes', 'MiÃ©rcoles', 'Jueves', 'Viernes', 'SÃ¡bado', 'Domingo']
 
 export const HorariosGeneralesView = ({ user, tenantSlug, aiPrefill, onSuccess }) => {
   const [espacios, setEspacios] = useState([])
@@ -38,12 +38,18 @@ export const HorariosGeneralesView = ({ user, tenantSlug, aiPrefill, onSuccess }
     if (espacios.length === 0 || loadingEspacios) return
 
     const identificador = (aiPrefill.espacio_identificador || '').toLowerCase()
-    const espacioEncontrado = espacios.find(
-      (e) =>
-        e.codigo.toLowerCase() === identificador ||
-        e.nombre.toLowerCase() === identificador ||
-        e.nombre.toLowerCase().includes(identificador)
-    )
+    let espacioEncontrado = null
+
+    if (identificador) {
+      espacioEncontrado = espacios.find(
+        (e) =>
+          e.codigo.toLowerCase() === identificador ||
+          e.nombre.toLowerCase() === identificador ||
+          e.nombre.toLowerCase().includes(identificador)
+      )
+    } else if (selectedEspacioId) {
+      espacioEncontrado = espacios.find((e) => e.id === selectedEspacioId)
+    }
 
     if (!espacioEncontrado) return
 

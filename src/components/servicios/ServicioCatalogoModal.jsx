@@ -72,38 +72,67 @@ export const ServicioCatalogoModal = ({
   useEffect(() => {
     if (!aiPrefill || !isOpen) return;
 
+    const generateCodigo = (nombre) => String(nombre || '')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .toUpperCase()
+      .replace(/[^A-Z0-9\s]/g, '')
+      .trim()
+      .replace(/\s+/g, '_');
+
+    const nombreServicio = aiPrefill.nombre_servicio || '';
+    const aiCodigo = aiPrefill.codigo || generateCodigo(nombreServicio);
+
+    // Parsear tiempo y precio desde el aiPrefill (puede venir como "90 minutos" o 90)
+    const parseTiempo = (val) => {
+      if (!val) return '';
+      const num = parseInt(String(val).replace(/\D/g, ''), 10);
+      if (!num) return '';
+      const redondeado = Math.round(num / 30) * 30 || 30;
+      return String(redondeado); // string para que el <select> haga match
+    };
+    const parsePrecio = (val) => {
+      if (val === undefined || val === null || val === '') return '';
+      const num = parseFloat(String(val).replace(/[^0-9.]/g, ''));
+      return isNaN(num) ? '' : num;
+    };
+
+    const tiempoStr = parseTiempo(aiPrefill.tiempo_estandar_min);
+    const precioNum = parsePrecio(aiPrefill.precio_base);
+
     const processPrefill = async () => {
       setIsSimulating(true);
-      await simulateDelay(600); // Esperar que el modal se asiente
+      await simulateDelay(400);
 
-      const aiCodigo = aiPrefill.codigo || (aiPrefill.nombre_servicio ? aiPrefill.nombre_servicio.toUpperCase().replace(/\s+/g, '_') : '');
-      if (aiCodigo) {
-        await simulateTyping(setFormData, 'codigo', aiCodigo, 40);
+      if (aiPrefill.status === 'EJECUTADA' || aiPrefill.estado === 'EJECUTADA') {
+        setIsSimulating(false);
+        await simulateDelay(800); // Esperar que el form actualice su estado async
+        
+        const submitBtn = document.getElementById('servicio-submit-btn');
+        if (submitBtn) {
+           submitBtn.click();
+        } else {
+           const submitEvent = { preventDefault: () => { } };
+           handleSubmit(submitEvent);
+        }
+        return;
       }
-      if (aiPrefill.nombre_servicio) {
-        await simulateTyping(setFormData, 'nombre', aiPrefill.nombre_servicio, 40);
+
+      // FASE PENDIENTE: llenar formulario visualmente campo a campo
+      if (aiCodigo) await simulateTyping(setFormData, 'codigo', aiCodigo, 25);
+      if (nombreServicio) await simulateTyping(setFormData, 'nombre', nombreServicio, 35);
+      if (aiPrefill.descripcion) await simulateTyping(setFormData, 'descripcion', aiPrefill.descripcion, 20);
+
+      // SELECT y NUMBER: setFormData directo
+      if (tiempoStr) {
+        await simulateDelay(250);
+        setFormData(prev => ({ ...prev, tiempo_estandar_min: tiempoStr }));
       }
-      if (aiPrefill.descripcion) {
-        await simulateTyping(setFormData, 'descripcion', aiPrefill.descripcion, 40);
-      }
-      if (aiPrefill.tiempo_estandar_min) {
-        await simulateTyping(setFormData, 'tiempo_estandar_min', aiPrefill.tiempo_estandar_min, 40);
-      }
-      if (aiPrefill.precio_base) {
-        await simulateTyping(setFormData, 'precio_base', aiPrefill.precio_base, 40);
+      if (precioNum !== '') {
+        await simulateDelay(150);
+        setFormData(prev => ({ ...prev, precio_base: precioNum }));
       }
 
       setIsSimulating(false);
-
-      if (aiPrefill.status === 'EJECUTADA' || aiPrefill.estado === 'EJECUTADA') {
-        await simulateDelay(800);
-        const btn = document.getElementById('servicio-submit-btn');
-        if (btn) {
-          btn.click();
-        } else {
-          handleSubmit({ preventDefault: () => {} });
-        }
-      }
     };
 
     processPrefill();

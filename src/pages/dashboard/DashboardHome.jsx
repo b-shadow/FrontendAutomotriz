@@ -1,213 +1,382 @@
-import { Briefcase, ClipboardList, User, Users, Building2, CreditCard, Car, Calendar, BarChart, CheckCircle, Package, Rocket, Lightbulb, Check, Info, Mail, Bot } from 'lucide-react';
-import { Card, Button } from '../../components/ui'
+import {
+  Building2,
+  CheckCircle,
+  Info,
+  Mail,
+  User,
+} from 'lucide-react'
 import { useEffect, useState } from 'react'
+import {
+  ResponsiveContainer,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  XAxis,
+  YAxis,
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+} from 'recharts'
+
+import { Card } from '../../components/ui'
 import apiClient from '../../services/apiClient'
+import { getRoleName } from '../../utils/roleHelper'
+
+const CHART_COLORS = ['#d4572f', '#10203a', '#10b981', '#f59e0b', '#6366f1', '#ef4444']
+
+const TONE_STYLES = {
+  neutral: 'border-neutral-200 dark:border-white/[0.06]',
+  success: 'border-emerald-200 dark:border-emerald-800/40',
+  warning: 'border-amber-200 dark:border-amber-800/40',
+  danger: 'border-rose-200 dark:border-rose-800/40',
+}
+
+const formatValue = (value, format) => {
+  if (value === null || value === undefined) return '-'
+  if (format === 'currency') {
+    return new Intl.NumberFormat('es-BO', {
+      style: 'currency',
+      currency: 'BOB',
+      minimumFractionDigits: 2,
+    }).format(Number(value || 0))
+  }
+  if (typeof value === 'number') {
+    return new Intl.NumberFormat('es-BO').format(value)
+  }
+  return String(value)
+}
+
+const prettifyKey = (text) => {
+  if (!text) return ''
+  return String(text)
+    .replaceAll('_', ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase())
+}
+
+const KpiCard = ({ item }) => (
+  <Card className={`p-5 border-l-4 border-l-primary-500 ${TONE_STYLES[item.tone] || TONE_STYLES.neutral}`}>
+    <p className="text-xs uppercase tracking-[0.18em] text-carbon-500 dark:text-neutral-400">
+      {item.label}
+    </p>
+    <p className="mt-2 text-2xl font-bold text-carbon-900 dark:text-white">
+      {formatValue(item.value, item.format)}
+    </p>
+  </Card>
+)
+
+const DashboardChart = ({ chart }) => {
+  const data = Array.isArray(chart?.data) ? chart.data : []
+  if (!data.length) {
+    return (
+      <div className="flex h-[280px] items-center justify-center rounded-2xl border border-dashed border-neutral-200 text-sm text-carbon-500 dark:border-white/[0.06] dark:text-neutral-400">
+        Sin datos para mostrar
+      </div>
+    )
+  }
+
+  const xKey = chart.xKey || 'name'
+  const yKey = chart.yKey || 'value'
+  const series = Array.isArray(chart.series) ? chart.series : []
+
+  return (
+    <div className="h-[280px] w-full">
+      <ResponsiveContainer width="100%" height="100%">
+        {chart.type === 'pie' ? (
+          <PieChart>
+            <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90}>
+              {data.map((entry, index) => (
+                <Cell key={`${chart.id}-${entry.name || index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+              ))}
+            </Pie>
+            <Tooltip contentStyle={{ borderRadius: '12px' }} />
+            <Legend verticalAlign="bottom" height={36} />
+          </PieChart>
+        ) : chart.type === 'line' ? (
+          <LineChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(148, 163, 184, 0.25)" />
+            <XAxis dataKey={xKey} tickLine={false} axisLine={false} stroke="#94a3b8" fontSize={12} />
+            <YAxis tickLine={false} axisLine={false} stroke="#94a3b8" fontSize={12} />
+            <Tooltip contentStyle={{ borderRadius: '12px' }} />
+            {series.length ? (
+              <>
+                <Legend verticalAlign="bottom" height={30} />
+                {series.map((serie, index) => (
+                  <Line
+                    key={`${chart.id}-${serie.key}`}
+                    type="monotone"
+                    dataKey={serie.key}
+                    name={serie.label}
+                    stroke={CHART_COLORS[index % CHART_COLORS.length]}
+                    strokeWidth={3}
+                    dot={{ r: 4 }}
+                  />
+                ))}
+              </>
+            ) : (
+              <Line type="monotone" dataKey={yKey} stroke="#d4572f" strokeWidth={3} dot={{ r: 4 }} />
+            )}
+          </LineChart>
+        ) : (
+          <BarChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(148, 163, 184, 0.25)" />
+            <XAxis dataKey={xKey} tickLine={false} axisLine={false} stroke="#94a3b8" fontSize={12} />
+            <YAxis tickLine={false} axisLine={false} stroke="#94a3b8" fontSize={12} />
+            <Tooltip contentStyle={{ borderRadius: '12px' }} />
+            {series.length ? (
+              <>
+                <Legend verticalAlign="bottom" height={30} />
+                {series.map((serie, index) => (
+                  <Bar
+                    key={`${chart.id}-${serie.key}`}
+                    dataKey={serie.key}
+                    name={serie.label}
+                    fill={CHART_COLORS[index % CHART_COLORS.length]}
+                    radius={[8, 8, 0, 0]}
+                  />
+                ))}
+              </>
+            ) : (
+              <Bar dataKey={yKey} fill="#10203a" radius={[8, 8, 0, 0]} />
+            )}
+          </BarChart>
+        )}
+      </ResponsiveContainer>
+    </div>
+  )
+}
+
+const DashboardTable = ({ table }) => {
+  const rows = Array.isArray(table?.rows) ? table.rows : []
+  return (
+    <Card className="p-6">
+      <h4 className="mb-4 text-lg font-bold text-carbon-900 dark:text-white">{table.title}</h4>
+      {rows.length ? (
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-neutral-200 dark:border-white/[0.06]">
+                {table.columns.map((column) => (
+                  <th key={`${table.id}-${column}`} className="p-3 text-sm font-semibold text-carbon-500 dark:text-neutral-400">
+                    {column}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, index) => (
+                <tr key={`${table.id}-${index}`} className="border-b border-neutral-100 dark:border-white/[0.03] hover:bg-neutral-50 dark:hover:bg-white/[0.02]">
+                  {Object.values(row).map((value, valueIndex) => (
+                    <td key={`${table.id}-${index}-${valueIndex}`} className="p-3 text-sm text-carbon-700 dark:text-neutral-300">
+                      {String(value)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-dashed border-neutral-200 px-4 py-8 text-sm text-carbon-500 dark:border-white/[0.06] dark:text-neutral-400">
+          Sin registros para mostrar
+        </div>
+      )}
+    </Card>
+  )
+}
+
+const DashboardSection = ({ section }) => (
+  <Card className="space-y-6 p-6">
+    <div>
+      <h3 className="text-xl font-bold text-carbon-900 dark:text-white">{section.title}</h3>
+      <p className="mt-1 text-sm text-carbon-500 dark:text-neutral-400">{section.description}</p>
+    </div>
+
+    {section.kpis?.length ? (
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+        {section.kpis.map((item) => (
+          <KpiCard key={item.key} item={item} />
+        ))}
+      </div>
+    ) : null}
+
+    {section.charts?.length ? (
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        {section.charts.map((chart) => (
+          <Card key={chart.id} className="p-6">
+            <h4 className="mb-4 text-lg font-bold text-carbon-900 dark:text-white">{chart.title}</h4>
+            <DashboardChart chart={chart} />
+          </Card>
+        ))}
+      </div>
+    ) : null}
+
+    {section.tables?.length ? (
+      <div className="grid grid-cols-1 gap-6">
+        {section.tables.map((table) => (
+          <DashboardTable key={table.id} table={table} />
+        ))}
+      </div>
+    ) : null}
+  </Card>
+)
 
 export const DashboardHome = ({ user, tenant, tenantSlug, onNavigate }) => {
-  const [kpis, setKpis] = useState(null)
+  const [dashboard, setDashboard] = useState(null)
+  const [loadingDashboard, setLoadingDashboard] = useState(false)
 
   useEffect(() => {
     let mounted = true
+
     const load = async () => {
       if (!tenantSlug) return
+      setLoadingDashboard(true)
       try {
         const res = await apiClient.get(`/api/${tenantSlug}/comunicacion-control/reportes/dashboard_kpis/`)
-        if (mounted) setKpis(res.data?.kpis || null)
+        if (mounted) setDashboard(res.data || null)
       } catch {
-        if (mounted) setKpis(null)
+        if (mounted) setDashboard(null)
+      } finally {
+        if (mounted) setLoadingDashboard(false)
       }
     }
+
     load()
-    return () => { mounted = false }
+    return () => {
+      mounted = false
+    }
   }, [tenantSlug])
 
-  const getModulesAvailable = () => {
-    const modules = []
-    if (user) {
-      const roleValue = user.role
-      const hasAdminRole = Array.isArray(roleValue)
-        ? roleValue.includes('ADMIN')
-        : typeof roleValue === 'string'
-          ? roleValue.includes('ADMIN')
-          : false
-
-      if (user.is_staff || hasAdminRole) {
-        modules.push({ icon: <Users className="inline-block mx-1 text-current" size={20} strokeWidth={2} />, text: 'Gestión de Usuarios', id: 'gestionUsuariosRoles' })
-        modules.push({ icon: <Building2 className="inline-block mx-1 text-current" size={20} strokeWidth={2} />, text: 'Gestión de Empresa', id: 'gestionEmpresa' })
-        modules.push({ icon: <CreditCard className="inline-block mx-1 text-current" size={20} strokeWidth={2} />, text: 'Gestión de Suscripción', id: 'gestionSuscripciones' })
-      }
-      modules.push({ icon: <Car className="inline-block mx-1 text-current" size={20} strokeWidth={2} />, text: 'Vehículos y Servicios', id: 'gestionVehiculos' })
-      modules.push({ icon: <Calendar className="inline-block mx-1 text-current" size={20} strokeWidth={2} />, text: 'Gestión de Citas', id: 'citas' })
-      modules.push({ icon: <BarChart className="inline-block mx-1 text-current" size={20} strokeWidth={2} />, text: 'Reportes y Estadísticas', id: 'generarReportes' })
-      modules.push({ icon: <Bot className="inline-block mx-1 text-current" size={20} strokeWidth={2} />, text: 'Asistente IA', id: 'asistenteIA' })
-    }
-    return modules
-  }
+  const summary = dashboard?.summary || []
+  const sections = dashboard?.sections || []
+  const fallbackKpis = !summary.length && dashboard?.kpis
+    ? Object.entries(dashboard.kpis).map(([key, value]) => ({
+        key,
+        label: prettifyKey(key),
+        value,
+        format: typeof value === 'number' && String(key).includes('ingresos') ? 'currency' : 'number',
+        tone: 'neutral',
+      }))
+    : []
 
   return (
     <div className="space-y-8">
-      {/* WELCOME SECTION */}
       <div>
-        <h1 className="text-4xl font-bold text-carbon-900 dark:text-white mb-2 tracking-tight">
-          Bienvenido, {user.nombres}!
+        <h1 className="mb-2 text-4xl font-bold tracking-tight text-carbon-900 dark:text-white">
+          Bienvenido, {user.nombres}
         </h1>
         <p className="text-xl text-carbon-600 dark:text-neutral-300">
           Dashboard de {tenant.nombre}
         </p>
       </div>
 
-      {/* PERFIL DEL USUARIO */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card className="bg-gradient-to-br from-primary-50 to-burgundy-50 dark:from-primary-900/15 dark:to-burgundy-900/15 border-primary-200 dark:border-primary-800/30">
-          <h3 className="text-lg font-bold text-carbon-900 dark:text-white mb-4 tracking-tight"><User className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Tu Perfil</h3>
+        <Card className="border-primary-200 bg-gradient-to-br from-primary-50 to-burgundy-50 dark:border-primary-800/30 dark:from-primary-900/15 dark:to-burgundy-900/15">
+          <h3 className="mb-4 text-lg font-bold tracking-tight text-carbon-900 dark:text-white">
+            <User className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Tu perfil
+          </h3>
           <div className="space-y-3 text-sm">
             <div>
-              <p className="text-carbon-500 dark:text-neutral-400 mb-1">Nombre Completo</p>
-              <p className="text-carbon-900 dark:text-neutral-100 font-semibold">
+              <p className="mb-1 text-carbon-500 dark:text-neutral-400">Nombre completo</p>
+              <p className="font-semibold text-carbon-900 dark:text-neutral-100">
                 {user.nombres} {user.apellidos}
               </p>
             </div>
             <div>
-              <p className="text-carbon-500 dark:text-neutral-400 mb-1">Correo Electrónico</p>
-              <p className="text-carbon-900 dark:text-neutral-100 font-mono text-xs">
-                {user.email}
-              </p>
+              <p className="mb-1 text-carbon-500 dark:text-neutral-400">Correo electronico</p>
+              <p className="font-mono text-xs text-carbon-900 dark:text-neutral-100">{user.email}</p>
             </div>
             <div>
-              <p className="text-carbon-500 dark:text-neutral-400 mb-1">Rol</p>
-              <span className="inline-block px-3 py-1 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full text-xs font-medium border border-primary-200 dark:border-primary-700/40">
-                {user.is_staff ? <><Briefcase className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Administrador</> : <><Users className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Usuario</>}
+              <p className="mb-1 text-carbon-500 dark:text-neutral-400">Rol operativo</p>
+              <span className="inline-block rounded-full border border-primary-200 bg-primary-100 px-3 py-1 text-xs font-medium text-primary-700 dark:border-primary-700/40 dark:bg-primary-900/30 dark:text-primary-300">
+                {getRoleName(user)}
               </span>
             </div>
           </div>
         </Card>
 
-        <Card className="bg-gradient-to-br from-carbon-50 to-neutral-100 dark:from-carbon-800/30 dark:to-carbon-900/30 border-neutral-300 dark:border-white/[0.06]">
-          <h3 className="text-lg font-bold text-carbon-900 dark:text-white mb-4 tracking-tight"><Building2 className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Información de Empresa</h3>
+        <Card className="border-neutral-300 bg-gradient-to-br from-carbon-50 to-neutral-100 dark:border-white/[0.06] dark:from-carbon-800/30 dark:to-carbon-900/30">
+          <h3 className="mb-4 text-lg font-bold tracking-tight text-carbon-900 dark:text-white">
+            <Building2 className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Informacion de empresa
+          </h3>
           <div className="space-y-3 text-sm">
             <div>
-              <p className="text-carbon-500 dark:text-neutral-400 mb-1">Nombre</p>
-              <p className="text-carbon-900 dark:text-neutral-100 font-semibold">
-                {tenant.nombre}
-              </p>
+              <p className="mb-1 text-carbon-500 dark:text-neutral-400">Nombre</p>
+              <p className="font-semibold text-carbon-900 dark:text-neutral-100">{tenant.nombre}</p>
             </div>
             <div>
-              <p className="text-carbon-500 dark:text-neutral-400 mb-1">Slug</p>
-              <p className="text-carbon-900 dark:text-neutral-100 font-mono text-xs">
-                {tenantSlug}
-              </p>
+              <p className="mb-1 text-carbon-500 dark:text-neutral-400">Slug</p>
+              <p className="font-mono text-xs text-carbon-900 dark:text-neutral-100">{tenantSlug}</p>
             </div>
             <div>
-              <p className="text-carbon-500 dark:text-neutral-400 mb-1">Estado</p>
-              <span className="inline-block px-3 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded-full text-xs font-medium border border-emerald-200 dark:border-emerald-700/40">
-                <CheckCircle className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Activo
+              <p className="mb-1 text-carbon-500 dark:text-neutral-400">Estado</p>
+              <span className="inline-block rounded-full border border-emerald-200 bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700 dark:border-emerald-700/40 dark:bg-emerald-900/30 dark:text-emerald-300">
+                <CheckCircle className="inline-block mx-1 text-current" size={16} strokeWidth={2} /> Activo
               </span>
             </div>
           </div>
         </Card>
       </div>
 
-      {kpis && (
-        <Card className="bg-gradient-to-r from-neutral-50 to-neutral-100 dark:from-carbon-800/20 dark:to-carbon-900/20 border-neutral-200 dark:border-white/[0.06]">
-          <h3 className="text-lg font-bold text-carbon-900 dark:text-white mb-4 tracking-tight">Indicadores del Dia</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-            {Object.entries(kpis).map(([key, value]) => (
-              <div key={key} className="p-3 rounded-lg bg-white/70 dark:bg-white/[0.03] border border-neutral-200/50 dark:border-white/[0.04]">
-                <p className="text-carbon-500 dark:text-neutral-400 text-xs uppercase">{key.replaceAll('_', ' ')}</p>
-                <p className="text-carbon-900 dark:text-white font-bold">{String(value)}</p>
-              </div>
+      {loadingDashboard ? (
+        <Card className="p-6">
+          <p className="text-sm text-carbon-500 dark:text-neutral-400">Cargando KPIs del rol...</p>
+        </Card>
+      ) : null}
+
+      {summary.length ? (
+        <Card className="border-neutral-200 bg-gradient-to-r from-neutral-50 to-neutral-100 dark:border-white/[0.06] dark:from-carbon-800/20 dark:to-carbon-900/20">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-lg font-bold tracking-tight text-carbon-900 dark:text-white">Resumen ejecutivo</h3>
+              <p className="text-sm text-carbon-500 dark:text-neutral-400">
+                KPIs visibles para el rol {dashboard?.rol || getRoleName(user)}
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+            {summary.map((item) => (
+              <KpiCard key={item.key} item={item} />
             ))}
           </div>
         </Card>
-      )}
+      ) : null}
 
-      {/* MÓDULOS DISPONIBLES */}
-      <Card className="bg-gradient-to-r from-burgundy-50 to-primary-50 dark:from-burgundy-900/15 dark:to-primary-900/15 border-burgundy-200 dark:border-burgundy-800/30">
-        <h3 className="text-lg font-bold text-carbon-900 dark:text-white mb-4 tracking-tight"><Package className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Módulos Disponibles</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {getModulesAvailable().map((module, idx) => (
-            <button 
-              key={idx} 
-              onClick={() => onNavigate && onNavigate(module.id)}
-              className="w-full text-left flex items-center gap-2 p-3 rounded-lg bg-white/60 dark:bg-white/[0.03] border border-neutral-200/50 dark:border-white/[0.04] hover:bg-white hover:shadow-md dark:hover:bg-carbon-800 transition-all cursor-pointer group"
-            >
-              <span className="text-xl text-primary-500 group-hover:scale-110 transition-transform">{module.icon}</span>
-              <span className="text-sm text-carbon-700 dark:text-neutral-300 font-medium group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
-                {module.text}
-              </span>
-            </button>
-          ))}
-        </div>
-      </Card>
+      {!summary.length && fallbackKpis.length ? (
+        <Card className="border-neutral-200 bg-gradient-to-r from-neutral-50 to-neutral-100 dark:border-white/[0.06] dark:from-carbon-800/20 dark:to-carbon-900/20">
+          <h3 className="mb-4 text-lg font-bold tracking-tight text-carbon-900 dark:text-white">Indicadores del dia</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+            {fallbackKpis.map((item) => (
+              <KpiCard key={item.key} item={item} />
+            ))}
+          </div>
+        </Card>
+      ) : null}
 
-      {/* GUÍA RÁPIDA */}
-      <Card className="bg-gradient-to-r from-neutral-50 to-neutral-100 dark:from-carbon-800/20 dark:to-carbon-900/20 border-neutral-200 dark:border-white/[0.06]">
-        <h3 className="text-lg font-bold text-carbon-900 dark:text-white mb-4 tracking-tight"><Rocket className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Guía Rápida de Navegación</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-          <button onClick={() => onNavigate && onNavigate('dashboard')} className="w-full text-left p-3 bg-white/60 dark:bg-white/[0.03] rounded-lg border border-neutral-200/50 dark:border-white/[0.04] hover:bg-white hover:shadow-md dark:hover:bg-carbon-800 transition-all cursor-pointer group">
-            <p className="font-semibold text-carbon-900 dark:text-white mb-1 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors"><BarChart className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Dashboard</p>
-            <p className="text-carbon-600 dark:text-neutral-400">Resumen general de tu empresa</p>
-          </button>
-          <button onClick={() => onNavigate && onNavigate('gestionUsuariosRoles')} className="w-full text-left p-3 bg-white/60 dark:bg-white/[0.03] rounded-lg border border-neutral-200/50 dark:border-white/[0.04] hover:bg-white hover:shadow-md dark:hover:bg-carbon-800 transition-all cursor-pointer group">
-            <p className="font-semibold text-carbon-900 dark:text-white mb-1 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors"><Users className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Gestión de Usuarios</p>
-            <p className="text-carbon-600 dark:text-neutral-400">Administra usuarios y roles</p>
-          </button>
-          <button onClick={() => onNavigate && onNavigate('citas')} className="w-full text-left p-3 bg-white/60 dark:bg-white/[0.03] rounded-lg border border-neutral-200/50 dark:border-white/[0.04] hover:bg-white hover:shadow-md dark:hover:bg-carbon-800 transition-all cursor-pointer group">
-            <p className="font-semibold text-carbon-900 dark:text-white mb-1 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors"><Calendar className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Citas</p>
-            <p className="text-carbon-600 dark:text-neutral-400">Programa y gestiona citas</p>
-          </button>
-          <button onClick={() => onNavigate && onNavigate('bitacora')} className="w-full text-left p-3 bg-white/60 dark:bg-white/[0.03] rounded-lg border border-neutral-200/50 dark:border-white/[0.04] hover:bg-white hover:shadow-md dark:hover:bg-carbon-800 transition-all cursor-pointer group">
-            <p className="font-semibold text-carbon-900 dark:text-white mb-1 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors"><ClipboardList className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Bitácora</p>
-            <p className="text-carbon-600 dark:text-neutral-400">Historial de auditoría completo</p>
-          </button>
-        </div>
-      </Card>
+      {sections.map((section) => (
+        <DashboardSection key={section.id} section={section} />
+      ))}
 
-      {/* CONSEJOS Y SUGERENCIAS */}
-      <Card className="bg-gradient-to-r from-primary-50 to-burgundy-50 dark:from-primary-900/10 dark:to-burgundy-900/10 border-primary-200 dark:border-primary-800/30">
-        <h3 className="text-lg font-bold text-carbon-900 dark:text-white mb-4 tracking-tight"><Lightbulb className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Consejos Útiles</h3>
-        <ul className="space-y-2 text-sm">
-          <li className="flex gap-2">
-            <span className="text-primary-500"><Check className="inline-block mx-1 text-current" size={20} strokeWidth={2} /></span>
-            <span className="text-carbon-700 dark:text-neutral-300">
-              Revisa regularmente la <strong>Bitácora</strong> para auditoría y seguridad
-            </span>
-          </li>
-          <li className="flex gap-2">
-            <span className="text-primary-500"><Check className="inline-block mx-1 text-current" size={20} strokeWidth={2} /></span>
-            <span className="text-carbon-700 dark:text-neutral-300">
-              Mantén tu <strong>Perfil</strong> actualizado con información válida
-            </span>
-          </li>
-          <li className="flex gap-2">
-            <span className="text-primary-500"><Check className="inline-block mx-1 text-current" size={20} strokeWidth={2} /></span>
-            <span className="text-carbon-700 dark:text-neutral-300">
-              Usa <strong>Reportes</strong> para analizar datos y estadísticas
-            </span>
-          </li>
-          <li className="flex gap-2">
-            <span className="text-primary-500"><Check className="inline-block mx-1 text-current" size={20} strokeWidth={2} /></span>
-            <span className="text-carbon-700 dark:text-neutral-300">
-              Configura <strong>Notificaciones</strong> según tus preferencias
-            </span>
-          </li>
-        </ul>
-      </Card>
-
-      {/* QUICK INFO - Al final como solicitaste */}
-      <Card className="bg-gradient-to-r from-carbon-50 to-neutral-100 dark:from-carbon-800/20 dark:to-carbon-900/30 border-neutral-300 dark:border-white/[0.06]">
-        <h3 className="text-xl font-bold text-carbon-900 dark:text-white mb-4 tracking-tight"><Info className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Información Útil</h3>
-        <div className="grid md:grid-cols-2 gap-4 text-sm">
+      <Card className="border-neutral-300 bg-gradient-to-r from-carbon-50 to-neutral-100 dark:border-white/[0.06] dark:from-carbon-800/20 dark:to-carbon-900/30">
+        <h3 className="mb-4 text-xl font-bold tracking-tight text-carbon-900 dark:text-white">
+          <Info className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Informacion util
+        </h3>
+        <div className="grid gap-4 text-sm md:grid-cols-2">
           <div>
-            <p className="text-carbon-500 dark:text-neutral-400 mb-1">🔗 URL del Tenant</p>
-            <p className="text-carbon-900 dark:text-neutral-100 font-mono text-xs bg-white dark:bg-carbon-800/60 p-2 rounded border border-neutral-200 dark:border-white/[0.06]">
+            <p className="mb-1 text-carbon-500 dark:text-neutral-400">URL del tenant</p>
+            <p className="rounded border border-neutral-200 bg-white p-2 font-mono text-xs text-carbon-900 dark:border-white/[0.06] dark:bg-carbon-800/60 dark:text-neutral-100">
               {typeof window !== 'undefined' ? `${window.location.origin}/${tenantSlug}` : 'N/A'}
             </p>
           </div>
           <div>
-            <p className="text-carbon-500 dark:text-neutral-400 mb-1"><Mail className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Soporte</p>
+            <p className="mb-1 text-carbon-500 dark:text-neutral-400">
+              <Mail className="inline-block mx-1 text-current" size={16} strokeWidth={2} /> Soporte
+            </p>
             <p className="text-carbon-900 dark:text-neutral-100">
-              Para reportar problemas, contacta al equipo de administración
+              Para reportar problemas, contacta al equipo de administracion.
             </p>
           </div>
         </div>

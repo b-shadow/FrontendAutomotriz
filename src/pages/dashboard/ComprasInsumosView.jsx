@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react'
 import { NotebookTabs, Plus, Search, SlidersHorizontal } from 'lucide-react'
 import { useTenant } from '../../hooks/useTenant'
+import { useGhostAutomation } from '../../hooks/useGhostAutomation'
 import inventarioService from '../../services/inventarioService'
 
 const ComprasInsumosView = ({ user, aiPrefill }) => {
@@ -19,6 +20,23 @@ const ComprasInsumosView = ({ user, aiPrefill }) => {
     cantidad: 1,
     costo_unitario: 0,
     observaciones: '',
+  })
+  const [submitBtn, setSubmitBtn] = useState(null)
+
+  useGhostAutomation({
+    aiPrefill,
+    isModalOpen: nuevaCompraOpen,
+    setModalOpen: setNuevaCompraOpen,
+    setForm: setNuevaCompra,
+    submitBtnRef: { current: submitBtn },
+    actionType: 'AGREGAR_ITEM_COMPRA',
+    fieldMapping: {
+      proveedor_id: 'proveedor_id',
+      item_inventario_id: 'item_inventario_id',
+      cantidad: 'cantidad',
+      costo_unitario: 'costo_unitario',
+      observaciones: 'observaciones'
+    }
   })
 
   const cargar = useCallback(async () => {
@@ -53,36 +71,7 @@ const ComprasInsumosView = ({ user, aiPrefill }) => {
     setError(null)
   }
 
-    useEffect(() => {
-    if (aiPrefill && aiPrefill.type === 'AGREGAR_ITEM_COMPRA' && aiPrefill.status === 'EJECUTADA') {
-      if (lastPrefillTs.current === aiPrefill._ts) return;
-      lastPrefillTs.current = aiPrefill._ts;
-      
-      const execCompraGhost = async () => {
-        if (!items.length) {
-          setError('Debes crear items primero');
-          return;
-        }
-        const cantidad = Number(aiPrefill.cantidad || 1);
-        const costo = Number(aiPrefill.costo_unitario || items[0].costo_promedio || 0);
-        
-        try {
-          await inventarioService.crearCompra(tenantSlug, {
-            proveedor_id: proveedores[0]?.id || null,
-            numero_documento: "CMP-${Date.now()}",
-            estado: 'BORRADOR',
-            detalles: [{ item_inventario_id: items[0].id, cantidad, costo_unitario: costo }],
-          });
-          setSuccess('Compra creada silenciosamente por IA');
-          await cargar();
-        } catch (err) {
-          setError('No se pudo crear compra');
-        }
-      };
-      execCompraGhost();
-    }
-  }, [aiPrefill, items, proveedores, tenantSlug, cargar]);
-
+  // El useEffect de creación silenciosa se eliminó en favor de useGhostAutomation
   const crearCompra = async () => {
     const cantidad = Number(nuevaCompra.cantidad || 0)
     const costo = Number(nuevaCompra.costo_unitario || 0)
@@ -296,7 +285,7 @@ const ComprasInsumosView = ({ user, aiPrefill }) => {
               <button onClick={() => setNuevaCompraOpen(false)} className="rounded border border-neutral-300 px-4 py-2 dark:border-white/[0.10]">
                 Cancelar
               </button>
-              <button onClick={crearCompra} className="rounded bg-primary-600 px-4 py-2 text-white">
+              <button ref={setSubmitBtn} onClick={crearCompra} className="rounded bg-primary-600 px-4 py-2 text-white">
                 Crear compra
               </button>
             </div>

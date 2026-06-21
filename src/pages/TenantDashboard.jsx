@@ -276,7 +276,7 @@ export const TenantDashboard = () => {
       case 'cajaMovimientos':
         return <CajaMovimientosView tenantSlug={tenantSlug} user={user} />
       case 'gestionarBackup':
-        return <GestionBackupView />
+        return <GestionBackupView aiPrefill={getAiPrefill(['CONFIGURAR_BACKUP'])} />
       case 'asistenteIA':
         return <AsistenteIAView />
       case 'generarReportes':

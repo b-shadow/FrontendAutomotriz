@@ -157,6 +157,27 @@ const inventarioService = {
     return response.data
   },
 
+  listarPagosDisponiblesParaFactura: async (tenantSlug) => {
+    const response = await apiClient.get(`/api/${tenantSlug}/gestion-administrativa/facturas/pagos-disponibles/`)
+    return response.data
+  },
+
+  visualizarFactura: async (tenantSlug, facturaId) => {
+    const response = await apiClient.get(
+      `/api/${tenantSlug}/gestion-administrativa/facturas/${facturaId}/visualizar/`,
+      { responseType: 'blob' }
+    )
+    return response.data
+  },
+
+  descargarFactura: async (tenantSlug, facturaId, formato = 'pdf') => {
+    const response = await apiClient.get(
+      `/api/${tenantSlug}/gestion-administrativa/facturas/${facturaId}/descargar/?formato=${encodeURIComponent(formato)}`,
+      { responseType: 'blob' }
+    )
+    return response.data
+  },
+
   listarCajas: async (tenantSlug) => {
     const response = await apiClient.get(`/api/${tenantSlug}/gestion-administrativa/cajas/`)
     return response.data

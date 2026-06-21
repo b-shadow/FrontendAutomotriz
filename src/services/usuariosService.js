@@ -233,6 +233,31 @@ const usuariosService = {
       throw error
     }
   },
+  registrarTokenPush: async (tenantSlug, payload) => {
+    try {
+      const response = await apiClient.post(
+        `/api/${tenantSlug}/usuarios/registrar-token-push/`,
+        payload
+      )
+      return response.data
+    } catch (error) {
+      console.error('Error al registrar token push:', error)
+      throw error
+    }
+  },
+
+  desactivarTokenPush: async (tenantSlug, payload) => {
+    try {
+      const response = await apiClient.post(
+        `/api/${tenantSlug}/usuarios/desactivar-token-push/`,
+        payload
+      )
+      return response.data
+    } catch (error) {
+      console.error('Error al desactivar token push:', error)
+      throw error
+    }
+  },
 }
 
 export default usuariosService

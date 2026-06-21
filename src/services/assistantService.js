@@ -63,7 +63,13 @@ const assistantService = {
         },
       }
     );
-    return response.data;
+    const data = response.data || {};
+    // Normaliza respuesta para consumidores antiguos/nuevos: `texto` (backend actual) y `text`.
+    return {
+      ...data,
+      text: (data.text ?? data.texto ?? '').toString(),
+      texto: (data.texto ?? data.text ?? '').toString(),
+    };
   },
 
   /**

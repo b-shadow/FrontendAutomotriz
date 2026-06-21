@@ -3,6 +3,7 @@ import { Database, Download, CheckSquare, Square, Loader2, Plus, X, Filter, BarC
 import apiClient from '../../services/apiClient';
 import * as XLSX from 'xlsx';
 import Plot from 'react-plotly.js';
+import { jsPDF } from 'jspdf';
 
 const VISTAS = {
   vehiculos_citas: {
@@ -127,13 +128,83 @@ const ExploradorDatosView = ({ tenantSlug }) => {
     }
   };
 
-  const handleExport = () => {
-    if (!data || data.length === 0) return;
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Datos");
-    XLSX.writeFile(wb, `Reporte_${vista}.xlsx`);
+  const downloadBlob = (blob, filename) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
   };
+
+  const buildTableHtml = (rows) => {
+    if (!rows?.length) return '<table><tr><td>Sin datos</td></tr></table>';
+    const keys = Object.keys(rows[0]);
+    let html = '<table border="1" cellspacing="0" cellpadding="6"><thead><tr>';
+    keys.forEach((k) => { html += `<th>${String(k)}</th>`; });
+    html += '</tr></thead><tbody>';
+    rows.forEach((r) => {
+      html += '<tr>';
+      keys.forEach((k) => { html += `<td>${r[k] ?? '-'}</td>`; });
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+    return html;
+  };
+
+  const handleExport = (format) => {
+    const rows = data || [];
+    if (!rows.length) return;
+    const baseName = `Reporte_${vista}_${new Date().toISOString().split('T')[0]}`;
+    if (format === 'excel') {
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Datos');
+      XLSX.writeFile(wb, `${baseName}.xlsx`);
+      return;
+    }
+    if (format === 'csv') {
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const csv = XLSX.utils.sheet_to_csv(ws);
+      downloadBlob(new Blob([csv], { type: 'text/csv;charset=utf-8;' }), `${baseName}.csv`);
+      return;
+    }
+    const tableHtml = buildTableHtml(rows);
+    if (format === 'html') {
+      const doc = `<!doctype html><html><head><meta charset="utf-8"><title>${baseName}</title></head><body>${tableHtml}</body></html>`;
+      downloadBlob(new Blob([doc], { type: 'text/html;charset=utf-8;' }), `${baseName}.html`);
+      return;
+    }
+    if (format === 'word') {
+      const doc = `<!doctype html><html><head><meta charset="utf-8"></head><body>${tableHtml}</body></html>`;
+      downloadBlob(new Blob([doc], { type: 'application/msword' }), `${baseName}.doc`);
+      return;
+    }
+    if (format === 'pdf') {
+      const doc = new jsPDF({ orientation: 'landscape' });
+      const keys = Object.keys(rows[0] || {});
+      let y = 12;
+      doc.setFontSize(12);
+      doc.text(baseName, 14, y);
+      y += 8;
+      doc.setFontSize(8);
+      doc.text(keys.join(' | '), 14, y);
+      y += 6;
+      rows.forEach((row) => {
+        const line = keys.map((k) => String(row[k] ?? '-')).join(' | ');
+        const wrapped = doc.splitTextToSize(line, 270);
+        doc.text(wrapped, 14, y);
+        y += wrapped.length * 4 + 1;
+        if (y > 190) {
+          doc.addPage();
+          y = 12;
+        }
+      });
+      doc.save(`${baseName}.pdf`);
+    }
+  };
+
+  const exportOptions = ['pdf', 'word', 'html', 'csv', 'excel'];
 
   return (
     <div className="space-y-6">
@@ -282,12 +353,17 @@ const ExploradorDatosView = ({ tenantSlug }) => {
 
             <div className="flex items-center gap-3">
               <span className="text-sm font-semibold text-carbon-500 dark:text-neutral-400">{data.length} registros</span>
-              <button 
-                onClick={handleExport}
-                className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-xl font-semibold flex items-center gap-2 transition-all shadow-sm"
-              >
-                <Download size={16} /> Exportar Excel
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                {exportOptions.map((opt) => (
+                  <button
+                    key={opt}
+                    onClick={() => handleExport(opt)}
+                    className="px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded-xl text-sm font-semibold flex items-center gap-2 transition-all shadow-sm"
+                  >
+                    <Download size={16} /> {opt.toUpperCase()}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 

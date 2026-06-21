@@ -1,85 +1,171 @@
-import { Bell, Rocket, Check, Mail, Mailbox, Settings, MessageSquare } from 'lucide-react';
+import { useEffect, useState } from 'react'
+import { Bell, CheckCheck, Mailbox, RefreshCw } from 'lucide-react'
 import { Card } from '../../components/ui'
+import notificacionesService from '../../services/notificacionesService'
 
-export const NotificacionesView = () => {
+const formatDate = (value) => {
+  if (!value) return '-'
+  try {
+    return new Date(value).toLocaleString()
+  } catch {
+    return value
+  }
+}
+
+export const NotificacionesView = ({ tenantSlug }) => {
+  const [items, setItems] = useState([])
+  const [resumen, setResumen] = useState({ total: 0, no_leidas: 0 })
+  const [loading, setLoading] = useState(true)
+  const [workingId, setWorkingId] = useState(null)
+  const [error, setError] = useState('')
+
+  const cargar = async () => {
+    if (!tenantSlug) return
+    setLoading(true)
+    setError('')
+    try {
+      const [notificaciones, resumenData] = await Promise.all([
+        notificacionesService.listar(tenantSlug),
+        notificacionesService.resumen(tenantSlug),
+      ])
+      setItems(notificaciones)
+      setResumen(resumenData)
+    } catch (err) {
+      setError(err.response?.data?.error || err.message || 'No se pudieron cargar las notificaciones.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    cargar()
+  }, [tenantSlug])
+
+  useEffect(() => {
+    const handler = () => cargar()
+    window.addEventListener('firebase-foreground-message', handler)
+    return () => window.removeEventListener('firebase-foreground-message', handler)
+  }, [tenantSlug])
+
+  const marcarLeida = async (id) => {
+    setWorkingId(id)
+    try {
+      const actualizada = await notificacionesService.marcarLeida(tenantSlug, id)
+      setItems((prev) => prev.map((item) => (item.id === id ? actualizada : item)))
+      setResumen((prev) => ({
+        ...prev,
+        no_leidas: Math.max(0, prev.no_leidas - 1),
+      }))
+    } catch (err) {
+      setError(err.response?.data?.error || err.message || 'No se pudo marcar la notificación como leída.')
+    } finally {
+      setWorkingId(null)
+    }
+  }
+
+  const marcarTodas = async () => {
+    setWorkingId('ALL')
+    try {
+      await notificacionesService.marcarTodasLeidas(tenantSlug)
+      setItems((prev) => prev.map((item) => ({ ...item, leida: true, leida_at: item.leida_at || new Date().toISOString() })))
+      setResumen((prev) => ({ ...prev, no_leidas: 0 }))
+    } catch (err) {
+      setError(err.response?.data?.error || err.message || 'No se pudieron marcar todas como leídas.')
+    } finally {
+      setWorkingId(null)
+    }
+  }
+
   return (
     <div className="space-y-6">
-      {/* HEADER */}
-      <div>
-        <h1 className="text-3xl font-bold text-carbon-900"><Bell className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Gestionar Notificaciones</h1>
-        <p className="text-carbon-600 mt-1">
-          Configura y gestiona tus notificaciones
-        </p>
-      </div>
-
-      {/* COMING SOON */}
-      <Card className="border-yellow-200 bg-yellow-50 py-12">
-        <div className="flex flex-col items-center justify-center text-center space-y-4">
-          <div className="text-6xl"><Rocket className="inline-block mx-1 text-current" size={20} strokeWidth={2} /></div>
-          <h2 className="text-2xl font-bold text-carbon-900">¡Próximamente!</h2>
-          <p className="text-carbon-700 max-w-xl">
-            El sistema de notificaciones está siendo desarrollado. Pronto podrás gestionar
-            aquí tus preferencias de notificaciones y recibir alertas sobre eventos
-            importantes en tu empresa.
-          </p>
-          <div className="text-sm text-carbon-600 mt-4">
-            <p><Check className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Notificaciones por email</p>
-            <p><Check className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Alertas en tiempo real</p>
-            <p><Check className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Historial de notificaciones</p>
-            <p><Check className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Preferencias personalizadas</p>
-          </div>
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-carbon-900"><Bell className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Centro de Notificaciones</h1>
+          <p className="text-carbon-600 mt-1">Historial operativo y alertas de tu empresa.</p>
         </div>
-      </Card>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={cargar}
+            className="px-4 py-2 rounded-lg border border-carbon-200 bg-white hover:bg-carbon-50"
+          >
+            <RefreshCw className="inline-block mx-1 text-current" size={18} strokeWidth={2} /> Actualizar
+          </button>
+          <button
+            type="button"
+            onClick={marcarTodas}
+            disabled={workingId === 'ALL' || resumen.no_leidas === 0}
+            className="px-4 py-2 rounded-lg bg-blue-600 text-white disabled:opacity-50"
+          >
+            <CheckCheck className="inline-block mx-1 text-current" size={18} strokeWidth={2} /> Marcar todas leídas
+          </button>
+        </div>
+      </div>
 
-      {/* INFO CARDS */}
-      <div className="grid md:grid-cols-2 gap-4">
+      <div className="grid gap-4 md:grid-cols-2">
         <Card>
-          <h3 className="text-lg font-bold text-carbon-900 mb-2"><Mail className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Notificaciones por Email</h3>
-          <p className="text-carbon-700 text-sm mb-3">
-            Recibe notificaciones sobre eventos importantes en tu empresa directamente en
-            tu bandeja de entrada.
-          </p>
-          <div className="text-sm text-carbon-600">Estado: <span className="font-semibold text-carbon-900">En desarrollo</span></div>
+          <div className="text-sm text-carbon-600">Total</div>
+          <div className="text-3xl font-bold text-carbon-900">{resumen.total}</div>
         </Card>
-
         <Card>
-          <h3 className="text-lg font-bold text-carbon-900 mb-2"><Bell className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Alertas en Tiempo Real</h3>
-          <p className="text-carbon-700 text-sm mb-3">
-            Recibe alertas instantáneas sobre actividades críticas en tu empresa.
-          </p>
-          <div className="text-sm text-carbon-600">Estado: <span className="font-semibold text-carbon-900">Planeado</span></div>
-        </Card>
-
-        <Card>
-          <h3 className="text-lg font-bold text-carbon-900 mb-2"><Mailbox className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Historial de Notificaciones</h3>
-          <p className="text-carbon-700 text-sm mb-3">
-            Consulta el historial completo de todas las notificaciones que hemos enviado.
-          </p>
-          <div className="text-sm text-carbon-600">Estado: <span className="font-semibold text-carbon-900">Planeado</span></div>
-        </Card>
-
-        <Card>
-          <h3 className="text-lg font-bold text-carbon-900 mb-2"><Settings className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Preferencias Personalizadas</h3>
-          <p className="text-carbon-700 text-sm mb-3">
-            Configura qué tipos de notificaciones deseas recibir y con qué frecuencia.
-          </p>
-          <div className="text-sm text-carbon-600">Estado: <span className="font-semibold text-carbon-900">Planeado</span></div>
+          <div className="text-sm text-carbon-600">No leídas</div>
+          <div className="text-3xl font-bold text-carbon-900">{resumen.no_leidas}</div>
         </Card>
       </div>
 
-      {/* CONTACT SECTION */}
-      <Card className="bg-blue-50 border-blue-200">
-        <h3 className="text-lg font-bold text-carbon-900 mb-2"><MessageSquare className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> ¿Tienes Sugerencias</h3>
-        <p className="text-carbon-700 mb-4">
-          Tu retroalimentación es importante. Si tienes sugerencias sobre cómo debería
-          funcionar el sistema de notificaciones, nos gustaría escucharte.
-        </p>
-        <a
-          href="mailto:soporte@example.com"
-          className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <Mail className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Enviar Sugerencia
-        </a>
+      {error ? (
+        <Card className="border-red-200 bg-red-50 text-red-700">{error}</Card>
+      ) : null}
+
+      <Card className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-bold text-carbon-900"><Mailbox className="inline-block mx-1 text-current" size={20} strokeWidth={2} /> Historial</h2>
+          {loading ? <span className="text-sm text-carbon-500">Cargando...</span> : null}
+        </div>
+
+        {!loading && items.length === 0 ? (
+          <div className="text-carbon-600">No hay notificaciones registradas todavía.</div>
+        ) : null}
+
+        <div className="space-y-3">
+          {items.map((item) => (
+            <div
+              key={item.id}
+              className={`rounded-xl border p-4 ${item.leida ? 'border-carbon-200 bg-white' : 'border-blue-200 bg-blue-50'}`}
+            >
+              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold text-carbon-900">{item.titulo}</h3>
+                    {!item.leida ? <span className="rounded-full bg-blue-600 px-2 py-0.5 text-xs text-white">Nueva</span> : null}
+                  </div>
+                  <p className="text-carbon-700">{item.mensaje}</p>
+                  <div className="text-xs text-carbon-500">
+                    <span>{item.tipo}</span>
+                    <span className="mx-2">•</span>
+                    <span>{formatDate(item.created_at)}</span>
+                    {item.leida_at ? (
+                      <>
+                        <span className="mx-2">•</span>
+                        <span>Leída: {formatDate(item.leida_at)}</span>
+                      </>
+                    ) : null}
+                  </div>
+                </div>
+                {!item.leida ? (
+                  <button
+                    type="button"
+                    onClick={() => marcarLeida(item.id)}
+                    disabled={workingId === item.id}
+                    className="px-3 py-2 rounded-lg bg-carbon-900 text-white disabled:opacity-50"
+                  >
+                    Marcar leída
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          ))}
+        </div>
       </Card>
     </div>
   )

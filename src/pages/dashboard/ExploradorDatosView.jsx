@@ -1,500 +1,647 @@
-import React, { useState, useEffect } from 'react';
-import { Database, Download, CheckSquare, Square, Loader2, Plus, X, Filter, BarChart2, Table as TableIcon } from 'lucide-react';
-import apiClient from '../../services/apiClient';
-import * as XLSX from 'xlsx';
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  BarChart3,
+  CheckSquare,
+  Database,
+  Download,
+  Filter,
+  Loader2,
+  Plus,
+  Square,
+  Table as TableIcon,
+  X,
+} from 'lucide-react';
 import Plot from 'react-plotly.js';
+import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
+import { Card } from '../../components/ui';
+import apiClient from '../../services/apiClient';
+import {
+  EXPLORER_VIEWS,
+  REPORT_GROUPS,
+  REPORT_TEMPLATES_BY_GROUP,
+} from './reportCatalog';
 
-const VISTAS = {
-  vehiculos_citas: {
-    label: "🚗 Vehículos con sus Citas",
-    columns: ["vehiculo__placa", "vehiculo__marca", "vehiculo__modelo", "estado", "fecha_hora_inicio_programada", "motivo_visita"]
-  },
-  clientes_ventas: {
-    label: "🛒 Ventas Rápidas (Mostrador)",
-    columns: ["id", "vendedor__nombres", "estado", "total", "metodo_pago", "created_at"]
-  },
-  vehiculos: {
-    label: "🚗 Solo Vehículos",
-    columns: ["id", "placa", "marca", "modelo", "anio", "color", "kilometraje_actual"]
-  },
-  citas: {
-    label: "📅 Solo Citas",
-    columns: ["id", "estado", "fecha_hora_inicio_programada", "motivo_visita", "canal_origen"]
-  },
-  usuarios: {
-    label: "👥 Usuarios",
-    columns: ["id", "email", "nombres", "apellidos", "is_active", "rol__nombre"]
-  },
-  compras: {
-    label: "🏢 Compras",
-    columns: ["id", "estado", "total_compra", "fecha_esperada_recepcion", "created_at"]
+const FILTER_OPERATORS = [
+  { value: 'eq', label: 'Es igual a' },
+  { value: 'contains', label: 'Contiene' },
+  { value: 'gt', label: 'Mayor que' },
+  { value: 'gte', label: 'Mayor o igual' },
+  { value: 'lt', label: 'Menor que' },
+  { value: 'lte', label: 'Menor o igual' },
+  { value: 'in', label: 'Esta en lista' },
+  { value: 'isnull', label: 'Es nulo' },
+];
+
+const parseFilterValue = (value, operator) => {
+  if (operator === 'isnull') {
+    return String(value).toLowerCase() === 'true';
+  }
+
+  if (operator === 'in') {
+    return String(value)
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .map((item) => {
+        if (item.toLowerCase() === 'true') return true;
+        if (item.toLowerCase() === 'false') return false;
+        if (item.toLowerCase() === 'null') return null;
+        if (!Number.isNaN(Number(item)) && item !== '') return Number(item);
+        return item;
+      });
+  }
+
+  if (String(value).toLowerCase() === 'true') return true;
+  if (String(value).toLowerCase() === 'false') return false;
+  if (String(value).toLowerCase() === 'null') return null;
+  if (!Number.isNaN(Number(value)) && String(value).trim() !== '') return Number(value);
+  return String(value).trim();
+};
+
+const buildUserFilters = (filters) =>
+  filters.reduce((acc, filter) => {
+    if (!filter.field) return acc;
+    if (filter.operator !== 'isnull' && String(filter.value || '').trim() === '') return acc;
+
+    const suffixMap = {
+      eq: '',
+      contains: '__icontains',
+      gt: '__gt',
+      gte: '__gte',
+      lt: '__lt',
+      lte: '__lte',
+      in: '__in',
+      isnull: '__isnull',
+    };
+
+    const key = `${filter.field}${suffixMap[filter.operator] || ''}`;
+    acc[key] = parseFilterValue(filter.value, filter.operator);
+    return acc;
+  }, {});
+
+const isNumericValue = (value) => {
+  if (value === null || value === undefined || value === '') return false;
+  return !Number.isNaN(Number(value));
+};
+
+const buildChartConfig = (rows) => {
+  if (!rows?.length) return null;
+
+  const keys = Object.keys(rows[0] || {});
+  if (keys.length < 2) return null;
+
+  const labelKey = keys.find((key) => rows.some((row) => !isNumericValue(row[key])));
+  const valueKey = keys.find(
+    (key) => key !== labelKey && rows.some((row) => isNumericValue(row[key])),
+  );
+
+  if (!labelKey || !valueKey) return null;
+
+  const labels = rows.map((row) => String(row[labelKey] ?? '-'));
+  const values = rows.map((row) => Number(row[valueKey] ?? 0));
+
+  return {
+    bar: {
+      data: [
+        {
+          type: 'bar',
+          x: labels,
+          y: values,
+          marker: {
+            color: '#ef4444',
+            line: { color: '#7f1d1d', width: 1 },
+          },
+          hovertemplate: `%{x}<br>%{y}<extra></extra>`,
+        },
+      ],
+      layout: {
+        title: `${labelKey.replace(/_/g, ' ')} vs ${valueKey.replace(/_/g, ' ')}`,
+        paper_bgcolor: 'transparent',
+        plot_bgcolor: 'transparent',
+        margin: { t: 48, r: 20, l: 48, b: 80 },
+      },
+    },
+    pie: {
+      data: [
+        {
+          type: 'pie',
+          labels,
+          values,
+          hole: 0.45,
+          marker: {
+            colors: ['#ef4444', '#f97316', '#eab308', '#10b981', '#3b82f6', '#8b5cf6'],
+          },
+        },
+      ],
+      layout: {
+        title: `Distribucion por ${labelKey.replace(/_/g, ' ')}`,
+        paper_bgcolor: 'transparent',
+        plot_bgcolor: 'transparent',
+        margin: { t: 48, r: 20, l: 20, b: 20 },
+      },
+    },
+  };
+};
+
+const downloadBlob = (blob, filename) => {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
+};
+
+const buildTableHtml = (rows) => {
+  if (!rows?.length) return '<table><tr><td>Sin datos</td></tr></table>';
+  const headers = Object.keys(rows[0]);
+  let html = '<table border="1" cellspacing="0" cellpadding="6"><thead><tr>';
+  headers.forEach((header) => {
+    html += `<th>${header.replace(/_/g, ' ')}</th>`;
+  });
+  html += '</tr></thead><tbody>';
+  rows.forEach((row) => {
+    html += '<tr>';
+    headers.forEach((header) => {
+      html += `<td>${row[header] ?? '-'}</td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  return html;
+};
+
+const createEmptyFilter = (defaultField = '') => ({
+  field: defaultField,
+  operator: 'eq',
+  value: '',
+});
+
+const exportRows = (rows, format, title) => {
+  if (!rows?.length) return;
+
+  const baseName = `${title.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}`;
+
+  if (format === 'excel') {
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Reporte');
+    XLSX.writeFile(wb, `${baseName}.xlsx`);
+    return;
+  }
+
+  if (format === 'csv') {
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const csv = XLSX.utils.sheet_to_csv(ws);
+    downloadBlob(new Blob([csv], { type: 'text/csv;charset=utf-8;' }), `${baseName}.csv`);
+    return;
+  }
+
+  const tableHtml = buildTableHtml(rows);
+
+  if (format === 'html') {
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>${baseName}</title></head><body>${tableHtml}</body></html>`;
+    downloadBlob(new Blob([html], { type: 'text/html;charset=utf-8;' }), `${baseName}.html`);
+    return;
+  }
+
+  if (format === 'word') {
+    const doc = `<!doctype html><html><head><meta charset="utf-8"></head><body>${tableHtml}</body></html>`;
+    downloadBlob(new Blob([doc], { type: 'application/msword' }), `${baseName}.doc`);
+    return;
+  }
+
+  if (format === 'pdf') {
+    const pdf = new jsPDF({ orientation: 'landscape' });
+    const headers = Object.keys(rows[0] || {});
+    let y = 12;
+    pdf.setFontSize(12);
+    pdf.text(baseName, 14, y);
+    y += 8;
+    pdf.setFontSize(8);
+    pdf.text(headers.join(' | '), 14, y);
+    y += 6;
+    rows.forEach((row) => {
+      const line = headers.map((key) => String(row[key] ?? '-')).join(' | ');
+      const wrapped = pdf.splitTextToSize(line, 270);
+      pdf.text(wrapped, 14, y);
+      y += wrapped.length * 4 + 1;
+      if (y > 190) {
+        pdf.addPage();
+        y = 12;
+      }
+    });
+    pdf.save(`${baseName}.pdf`);
   }
 };
 
 const ExploradorDatosView = ({ tenantSlug }) => {
-  const [vista, setVista] = useState('vehiculos_citas');
-  const [columnasSeleccionadas, setColumnasSeleccionadas] = useState(VISTAS['vehiculos_citas'].columns);
-  
-  // Array de filtros: { columna: string, valor: string }
-  const [filtros, setFiltros] = useState([]);
-  
+  const [selectedGroup, setSelectedGroup] = useState(REPORT_GROUPS[0]?.id || 'global');
+  const [selectedTemplateId, setSelectedTemplateId] = useState(
+    REPORT_TEMPLATES_BY_GROUP[REPORT_GROUPS[0]?.id || 'global']?.[0]?.id || '',
+  );
+  const [selectedColumns, setSelectedColumns] = useState([]);
+  const [filters, setFilters] = useState([]);
+  const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState(null);
+  const [error, setError] = useState('');
+  const [resultMeta, setResultMeta] = useState(null);
+  const [viewMode, setViewMode] = useState('table');
 
-  // States for chart/table options
-  const [viewMode, setViewMode] = useState('tabla'); // 'tabla' or 'grafico'
-  const [tipoGrafico, setTipoGrafico] = useState('bar'); // 'bar', 'line', 'pie'
-  const [ejeX, setEjeX] = useState('');
-  const [ejeY, setEjeY] = useState('');
+  const templates = useMemo(
+    () => REPORT_TEMPLATES_BY_GROUP[selectedGroup] || [],
+    [selectedGroup],
+  );
 
-  // Keep X and Y axis in sync with selected columns
+  const currentTemplate = useMemo(
+    () => templates.find((template) => template.id === selectedTemplateId) || templates[0] || null,
+    [selectedTemplateId, templates],
+  );
+
+  const currentView = currentTemplate ? EXPLORER_VIEWS[currentTemplate.view] : null;
+  const availableColumns = currentView?.columns || [];
+  const chartConfig = useMemo(() => buildChartConfig(rows), [rows]);
+
   useEffect(() => {
-    if (columnasSeleccionadas.length > 0) {
-      if (!columnasSeleccionadas.includes(ejeX)) {
-        setEjeX(columnasSeleccionadas[0]);
+    const groupTemplates = REPORT_TEMPLATES_BY_GROUP[selectedGroup] || [];
+    if (!groupTemplates.length) return;
+    setSelectedTemplateId(groupTemplates[0].id);
+  }, [selectedGroup]);
+
+  useEffect(() => {
+    if (!currentTemplate) return;
+    setSelectedColumns(currentTemplate.selectedColumns);
+    setFilters([createEmptyFilter(currentTemplate.selectedColumns[0] || availableColumns[0] || '')]);
+    setRows([]);
+    setResultMeta(null);
+    setError('');
+    setViewMode('table');
+  }, [currentTemplate, availableColumns]);
+
+  const handleToggleColumn = (column) => {
+    setSelectedColumns((prev) => {
+      if (prev.includes(column)) {
+        return prev.filter((item) => item !== column);
       }
-      if (!columnasSeleccionadas.includes(ejeY)) {
-        setEjeY(columnasSeleccionadas[1] || columnasSeleccionadas[0]);
-      }
-    }
-  }, [columnasSeleccionadas, ejeX, ejeY]);
-
-  const handleVistaChange = (e) => {
-    const nuevaVista = e.target.value;
-    setVista(nuevaVista);
-    setColumnasSeleccionadas(VISTAS[nuevaVista].columns);
-    setFiltros([]); // Reset filters on view change
-    setData(null);
+      return [...prev, column];
+    });
   };
 
-  const toggleColumna = (col) => {
-    if (columnasSeleccionadas.includes(col)) {
-      setColumnasSeleccionadas(columnasSeleccionadas.filter(c => c !== col));
-    } else {
-      setColumnasSeleccionadas([...columnasSeleccionadas, col]);
-    }
+  const handleFilterChange = (index, patch) => {
+    setFilters((prev) =>
+      prev.map((filter, currentIndex) =>
+        currentIndex === index ? { ...filter, ...patch } : filter,
+      ),
+    );
   };
 
-  const addFiltro = () => {
-    setFiltros([...filtros, { columna: VISTAS[vista].columns[0], valor: "" }]);
+  const handleAddFilter = () => {
+    setFilters((prev) => [...prev, createEmptyFilter(availableColumns[0] || '')]);
   };
 
-  const updateFiltro = (index, field, value) => {
-    const nuevosFiltros = [...filtros];
-    nuevosFiltros[index][field] = value;
-    setFiltros(nuevosFiltros);
+  const handleRemoveFilter = (index) => {
+    setFilters((prev) => prev.filter((_, currentIndex) => currentIndex !== index));
   };
 
-  const removeFiltro = (index) => {
-    setFiltros(filtros.filter((_, i) => i !== index));
-  };
-
-  const generarReporte = async () => {
-    if (columnasSeleccionadas.length === 0) {
-      alert("Selecciona al menos una columna");
+  const handleGenerate = async () => {
+    if (!currentTemplate || !selectedColumns.length) {
+      setError('Selecciona al menos una columna para generar el reporte.');
       return;
     }
+
     setLoading(true);
-    
-    // Procesar filtros para el backend
-    const filtroParams = {};
-    filtros.forEach(f => {
-      if (f.valor.trim() !== '') {
-        // Si hay comas, lo convertimos en array para que el backend use __in
-        if (f.valor.includes(',')) {
-          filtroParams[f.columna] = f.valor.split(',').map(v => v.trim()).filter(v => v);
-        } else {
-          filtroParams[f.columna] = f.valor.trim();
-        }
-      }
-    });
+    setError('');
 
     try {
-      const colString = columnasSeleccionadas.join(',');
-      const res = await apiClient.get(`/api/${tenantSlug}/comunicacion-control/reportes/explorador_datos/`, {
-        params: {
-          vista: vista,
-          columnas: colString,
-          filtros: JSON.stringify(filtroParams)
-        }
+      const mergedFilters = {
+        ...(currentTemplate.defaultFilters || {}),
+        ...buildUserFilters(filters),
+      };
+
+      const params = new URLSearchParams({
+        vista: currentTemplate.view,
+        columnas: selectedColumns.join(','),
+        filtros: JSON.stringify(mergedFilters),
       });
-      setData(res.data.resultados);
-    } catch (err) {
-      console.error(err);
-      alert("Error al obtener los datos");
+
+      const response = await apiClient.get(
+        `/api/${tenantSlug}/comunicacion-control/reportes/explorador_datos/?${params.toString()}`,
+      );
+
+      const resultados = response.data?.resultados || [];
+      setRows(resultados);
+      setResultMeta({
+        title: currentTemplate.title,
+        description: currentTemplate.description,
+        total: resultados.length,
+      });
+
+      if (buildChartConfig(resultados)) {
+        setViewMode('chart');
+      } else {
+        setViewMode('table');
+      }
+    } catch (requestError) {
+      setRows([]);
+      setResultMeta(null);
+      setError(requestError.response?.data?.error || 'No se pudo generar el reporte.');
     } finally {
       setLoading(false);
     }
   };
 
-  const downloadBlob = (blob, filename) => {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const buildTableHtml = (rows) => {
-    if (!rows?.length) return '<table><tr><td>Sin datos</td></tr></table>';
-    const keys = Object.keys(rows[0]);
-    let html = '<table border="1" cellspacing="0" cellpadding="6"><thead><tr>';
-    keys.forEach((k) => { html += `<th>${String(k)}</th>`; });
-    html += '</tr></thead><tbody>';
-    rows.forEach((r) => {
-      html += '<tr>';
-      keys.forEach((k) => { html += `<td>${r[k] ?? '-'}</td>`; });
-      html += '</tr>';
-    });
-    html += '</tbody></table>';
-    return html;
-  };
-
-  const handleExport = (format) => {
-    const rows = data || [];
-    if (!rows.length) return;
-    const baseName = `Reporte_${vista}_${new Date().toISOString().split('T')[0]}`;
-    if (format === 'excel') {
-      const ws = XLSX.utils.json_to_sheet(rows);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Datos');
-      XLSX.writeFile(wb, `${baseName}.xlsx`);
-      return;
-    }
-    if (format === 'csv') {
-      const ws = XLSX.utils.json_to_sheet(rows);
-      const csv = XLSX.utils.sheet_to_csv(ws);
-      downloadBlob(new Blob([csv], { type: 'text/csv;charset=utf-8;' }), `${baseName}.csv`);
-      return;
-    }
-    const tableHtml = buildTableHtml(rows);
-    if (format === 'html') {
-      const doc = `<!doctype html><html><head><meta charset="utf-8"><title>${baseName}</title></head><body>${tableHtml}</body></html>`;
-      downloadBlob(new Blob([doc], { type: 'text/html;charset=utf-8;' }), `${baseName}.html`);
-      return;
-    }
-    if (format === 'word') {
-      const doc = `<!doctype html><html><head><meta charset="utf-8"></head><body>${tableHtml}</body></html>`;
-      downloadBlob(new Blob([doc], { type: 'application/msword' }), `${baseName}.doc`);
-      return;
-    }
-    if (format === 'pdf') {
-      const doc = new jsPDF({ orientation: 'landscape' });
-      const keys = Object.keys(rows[0] || {});
-      let y = 12;
-      doc.setFontSize(12);
-      doc.text(baseName, 14, y);
-      y += 8;
-      doc.setFontSize(8);
-      doc.text(keys.join(' | '), 14, y);
-      y += 6;
-      rows.forEach((row) => {
-        const line = keys.map((k) => String(row[k] ?? '-')).join(' | ');
-        const wrapped = doc.splitTextToSize(line, 270);
-        doc.text(wrapped, 14, y);
-        y += wrapped.length * 4 + 1;
-        if (y > 190) {
-          doc.addPage();
-          y = 12;
-        }
-      });
-      doc.save(`${baseName}.pdf`);
-    }
-  };
-
-  const exportOptions = ['pdf', 'word', 'html', 'csv', 'excel'];
-
   return (
     <div className="space-y-6">
-      <div className="bg-white dark:bg-carbon-900 rounded-3xl p-6 shadow-xl border border-neutral-100 dark:border-white/[0.05]">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="bg-primary-500/10 p-2 rounded-xl">
-            <Database className="text-primary-500" size={24} />
+      <Card className="p-6 sm:p-8 rounded-[2rem] border-neutral-200 dark:border-white/[0.06] shadow-xl bg-white dark:bg-carbon-900">
+        <div className="flex items-start gap-4 mb-6">
+          <div className="w-12 h-12 rounded-2xl bg-red-50 dark:bg-red-500/10 flex items-center justify-center">
+            <Database className="text-red-500" size={24} />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-carbon-900 dark:text-white">Reportes Personalizados</h2>
-            <p className="text-sm text-carbon-500 dark:text-neutral-400">Diseña tus propios reportes combinando tablas, columnas y filtros a tu medida (SQL Guiado).</p>
+            <h2 className="text-2xl font-bold text-carbon-900 dark:text-white">
+              Reportes Personalizados
+            </h2>
+            <p className="text-carbon-500 dark:text-neutral-400">
+              Disena reportes dinamicos usando vistas predefinidas, columnas y filtros combinables.
+            </p>
           </div>
         </div>
 
-        <div className="space-y-8">
-          {/* PASO 1 */}
-          <div>
-            <label className="block text-sm font-semibold text-carbon-600 dark:text-neutral-300 mb-2">1. Selecciona la Vista (Tablas Relacionadas)</label>
-            <select 
-              value={vista} 
-              onChange={handleVistaChange}
-              className="w-full max-w-sm bg-neutral-50 dark:bg-carbon-800 border border-neutral-200 dark:border-carbon-700 rounded-xl px-4 py-3 text-carbon-900 dark:text-white outline-none cursor-pointer"
-            >
-              {Object.keys(VISTAS).map(k => (
-                <option key={k} value={k}>{VISTAS[k].label}</option>
-              ))}
-            </select>
-          </div>
+        <div className="grid gap-3 md:grid-cols-4 mb-6">
+          {REPORT_GROUPS.map((group) => {
+            const isActive = selectedGroup === group.id;
+            return (
+              <button
+                key={group.id}
+                type="button"
+                onClick={() => setSelectedGroup(group.id)}
+                className={`text-left rounded-2xl border px-4 py-4 transition-all ${
+                  isActive
+                    ? 'border-red-300 bg-red-50 dark:bg-red-500/10 dark:border-red-500/30 shadow-sm'
+                    : 'border-neutral-200 bg-white hover:border-red-200 dark:bg-carbon-950/40 dark:border-white/[0.06]'
+                }`}
+              >
+                <div className="text-sm font-bold text-carbon-900 dark:text-white">
+                  {group.shortLabel}
+                </div>
+                <div className="text-xs text-carbon-500 dark:text-neutral-400 mt-1">
+                  {group.description}
+                </div>
+              </button>
+            );
+          })}
+        </div>
 
-          {/* PASO 2 */}
-          <div>
-            <label className="block text-sm font-semibold text-carbon-600 dark:text-neutral-300 mb-2">2. Selecciona las Columnas a Mostrar</label>
-            <div className="flex flex-wrap gap-3">
-              {VISTAS[vista].columns.map(col => {
-                const isSelected = columnasSeleccionadas.includes(col);
-                return (
-                  <button
-                    key={col}
-                    onClick={() => toggleColumna(col)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl border transition-all ${isSelected ? 'border-primary-500 bg-primary-50 text-primary-700 dark:bg-primary-500/20 dark:text-primary-300' : 'border-neutral-200 dark:border-carbon-700 text-carbon-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-carbon-800'}`}
-                  >
-                    {isSelected ? <CheckSquare size={16} /> : <Square size={16} />}
-                    <span className="truncate max-w-[150px]" title={col}>{col}</span>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* PASO 3 */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="block text-sm font-semibold text-carbon-600 dark:text-neutral-300">
-                3. Filtros (WHERE)
+        <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
+          <div className="space-y-5">
+            <div>
+              <label className="block text-sm font-semibold text-carbon-700 dark:text-neutral-200 mb-2">
+                Tipo de reporte
               </label>
-              <button 
-                onClick={addFiltro}
-                className="text-primary-500 hover:text-primary-600 flex items-center gap-1 text-sm font-semibold bg-primary-50 dark:bg-primary-500/10 px-3 py-1.5 rounded-lg"
+              <select
+                value={currentTemplate?.id || ''}
+                onChange={(event) => setSelectedTemplateId(event.target.value)}
+                className="w-full rounded-2xl border border-neutral-200 dark:border-white/[0.08] bg-white dark:bg-carbon-950 px-4 py-3 text-sm text-carbon-900 dark:text-white outline-none focus:border-red-400"
               >
-                <Plus size={16} /> Añadir Filtro
-              </button>
-            </div>
-            
-            {filtros.length === 0 ? (
-              <div className="text-sm text-carbon-400 dark:text-neutral-500 italic p-4 bg-neutral-50 dark:bg-carbon-800 rounded-xl border border-dashed border-neutral-200 dark:border-carbon-700">
-                No hay filtros aplicados. Se mostrarán todos los registros.
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {filtros.map((filtro, idx) => (
-                  <div key={idx} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-neutral-50 dark:bg-carbon-800 p-3 rounded-xl border border-neutral-100 dark:border-carbon-700">
-                    <div className="flex items-center gap-2 shrink-0">
-                      <Filter size={18} className="text-carbon-400 hidden sm:block" />
-                      <select 
-                        value={filtro.columna} 
-                        onChange={(e) => updateFiltro(idx, 'columna', e.target.value)}
-                        className="w-full bg-white dark:bg-carbon-900 border border-neutral-200 dark:border-carbon-600 rounded-lg px-3 py-2 text-sm text-carbon-900 dark:text-white outline-none"
-                        style={{ width: '240px' }}
-                      >
-                        {VISTAS[vista].columns.map(col => (
-                          <option key={col} value={col}>{col}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <input 
-                        type="text" 
-                        value={filtro.valor}
-                        onChange={(e) => updateFiltro(idx, 'valor', e.target.value)}
-                        placeholder="Valor (Usa comas para múltiples: val1, val2)"
-                        className="w-full bg-white dark:bg-carbon-900 border border-neutral-200 dark:border-carbon-600 rounded-lg px-3 py-2 text-sm text-carbon-900 dark:text-white placeholder:text-carbon-400 dark:placeholder:text-carbon-500 outline-none"
-                      />
-                    </div>
-
-                    <button 
-                      onClick={() => removeFiltro(idx)}
-                      className="text-red-500 hover:bg-red-50 dark:hover:bg-red-500/20 p-2 rounded-lg transition-colors shrink-0 self-end sm:self-auto"
-                    >
-                      <X size={18} />
-                    </button>
-                  </div>
+                {templates.map((template) => (
+                  <option key={template.id} value={template.id}>
+                    {template.title}
+                  </option>
                 ))}
+              </select>
+              {currentTemplate?.description && (
+                <p className="text-xs text-carbon-500 dark:text-neutral-400 mt-2">
+                  {currentTemplate.description}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-semibold text-carbon-700 dark:text-neutral-200">
+                  Columnas visibles
+                </label>
+                <span className="text-xs text-carbon-500 dark:text-neutral-400">
+                  {selectedColumns.length} seleccionadas
+                </span>
               </div>
-            )}
+              <div className="flex flex-wrap gap-2">
+                {availableColumns.map((column) => {
+                  const active = selectedColumns.includes(column);
+                  return (
+                    <button
+                      key={column}
+                      type="button"
+                      onClick={() => handleToggleColumn(column)}
+                      className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-sm transition-all ${
+                        active
+                          ? 'border-red-300 bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-300'
+                          : 'border-neutral-200 text-carbon-600 hover:border-red-200 dark:border-white/[0.08] dark:text-neutral-300'
+                      }`}
+                    >
+                      {active ? <CheckSquare size={16} /> : <Square size={16} />}
+                      {column}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
 
-          <div className="pt-4 flex justify-end border-t border-neutral-100 dark:border-white/[0.05]">
-            <button 
-              onClick={generarReporte}
-              disabled={loading || columnasSeleccionadas.length === 0}
-              className="px-6 py-2.5 bg-primary-500 hover:bg-primary-600 disabled:opacity-50 text-white rounded-xl font-semibold flex items-center gap-2 transition-all shadow-md"
-            >
-              {loading ? <Loader2 size={18} className="animate-spin" /> : <Database size={18} />}
-              Generar Consulta
-            </button>
+          <div className="space-y-4 rounded-3xl border border-neutral-200 dark:border-white/[0.06] bg-neutral-50/70 dark:bg-carbon-950/40 p-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Filter size={18} className="text-red-500" />
+                <h3 className="font-semibold text-carbon-900 dark:text-white">Filtros</h3>
+              </div>
+              <button
+                type="button"
+                onClick={handleAddFilter}
+                className="inline-flex items-center gap-2 rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20"
+              >
+                <Plus size={16} />
+                Anadir filtro
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {filters.map((filter, index) => (
+                <div key={`${filter.field}-${index}`} className="grid gap-3 md:grid-cols-[1.3fr_1fr_1.2fr_auto]">
+                  <select
+                    value={filter.field}
+                    onChange={(event) => handleFilterChange(index, { field: event.target.value })}
+                    className="rounded-2xl border border-neutral-200 dark:border-white/[0.08] bg-white dark:bg-carbon-900 px-3 py-3 text-sm"
+                  >
+                    {availableColumns.map((column) => (
+                      <option key={column} value={column}>
+                        {column}
+                      </option>
+                    ))}
+                  </select>
+
+                  <select
+                    value={filter.operator}
+                    onChange={(event) => handleFilterChange(index, { operator: event.target.value })}
+                    className="rounded-2xl border border-neutral-200 dark:border-white/[0.08] bg-white dark:bg-carbon-900 px-3 py-3 text-sm"
+                  >
+                    {FILTER_OPERATORS.map((operator) => (
+                      <option key={operator.value} value={operator.value}>
+                        {operator.label}
+                      </option>
+                    ))}
+                  </select>
+
+                  <input
+                    value={filter.value}
+                    onChange={(event) => handleFilterChange(index, { value: event.target.value })}
+                    placeholder={filter.operator === 'in' ? 'valor1, valor2, valor3' : 'Valor'}
+                    className="rounded-2xl border border-neutral-200 dark:border-white/[0.08] bg-white dark:bg-carbon-900 px-3 py-3 text-sm"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveFilter(index)}
+                    disabled={filters.length === 1}
+                    className="rounded-2xl border border-neutral-200 dark:border-white/[0.08] px-3 py-3 text-carbon-500 hover:text-red-500 disabled:opacity-40"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
 
-      {data && (
-        <div className="bg-white dark:bg-carbon-900 rounded-3xl p-6 shadow-xl border border-neutral-100 dark:border-white/[0.05] overflow-hidden">
-          <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-            <div className="flex bg-neutral-100 dark:bg-carbon-800 p-1 rounded-2xl border border-neutral-200 dark:border-white/[0.06] shadow-inner">
-              <button
-                onClick={() => setViewMode('tabla')}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-all ${
-                  viewMode === 'tabla'
-                    ? 'bg-white dark:bg-carbon-900 text-primary-500 shadow-sm'
-                    : 'text-carbon-500 dark:text-neutral-400 hover:text-carbon-700 dark:hover:text-neutral-200'
-                }`}
-              >
-                <TableIcon size={18} /> Tabla
-              </button>
-              <button
-                onClick={() => setViewMode('grafico')}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-all ${
-                  viewMode === 'grafico'
-                    ? 'bg-white dark:bg-carbon-900 text-primary-500 shadow-sm'
-                    : 'text-carbon-500 dark:text-neutral-400 hover:text-carbon-700 dark:hover:text-neutral-200'
-                }`}
-              >
-                <BarChart2 size={18} /> Gráfico
-              </button>
+        <div className="flex justify-end mt-6">
+          <button
+            type="button"
+            onClick={handleGenerate}
+            disabled={loading || !selectedColumns.length}
+            className="inline-flex items-center gap-3 rounded-2xl bg-gradient-to-r from-red-600 to-red-500 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-red-500/20 transition-all hover:scale-[1.02] disabled:opacity-50"
+          >
+            {loading ? <Loader2 size={18} className="animate-spin" /> : <Database size={18} />}
+            Generar consulta
+          </button>
+        </div>
+      </Card>
+
+      {error && (
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-medium text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300">
+          {error}
+        </div>
+      )}
+
+      {resultMeta && (
+        <Card className="p-6 rounded-[2rem] border-neutral-200 dark:border-white/[0.06] shadow-xl bg-white dark:bg-carbon-900">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-5">
+            <div>
+              <h3 className="text-xl font-bold text-carbon-900 dark:text-white">
+                {resultMeta.title}
+              </h3>
+              <p className="text-sm text-carbon-500 dark:text-neutral-400">
+                {resultMeta.total} registros encontrados
+              </p>
             </div>
 
-            <div className="flex items-center gap-3">
-              <span className="text-sm font-semibold text-carbon-500 dark:text-neutral-400">{data.length} registros</span>
-              <div className="flex flex-wrap items-center gap-2">
-                {exportOptions.map((opt) => (
-                  <button
-                    key={opt}
-                    onClick={() => handleExport(opt)}
-                    className="px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded-xl text-sm font-semibold flex items-center gap-2 transition-all shadow-sm"
-                  >
-                    <Download size={16} /> {opt.toUpperCase()}
-                  </button>
-                ))}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex rounded-2xl border border-neutral-200 dark:border-white/[0.08] bg-neutral-50 dark:bg-carbon-950/40 p-1">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('table')}
+                  className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold ${
+                    viewMode === 'table'
+                      ? 'bg-white text-red-600 shadow-sm dark:bg-carbon-900'
+                      : 'text-carbon-500 dark:text-neutral-400'
+                  }`}
+                >
+                  <TableIcon size={16} />
+                  Tabla
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('chart')}
+                  disabled={!chartConfig}
+                  className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold ${
+                    viewMode === 'chart'
+                      ? 'bg-white text-red-600 shadow-sm dark:bg-carbon-900'
+                      : 'text-carbon-500 dark:text-neutral-400'
+                  } ${!chartConfig ? 'opacity-40' : ''}`}
+                >
+                  <BarChart3 size={16} />
+                  Grafico
+                </button>
               </div>
+
+              {['pdf', 'word', 'html', 'csv', 'excel'].map((format) => (
+                <button
+                  key={format}
+                  type="button"
+                  onClick={() => exportRows(rows, format, resultMeta.title)}
+                  className="inline-flex items-center gap-2 rounded-xl bg-carbon-900 px-4 py-2 text-sm font-semibold text-white hover:bg-carbon-800 dark:bg-white dark:text-carbon-900"
+                >
+                  <Download size={15} />
+                  {format.toUpperCase()}
+                </button>
+              ))}
             </div>
           </div>
 
-          {viewMode === 'grafico' ? (
-            <div className="space-y-6">
-              {/* Controles del Gráfico en la parte superior izquierda / superior general */}
-              <div className="flex flex-wrap items-center gap-4 bg-neutral-50 dark:bg-carbon-800/50 p-4 rounded-2xl border border-neutral-100 dark:border-carbon-700">
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs font-bold text-carbon-500 dark:text-neutral-400">Tipo de Gráfico</label>
-                  <select 
-                    value={tipoGrafico} 
-                    onChange={(e) => setTipoGrafico(e.target.value)}
-                    className="bg-white dark:bg-carbon-900 border border-neutral-200 dark:border-carbon-700 rounded-xl px-3 py-1.5 text-sm text-carbon-900 dark:text-white outline-none cursor-pointer"
-                  >
-                    <option value="bar">📊 Gráfico de Barras</option>
-                    <option value="line">📈 Gráfico de Líneas</option>
-                    <option value="pie">🍕 Gráfico Circular</option>
-                  </select>
-                </div>
-
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs font-bold text-carbon-500 dark:text-neutral-400">Eje X (Categoría)</label>
-                  <select 
-                    value={ejeX} 
-                    onChange={(e) => setEjeX(e.target.value)}
-                    className="bg-white dark:bg-carbon-900 border border-neutral-200 dark:border-carbon-700 rounded-xl px-3 py-1.5 text-sm text-carbon-900 dark:text-white outline-none cursor-pointer"
-                  >
-                    {columnasSeleccionadas.map(col => (
-                      <option key={col} value={col}>{col}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs font-bold text-carbon-500 dark:text-neutral-400">Eje Y (Valores/Métrica)</label>
-                  <select 
-                    value={ejeY} 
-                    onChange={(e) => setEjeY(e.target.value)}
-                    className="bg-white dark:bg-carbon-900 border border-neutral-200 dark:border-carbon-700 rounded-xl px-3 py-1.5 text-sm text-carbon-900 dark:text-white outline-none cursor-pointer"
-                  >
-                    {columnasSeleccionadas.map(col => (
-                      <option key={col} value={col}>{col}</option>
-                    ))}
-                  </select>
-                </div>
+          {viewMode === 'chart' && chartConfig ? (
+            <div className="grid gap-6 xl:grid-cols-2">
+              <div className="rounded-3xl border border-neutral-200 dark:border-white/[0.06] p-4">
+                <Plot
+                  data={chartConfig.bar.data}
+                  layout={chartConfig.bar.layout}
+                  config={{ responsive: true, displayModeBar: false }}
+                  className="w-full h-[420px]"
+                />
               </div>
-
-              {/* Render del Gráfico */}
-              <div className="w-full overflow-x-auto flex justify-center py-4 bg-white dark:bg-carbon-900 rounded-2xl border border-neutral-100 dark:border-carbon-800">
-                {data.length > 0 ? (
-                  <Plot
-                    data={(() => {
-                      const yValues = data.map(row => {
-                        const val = row[ejeY];
-                        const parsed = parseFloat(val);
-                        return isNaN(parsed) ? (val !== null && val !== undefined ? 1 : 0) : parsed;
-                      });
-                      const xValues = data.map(row => String(row[ejeX] ?? '-'));
-
-                      if (tipoGrafico === 'pie') {
-                        return [{
-                          labels: xValues,
-                          values: yValues,
-                          type: 'pie',
-                          hole: 0.4,
-                          marker: {
-                            colors: ['#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#ef4444', '#ec4899']
-                          }
-                        }];
-                      }
-                      if (tipoGrafico === 'line') {
-                        return [{
-                          x: xValues,
-                          y: yValues,
-                          type: 'scatter',
-                          mode: 'lines+markers',
-                          line: { color: '#3b82f6', width: 3 },
-                          marker: { size: 8, color: '#2563eb' }
-                        }];
-                      }
-                      // Default Bar
-                      return [{
-                        x: xValues,
-                        y: yValues,
-                        type: 'bar',
-                        marker: { color: '#3b82f6' }
-                      }];
-                    })()}
-                    layout={{
-                      autosize: true,
-                      margin: { t: 40, r: 20, l: 50, b: 50 },
-                      paper_bgcolor: 'transparent',
-                      plot_bgcolor: 'transparent',
-                      font: { family: 'Inter, sans-serif', color: '#888' },
-                      xaxis: { gridcolor: 'rgba(128,128,128,0.1)' },
-                      yaxis: { gridcolor: 'rgba(128,128,128,0.1)' }
-                    }}
-                    config={{ responsive: true, displayModeBar: false }}
-                    className="w-full h-[450px]"
-                  />
-                ) : (
-                  <div className="text-center py-12 text-carbon-400">No hay datos para graficar.</div>
-                )}
+              <div className="rounded-3xl border border-neutral-200 dark:border-white/[0.06] p-4">
+                <Plot
+                  data={chartConfig.pie.data}
+                  layout={chartConfig.pie.layout}
+                  config={{ responsive: true, displayModeBar: false }}
+                  className="w-full h-[420px]"
+                />
               </div>
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-xl border border-neutral-200 dark:border-carbon-800">
+            <div className="overflow-x-auto rounded-3xl border border-neutral-200 dark:border-white/[0.06]">
               <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-neutral-50 dark:bg-carbon-950 border-b border-neutral-200 dark:border-carbon-800">
-                    {columnasSeleccionadas.map(col => (
-                      <th key={col} className="p-3 text-xs font-semibold text-carbon-500 dark:text-neutral-400 uppercase tracking-wider whitespace-nowrap">
-                        {col}
+                <thead className="bg-neutral-50 dark:bg-carbon-950/50">
+                  <tr>
+                    {selectedColumns.map((column) => (
+                      <th
+                        key={column}
+                        className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-carbon-500 dark:text-neutral-400 border-b border-neutral-200 dark:border-white/[0.06]"
+                      >
+                        {column.replace(/_/g, ' ')}
                       </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {data.map((row, idx) => (
-                    <tr key={idx} className="border-b border-neutral-100 dark:border-carbon-800/50 hover:bg-neutral-50/50 dark:hover:bg-carbon-800/50">
-                      {columnasSeleccionadas.map(col => (
-                        <td key={col} className="p-3 text-sm text-carbon-700 dark:text-neutral-300 whitespace-nowrap">
-                          {row[col] !== null ? String(row[col]) : '-'}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                  {data.length === 0 && (
+                  {rows.length ? (
+                    rows.map((row, index) => (
+                      <tr
+                        key={`${index}-${Object.values(row).join('-')}`}
+                        className="border-b border-neutral-100 dark:border-white/[0.03] hover:bg-neutral-50/70 dark:hover:bg-white/[0.02]"
+                      >
+                        {selectedColumns.map((column) => (
+                          <td key={`${index}-${column}`} className="px-4 py-3 text-sm text-carbon-700 dark:text-neutral-300">
+                            {row[column] !== null && row[column] !== undefined ? String(row[column]) : '-'}
+                          </td>
+                        ))}
+                      </tr>
+                    ))
+                  ) : (
                     <tr>
-                      <td colSpan={columnasSeleccionadas.length} className="p-8 text-center text-carbon-500 dark:text-neutral-400">
-                        No se encontraron resultados para esta consulta.
+                      <td
+                        colSpan={selectedColumns.length || 1}
+                        className="px-4 py-10 text-center text-carbon-500 dark:text-neutral-400"
+                      >
+                        Sin datos para mostrar con la configuracion actual.
                       </td>
                     </tr>
                   )}
@@ -502,7 +649,7 @@ const ExploradorDatosView = ({ tenantSlug }) => {
               </table>
             </div>
           )}
-        </div>
+        </Card>
       )}
     </div>
   );

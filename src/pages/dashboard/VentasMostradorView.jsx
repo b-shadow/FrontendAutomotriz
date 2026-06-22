@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { CreditCard, Plus, Trash2, X } from 'lucide-react'
 import { useTenant } from '../../hooks/useTenant'
+import { useGhostAutomation } from '../../hooks/useGhostAutomation'
 import inventarioService from '../../services/inventarioService'
 
 const METODOS_PAGO = ['Efectivo', 'Tarjeta (Stripe)', 'QR']
 
-const VentasMostradorView = () => {
+const VentasMostradorView = ({ user, aiPrefill }) => {
   const { tenantSlug } = useTenant()
   const [items, setItems] = useState([])
   const [lineas, setLineas] = useState([])
@@ -16,6 +17,20 @@ const VentasMostradorView = () => {
 
   const [showAgregarModal, setShowAgregarModal] = useState(false)
   const [agregarForm, setAgregarForm] = useState({ itemId: '', cantidad: 1 })
+  const [submitBtn, setSubmitBtn] = useState(null)
+
+  useGhostAutomation({
+    aiPrefill,
+    isModalOpen: showAgregarModal,
+    setModalOpen: setShowAgregarModal,
+    setForm: setAgregarForm,
+    submitBtnRef: { current: submitBtn },
+    actionType: 'AGREGAR_ITEM_VENTA',
+    fieldMapping: {
+      itemId: 'itemId',
+      cantidad: 'cantidad'
+    }
+  })
 
   const [showQRModal, setShowQRModal] = useState(false)
   const [qrPago, setQrPago] = useState(null)
@@ -320,7 +335,7 @@ const VentasMostradorView = () => {
                 {items.map((i) => <option key={i.id} value={i.id}>{i.codigo} - {i.nombre} | stock: {i.stock_actual} | Bs {Number(i.precio_venta || 0).toFixed(2)}</option>)}
               </select>
               <input type="number" min={1} value={agregarForm.cantidad} onChange={(e) => setAgregarForm((p) => ({ ...p, cantidad: Number(e.target.value) }))} className="w-full rounded-lg border px-3 py-2 dark:border-white/[0.1] dark:bg-carbon-800" />
-              <div className="flex justify-end gap-2"><button onClick={() => setShowAgregarModal(false)} className="rounded-lg border px-4 py-2">Cancelar</button><button onClick={agregarProducto} className="rounded-lg bg-gradient-to-r from-primary-600 to-burgundy-700 px-4 py-2 text-white">Agregar</button></div>
+              <div className="flex justify-end gap-2"><button onClick={() => setShowAgregarModal(false)} className="rounded-lg border px-4 py-2">Cancelar</button><button ref={setSubmitBtn} onClick={agregarProducto} className="rounded-lg bg-gradient-to-r from-primary-600 to-burgundy-700 px-4 py-2 text-white">Agregar</button></div>
             </div>
           </div>
         </div>

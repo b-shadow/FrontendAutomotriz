@@ -2,9 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { FileText, Download, Eye, FileSpreadsheet, PlusCircle, RefreshCw, X, Code2, Table2, FileCode } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { useTenant } from '../../hooks/useTenant'
+import { useGhostAutomation } from '../../hooks/useGhostAutomation'
 import inventarioService from '../../services/inventarioService'
 
-const FacturasRecibosView = () => {
+const FacturasRecibosView = ({ user, aiPrefill }) => {
   const { tenantSlug } = useTenant()
   const [facturas, setFacturas] = useState([])
   const [pagosDisponibles, setPagosDisponibles] = useState([])
@@ -18,6 +19,21 @@ const FacturasRecibosView = () => {
     pago_taller: '',
     numero: '',
     nit_razon_social: '',
+  })
+  const [submitBtn, setSubmitBtn] = useState(null)
+
+  useGhostAutomation({
+    aiPrefill,
+    isModalOpen: true, // It's an inline form, so always "open"
+    setModalOpen: null,
+    setForm,
+    submitBtnRef: { current: submitBtn },
+    actionType: 'EMITIR_FACTURA',
+    fieldMapping: {
+      pago_taller: 'pago_taller',
+      numero: 'numero',
+      nit_razon_social: 'nit_razon_social'
+    }
   })
 
   const cargar = useCallback(async () => {
@@ -207,6 +223,7 @@ const FacturasRecibosView = () => {
                 : 'Selecciona un pago para ver su detalle'}
             </div>
             <button
+              ref={setSubmitBtn}
               type="submit"
               className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-60"
               disabled={loading || pagosDisponibles.length === 0}

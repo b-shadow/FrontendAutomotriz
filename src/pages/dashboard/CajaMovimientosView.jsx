@@ -3,7 +3,7 @@ import { BarChart3 } from 'lucide-react'
 import { useTenant } from '../../hooks/useTenant'
 import inventarioService from '../../services/inventarioService'
 
-const CajaMovimientosView = () => {
+const CajaMovimientosView = ({ aiPrefill }) => {
   const { tenantSlug, user } = useTenant()
   const [resumen, setResumen] = useState({ ingresos: 0, egresos: 0, ajustes: 0, saldo: 0 })
   const [movimientos, setMovimientos] = useState([])

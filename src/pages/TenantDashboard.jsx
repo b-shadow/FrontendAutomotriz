@@ -268,13 +268,13 @@ export const TenantDashboard = () => {
       case 'comprasInsumos':
         return <ComprasInsumosView tenantSlug={tenantSlug} user={user} aiPrefill={getAiPrefill(['AGREGAR_ITEM_COMPRA'])} />
       case 'ventasMostrador':
-        return <VentasMostradorView tenantSlug={tenantSlug} user={user} />
+        return <VentasMostradorView tenantSlug={tenantSlug} user={user} aiPrefill={getAiPrefill(['AGREGAR_ITEM_VENTA'])} />
       case 'pagosTaller':
-        return <VentasMostradorView tenantSlug={tenantSlug} user={user} />
+        return <VentasMostradorView tenantSlug={tenantSlug} user={user} aiPrefill={getAiPrefill(['AGREGAR_ITEM_VENTA'])} />
       case 'facturasRecibos':
-        return <FacturasRecibosView tenantSlug={tenantSlug} user={user} />
+        return <FacturasRecibosView tenantSlug={tenantSlug} user={user} aiPrefill={getAiPrefill(['EMITIR_FACTURA'])} />
       case 'cajaMovimientos':
-        return <CajaMovimientosView tenantSlug={tenantSlug} user={user} />
+        return <CajaMovimientosView tenantSlug={tenantSlug} user={user} aiPrefill={getAiPrefill(['CONSULTAR_CAJA'])} />
       case 'gestionarBackup':
         return <GestionBackupView aiPrefill={getAiPrefill(['CONFIGURAR_BACKUP'])} />
       case 'asistenteIA':

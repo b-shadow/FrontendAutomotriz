@@ -131,11 +131,11 @@
 
   /* ── MODALS ── */
   .modal-overlay {
-    @apply fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-50;
+    @apply fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-50 overflow-y-auto p-4;
   }
 
   .modal-content {
-    @apply bg-white rounded-2xl shadow-2xl max-w-md w-11/12 p-6 relative border border-neutral-200;
+    @apply bg-white rounded-2xl shadow-2xl max-w-md w-11/12 p-6 relative border border-neutral-200 max-h-[calc(100vh-2rem)] overflow-y-auto my-auto;
     @apply dark:bg-carbon-900 dark:border-white/[0.08] dark:shadow-carbon-950/80;
   }
 

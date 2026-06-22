@@ -1,5 +1,5 @@
 import { Briefcase, AlertTriangle, Check, User, Bookmark, X, Pencil, Lock, Unlock, Info, ClipboardList, RefreshCw } from 'lucide-react';
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useTenant } from '../../hooks/useTenant'
 import { Card, Button } from '../../components/ui'
 import usuariosService from '../../services/usuariosService'
@@ -23,6 +23,8 @@ export const GestionUsuariosRolesView = ({ user, aiPrefill }) => {
     password: '',
     telefono: '',
   })
+  const lastRoleTs = useRef(null)
+  const submitBtnRef = useRef(null)
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -466,7 +468,7 @@ export const GestionUsuariosRolesView = ({ user, aiPrefill }) => {
                 <Button type="button" onClick={() => setShowCrearUsuarioModal(false)} disabled={loading}>
                   Cancelar
                 </Button>
-                <Button ref={setSubmitBtn} type="submit" disabled={loading}>
+                <Button ref={submitBtnRef} type="submit" disabled={loading}>
                   {loading ? 'Creando...' : 'Crear'}
                 </Button>
               </div>

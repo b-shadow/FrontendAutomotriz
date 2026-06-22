@@ -1,6 +1,7 @@
 ﻿import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Briefcase, Plus, Search, SlidersHorizontal, X } from 'lucide-react'
 import { useTenant } from '../../hooks/useTenant'
+import { useGhostAutomation } from '../../hooks/useGhostAutomation'
 import inventarioService from '../../services/inventarioService'
 
 const emptyProveedor = {
